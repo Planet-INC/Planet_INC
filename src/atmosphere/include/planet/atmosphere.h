@@ -79,14 +79,14 @@ class Atmosphere{
         std::map<std::string, int > _photon_absorbing_species_map; //positive neutrals, negative charged
 //electron
 //diffusion
-        DiffusionEvaluator<CoeffType> _diffusion;
+        DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
         CoeffType _K0;
         VectorCoeffType _K;
 //thermal
         VectorCoeffType _thermal_coefficient;
 //mean free path
-        VectorCoefftype _hard_sphere_radius;
-        VectorCoefftype _mean_free_path;
+        VectorCoeffType _hard_sphere_radius;
+        VectorCoeffType _mean_free_path;
 
       public:
 
@@ -122,9 +122,6 @@ class Atmosphere{
         //! calculate mean free pathes
         void make_free_pathes();
 
-        //! mean free path of species s
-        VectorCoeffType mean_free_path_top_to_bottom(unsigned int s) const;
-
 /*exobase (altitude where mean free path is equal to scale height) */
         //!
         VectorCoeffType exobase_altitude(unsigned int s) const;
@@ -134,22 +131,16 @@ class Atmosphere{
 
 /* diffusion */
         //! return the diffusion evaluator object
-        DiffusionEvaluator<CoeffType> diffusion();
+        DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> diffusion();
 
         //!
         void make_diffusion();
 
         //! diffusion of species ineu on an altitude column
-        template<typename VectorStateType>
-        ANTIOCH_AUTO(VectorStateType)
-        diffusion_species_bottom_to_top(unsigned int ineu) const
-        ANTIOCH_FUNC(VectorStateType,_diffusion.species_bottom_to_top(ineu))
+        VectorCoeffType diffusion_species_bottom_to_top(unsigned int ineu) const;
 
         //! diffusion of species ineu on an altitude column
-        template<typename VectorStateType>
-        ANTIOCH_AUTO(VectorStateType)
-        diffusion_species_top_to_bottom(unsigned int ineu) const
-        ANTIOCH_FUNC(VectorStateType,_diffusion.species_top_to_bottom(ineu))
+        VectorCoeffType diffusion_species_top_to_bottom(unsigned int ineu) const;
 
 /* photon */
 
@@ -283,21 +274,17 @@ class Atmosphere{
                                     (this->g(z) * StateType(1e-3L) * _neutral_composition.M(s) / Antioch::Constants::Avogadro<StateType>())
                         )
 
-        //! \return scale height of species s at altitude z, H = kb*T/(g*Ms)
-        template<typename StateType>
-        StateType H_top_to_bottom(unsigned int s) const;
+        //! \return scale height of species s H = kb*T/(g*Ms)
+        VectorCoeffType H_top_to_bottom(unsigned int s) const;
 
         //! \return scale height of species s at altitude z, H = kb*T/(g*Ms)
-        template<typename StateType>
-        StateType H_bottom_to_top(unsigned int s) const;
+        VectorCoeffType H_bottom_to_top(unsigned int s) const;
 
         //! \return mean scale height for all altitudes
-        template<typename StateType>
-        VectorStateType H_bottom_to_top() const;
+        VectorCoeffType H_bottom_to_top() const;
 
         //! \return mean scale height for all altitudes
-        template<typename StateType>
-        VectorStateType H_top_to_bottom() const;
+        VectorCoeffType H_top_to_bottom() const;
 
         //! \return mean scale height at altitude z, H = kb*T/(g*<m>)
         template<typename StateType>
@@ -354,12 +341,10 @@ class Atmosphere{
         CoeffType neutral_molar_density(unsigned int nneu, unsigned int alt) const; 
 
         //!
-        template <typename VectorStateType>
-        VectorStateType  neutral_molar_density_bottom_to_top(unsigned int nneu) const;
+        VectorCoeffType  neutral_molar_density_bottom_to_top(unsigned int nneu) const;
 
         //!
-        template <typename VectorStateType>
-        VectorStateType  neutral_molar_density_top_to_bottom(unsigned int nneu) const;
+        VectorCoeffType  neutral_molar_density_top_to_bottom(unsigned int nneu) const;
 
         //!
         template <typename StateType>
@@ -376,7 +361,7 @@ class Atmosphere{
         //!
        template <typename StateType>
         ANTIOCH_AUTO(StateType)
-        total_density(const StateType &z) 
+        total_density(const StateType &z) const
         ANTIOCH_AUTOFUNC(StateType,_total_density[_altitudes.at(z)])
 
         //!
@@ -395,6 +380,20 @@ class Atmosphere{
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_species_top_to_bottom(unsigned int ineu) const
+{
+  return _diffusion.species_top_to_bottom(ineu);
+}
+
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+inline
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_species_bottom_to_top(unsigned int ineu) const
+{
+  return _diffusion.species_bottom_to_top(ineu);
+}
+
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+inline
 VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::exobase_altitude(unsigned int s) const
 {
   antioch_assert_lower(s,_neutral_composition.n_species());
@@ -402,13 +401,13 @@ VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::exobase_a
   CoeffType tmp = 1e303;
   for(CoeffType z = _min_alt; z <= _max_alt; z += _step_alt)
   {
-     if(Antioch::ant_abs(_mean_free_path[s][_altitude[z]] - H(s,z)) < tmp)
+     if(Antioch::ant_abs(_mean_free_path[s][_altitudes[z]] - H(s,z)) < tmp)
      {
         alt = z;
      }
   }
 
-  return z;
+  return alt;
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -432,7 +431,7 @@ VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::altitude_
   VectorCoeffType out;
   out.resize(this->n_altitudes(),0.L);
 
-  for(unsigned int iz = 0; iz < _mean_free_path[s].size(); iz++)
+  for(unsigned int iz = 0; iz < _altitudes_list.size(); iz++)
   {
      _altitudes_list[_altitudes_list.size() - 1 - iz] = _altitudes_list[iz];
   }
@@ -442,7 +441,7 @@ VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::altitude_
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-VectorCoeffType altitude_top_to_bottom() const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::altitude_top_to_bottom() const
 {
   return _altitudes_list;
 }
@@ -455,7 +454,7 @@ void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::set_hard_sphere_radi
   antioch_assert_equal(hsp.size(),_neutral_composition.n_species());
          
   _hard_sphere_radius.clear();
-  _hard_shere_radius = hsp;
+  _hard_sphere_radius = hsp;
 
   this->make_free_pathes();
 
@@ -492,7 +491,7 @@ template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
 CoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::mean_free_path(unsigned int s, const CoeffType &z) const
 {
-  return _mean_free_path[s][_altitude[z]];
+  return _mean_free_path[s][_altitudes[z]];
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -574,17 +573,16 @@ void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::set_K0(const StateTy
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-DiffusionEvaluator<CoeffType> Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion()
+DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion()
 {
   return _diffusion;
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template <typename VectorStateType>
 inline
-VectorStateType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_molar_density_bottom_to_top(unsigned int nneu) const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_molar_density_bottom_to_top(unsigned int nneu) const
 {
-   VectorStateType out;
+   VectorCoeffType out;
    out.resize(_altitudes.size(),0.L);
    unsigned int i(0);
    for(CoeffType z = _min_alt; z <= _max_alt; z += _step_alt)
@@ -597,11 +595,10 @@ VectorStateType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_m
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template <typename VectorStateType>
 inline
-VectorStateType  neutral_molar_density_top_to_bottom(unsigned int nneu) const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_molar_density_top_to_bottom(unsigned int nneu) const
 {
-   VectorStateType out;
+   VectorCoeffType out;
    out.resize(_altitudes.size(),0.L);
    unsigned int i(0);
    for(CoeffType z = _max_alt; z >= _min_alt; z -= _step_alt)
@@ -614,11 +611,10 @@ VectorStateType  neutral_molar_density_top_to_bottom(unsigned int nneu) const
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template<typename StateType>
 inline
-VectorStateType Atmosphere<Coefftype,VectorCoeffType,MatrixCoeffType>::H_bottom_to_top() const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_bottom_to_top() const
 {
-  VectorStateType out;
+  VectorCoeffType out;
   out.resize(_altitudes_list.size(),0.L);
 
   unsigned int i(0);
@@ -631,11 +627,10 @@ VectorStateType Atmosphere<Coefftype,VectorCoeffType,MatrixCoeffType>::H_bottom_
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template<typename StateType>
 inline
-VectorStateType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_top_to_bottom() const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_top_to_bottom() const
 {
-  VectorStateType out;
+  VectorCoeffType out;
   out.resize(_altitudes_list.size(),0.L);
 
   unsigned int i(0);
@@ -648,11 +643,10 @@ VectorStateType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_top_to_
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template<typename StateType>
 inline
-VectorStateType Atmosphere<Coefftype,VectorCoeffType,MatrixCoeffType>::H_bottom_to_top(unsigned int s) const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_bottom_to_top(unsigned int s) const
 {
-  VectorStateType out;
+  VectorCoeffType out;
   out.resize(_altitudes_list.size(),0.L);
 
   unsigned int i(0);
@@ -665,11 +659,10 @@ VectorStateType Atmosphere<Coefftype,VectorCoeffType,MatrixCoeffType>::H_bottom_
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template<typename StateType>
 inline
-VectorStateType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_top_to_bottom(unsigned int s) const
+VectorCoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::H_top_to_bottom(unsigned int s) const
 {
-  VectorStateType out;
+  VectorCoeffType out;
   out.resize(_altitudes_list.size(),0.L);
 
   unsigned int i(0);

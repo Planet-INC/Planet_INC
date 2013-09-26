@@ -13,6 +13,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/atmosphere/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/solver/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h

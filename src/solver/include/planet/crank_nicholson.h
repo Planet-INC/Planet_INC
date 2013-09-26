@@ -12,7 +12,7 @@
 namespace Planet
 {
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  class Thomas
+  class CrankNicholson
   {
      private:
 
@@ -20,8 +20,8 @@ namespace Planet
        void derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx);
 
      public:  
-       Thomas();
-       ~Thomas();
+       CrankNicholson();
+       ~CrankNicholson();
 
        void solve(Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> &atm);
 
@@ -29,7 +29,7 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  void Thomas<CoeffType,VectorCoeffType,MatrixCoeffType>::derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx)
+  void CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx)
   {
      deriv.clear();
      deriv.resize(vec.size(),0.L);
@@ -42,21 +42,21 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  Thomas<CoeffType,VectorCoeffType,MatrixCoeffType>::Thomas()
+  CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::CrankNicholson()
   {
      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  Thomas<CoeffType,VectorCoeffType,MatrixCoeffType>::~Thomas()
+  CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::~CrankNicholson()
   {
      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  void Thomas<CoeffType,VectorCoeffType,MatrixCoeffType>::solve(Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> &atm)
+  void CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::solve(Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> &atm)
   {
 
 // Matrixes/Vectors of parameters

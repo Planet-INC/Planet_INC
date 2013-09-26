@@ -131,9 +131,9 @@ int test()
   Scalar dens_tot(1e12);
 
 //diffusion
-  Planet::BinaryDiffusion<Scalar> N2N2(   "N2", "N2",5.09e+16,0.81,Planet::DiffusionType::Massman);
-  Planet::BinaryDiffusion<Scalar> N2CH4(  "N2","CH4",7.34e+16,0.75,Planet::DiffusionType::Massman);
-  Planet::BinaryDiffusion<Scalar> CH4CH4("CH4","CH4",5.73e+16,0.50,Planet::DiffusionType::Massman);
+  Planet::BinaryDiffusion<Scalar> N2N2(   Antioch::Species::N2,  Antioch::Species::N2 , 5.09e+16,0.81, Planet::DiffusionType::Massman);
+  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, 7.34e+16,0.75, Planet::DiffusionType::Massman);
+  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, 5.73e+16,0.50, Planet::DiffusionType::Massman);
 
 //atmosphere
   Planet::Atmosphere<Scalar, std::vector<Scalar>, std::vector<std::vector<Scalar> > > atm(neutrals,ions,photon);

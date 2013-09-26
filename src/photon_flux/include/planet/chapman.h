@@ -59,7 +59,7 @@ class Chapman{
      template <typename StateType>
      ANTIOCH_AUTO(StateType)
      chapman_high_angles(const StateType &x) const
-     ANTIOCH_AUTOSUBROUT(StateType,antioch_assert_greater(_chi,rad(90.L)),
+     ANTIOCH_AUTOGENFUNC(StateType,antioch_assert_greater(_chi,rad(90.L)),
                                 Antioch::ant_sqrt(StateType(2.L) * Constants::pi<StateType>() * x) * 
                                 (  Antioch::ant_sqrt(Antioch::ant_sin(_chi)) * 
                                    Antioch::ant_exp( x * (StateType(1.L) - Antioch::ant_sin(_chi))) -
@@ -79,7 +79,7 @@ class Chapman{
      template <typename StateType>
      ANTIOCH_AUTO(StateType)
      chapman_medium_angles(const StateType &x) const
-     ANTIOCH_AUTOSUBROUT(StateType,antioch_assert_less(_chi,rad(90.1L));antioch_assert_greater(_chi,rad(75.L)),
+     ANTIOCH_AUTOGENFUNC(StateType,antioch_assert_less(_chi,rad(90.1L));antioch_assert_greater(_chi,rad(75.L)),
                                 Antioch::ant_sqrt(Constants::pi<StateType>() * x/StateType(2.L)) * 
                                 (StateType(1.L) - this->erf(Antioch::ant_sqrt(x/StateType(2.L))  * Antioch::ant_abs(Antioch::ant_cos(_chi)))) *
                                 Antioch::ant_exp(x/StateType(2.L) * Antioch::ant_pow(Antioch::ant_cos(_chi),2))
@@ -89,7 +89,7 @@ class Chapman{
      template <typename StateType>
      ANTIOCH_AUTO(StateType)
      erf(StateType x) const
-     ANTIOCH_AUTOSUBROUT(StateType, if(x < 0.)x = -x ,
+     ANTIOCH_AUTOGENFUNC(StateType, if(x < 0.)x = -x ,
                 StateType(1.L) - (StateType( 0.254829592)   * (StateType(1.L)/(StateType(1.L)                 + StateType(0.3275911L) * x)) +
                                   StateType(-0.284496736L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),2) + 
                                   StateType( 1.421413741L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),3) + 

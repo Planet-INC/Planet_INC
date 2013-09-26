@@ -25,6 +25,7 @@
 #define PLANET_DIFFUSION_H
 
 //Antioch
+#include "antioch/species_enum.h"
 #include "antioch/metaprogramming_decl.h"
 #include "antioch/cmath_shims.h"
 
@@ -49,8 +50,8 @@ class BinaryDiffusion{
         CoeffType _beta;
         DiffusionType _diffusion_model;
 
-        std::string _mol1;
-        std::string _mol2;
+        Antioch::Species _mol1;
+        Antioch::Species _mol2;
 
       public:
         //!
@@ -58,12 +59,12 @@ class BinaryDiffusion{
         //!
         BinaryDiffusion(const BinaryDiffusion &rhs);
         //!
-        BinaryDiffusion(const std::string &mol1, const std::string& mol2, const CoeffType &par1, const CoeffType &par2, const DiffusionType &model);
+        BinaryDiffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, const CoeffType &par1, const CoeffType &par2, const DiffusionType &model);
         //!
         ~BinaryDiffusion();
 
         //!
-        void set_molecules(const std::string &mol1, const std::string &mol2);
+        void set_molecules(const Antioch::Species &mol1, const Antioch::Species &mol2);
         //!
         void set_diffusion_model(const DiffusionType &model);
         //!
@@ -72,7 +73,8 @@ class BinaryDiffusion{
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         binary_coefficient(const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,_D01 * Constants::Convention::P_standard<StateType>()/P * ant_pow((Constants::Convention::T_standard<StateType>()/T),_beta))
+        ANTIOCH_AUTOFUNC(StateType,_D01 * Constants::Convention::P_standard<StateType>() / P * 
+                                    Antioch::ant_pow((Constants::Convention::T_standard<StateType>()/T),_beta))
 
         //!
         template<typename StateType>
@@ -105,9 +107,9 @@ class BinaryDiffusion{
         //!
         DiffusionType diffusion_model() const;
         //!
-        const std::string mol1() const {return _mol1;}
+        const Antioch::Species mol1() const {return _mol1;}
         //!
-        const std::string mol2() const {return _mol2;}
+        const Antioch::Species mol2() const {return _mol2;}
 
 };
 
@@ -156,8 +158,8 @@ _diffusion_model(NoData)
 
 template<typename CoeffType>
 inline
-BinaryDiffusion<CoeffType>::BinaryDiffusion(const std::string &mol1, 
-                                            const std::string &mol2, 
+BinaryDiffusion<CoeffType>::BinaryDiffusion(const Antioch::Species &mol1, 
+                                            const Antioch::Species &mol2, 
                                             const CoeffType &par1, 
                                             const CoeffType &par2, 
                                             const DiffusionType &model):
@@ -178,7 +180,7 @@ BinaryDiffusion<CoeffType>::~BinaryDiffusion()
 
 template<typename CoeffType>
 inline
-void BinaryDiffusion<CoeffType>::set_molecules(const std::string &mol1, const std::string &mol2)
+void BinaryDiffusion<CoeffType>::set_molecules(const Antioch::Species &mol1, const Antioch::Species &mol2)
 {
   _mol1 = mol1;
   _mol2 = mol2;

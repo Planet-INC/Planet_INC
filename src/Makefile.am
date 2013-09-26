@@ -48,6 +48,9 @@ include_HEADERS += atmosphere/include/planet/atmosphere.h
 include_HEADERS += diffusion/include/planet/binary_diffusion.h
 include_HEADERS += diffusion/include/planet/diffusion_evaluator.h
 
+# solvers
+include_HEADERS += solver/include/planet/CrankNicholson.h
+
 # sampling
 include_HEADERS += 
 
@@ -72,6 +75,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/solver/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 AM_CPPFLAGS +=  $(planet_optional_INCLUDES)
