@@ -49,7 +49,7 @@ include_HEADERS += diffusion/include/planet/binary_diffusion.h
 include_HEADERS += diffusion/include/planet/diffusion_evaluator.h
 
 # solvers
-include_HEADERS += solver/include/planet/CrankNicholson.h
+include_HEADERS += solver/include/planet/crank_nicholson.h
 
 # sampling
 include_HEADERS += 

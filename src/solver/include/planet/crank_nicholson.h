@@ -19,6 +19,8 @@ namespace Planet
        //! derive with respect to vec and dx
        void derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx);
 
+       CoeffType dt;
+
      public:  
        CrankNicholson();
        ~CrankNicholson();
@@ -35,14 +37,15 @@ namespace Planet
      deriv.resize(vec.size(),0.L);
      for(unsigned int ix = 1; ix < vec.size() - 1; ix++)
      {
-        deriv[ix] = (vec[ix+1] - vec[i-1]) / (dx + dx);
+        deriv[ix] = (vec[ix+1] - vec[ix-1]) / (dx + dx);
      }
      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::CrankNicholson()
+  CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::CrankNicholson():
+        dt(1e-5L)
   {
      return;
   }
@@ -103,7 +106,7 @@ namespace Planet
      VectorCoeffType dscale_height_dz;
 //derived Matrixes
      MatrixCoeffType dDs_dz;
-     MatrixCoeffType dneu_dz;
+     MatrixCoeffType dneut_dz;
      MatrixCoeffType gradH_dz;
      dDs_dz.resize(atm.n_neutral_species());
      dneut_dz.resize(atm.n_neutral_species());
@@ -133,51 +136,40 @@ namespace Planet
 
 //exobase scale height = mean free path
      //N2 exobase used for all the species except H and H2
-     CoeffType exobase_alt = exobase[atm.neutral_composition().species_list()[N2]];
-     unsigned int iN2 = atm.neutral_composition().species_list()[N2];
+     CoeffType exobase_alt = exobase[atm.neutral_composition().species_list()[Antioch::Species::N2]];
+     unsigned int iN2 = atm.neutral_composition().species_list()[Antioch::Species::N2];
 
-     if( ( Antioch::ant_abs(H(iN2,exobase_alt) - atm.mean_free_path(iN2,exobase_alt))/atm.mean_free_path(iN2,exobase_alt)  < 1 ) && 
-         (exobase_alt != atm.max_alt() ) && (exobase_alt != atm.min_alt() ) 
-       )
-     {
-        exobase_alt = altitude[exobase_index]; //Exobase altitude in km
-     }
-     else
-     {
-        exobase_alt = altitude.back() * Coefftype(9e-1L);   //upper possible limit set for the exobase
-        CoeffType tmp(altitude[0] - exobase_alt);
-        exobase_index = 0;
-        for(unsigned int iz = 1; iz < altitude.size(); iz++)
-        {
-            if(Antioch::ant_abs(altitude[iz] - exobase_alt) < tmp)
-            {
-                tmp = Antioch::ant_abs(z - exobase_alt);
-                exobase_index = iz;
-            }
-        }
-     }
+     if( ( Antioch::ant_abs(H(iN2,exobase_alt) - atm.mean_free_path(iN2,exobase_alt))/atm.mean_free_path(iN2,exobase_alt)  >= 1 ) || 
+         (exobase_alt == atm.max_alt() ) || (exobase_alt == atm.min_alt() ) 
+       )exobase_alt = altitude.back() * CoeffType(9e-1L);   //upper possible limit set for the exobase
 
 
 //matrixes            
-     MatrixCoeffType As,Bs,Cs,Csr,a,b,c,d;
+     MatrixCoeffType As,Bs,Bsr,Cs,Csr,a,b,c,d,Loss,Prod;
      As.resize(atm.n_neutral_species());
      Bs.resize(atm.n_neutral_species());
+     Bsr.resize(atm.n_neutral_species());
      Cs.resize(atm.n_neutral_species());
      Csr.resize(atm.n_neutral_species());
      a.resize(atm.n_neutral_species());
      b.resize(atm.n_neutral_species());
      c.resize(atm.n_neutral_species());
      d.resize(atm.n_neutral_species());
+     Loss.resize(atm.n_neutral_species());
+     Prod.resize(atm.n_neutral_species());
      for(unsigned int i = 0; i < atm.n_neutral_species(); i++)
      {
-        As[i].resize(atm.n_altitudes(),0.L)
-        Bs[i].resize(atm.n_altitudes(),0.L)
-        Cs[i].resize(atm.n_altitudes(),0.L)
-        Csr[i].resize(atm.n_altitudes(),0.L)
-        a[i].resize(atm.n_altitudes(),0.L)
-        b[i].resize(atm.n_altitudes(),0.L)
-        c[i].resize(atm.n_altitudes(),0.L)
-        d[i].resize(atm.n_altitudes(),0.L)
+        As[i].resize(atm.n_altitudes(),0.L);
+        Bs[i].resize(atm.n_altitudes(),0.L);
+        Bsr[i].resize(atm.n_altitudes(),0.L);
+        Cs[i].resize(atm.n_altitudes(),0.L);
+        Csr[i].resize(atm.n_altitudes(),0.L);
+        a[i].resize(atm.n_altitudes(),0.L);
+        b[i].resize(atm.n_altitudes(),0.L);
+        c[i].resize(atm.n_altitudes(),0.L);
+        d[i].resize(atm.n_altitudes(),0.L);
+        Loss[i].resize(atm.n_altitudes(),0.L);
+        Prod[i].resize(atm.n_altitudes(),0.L);
      }
 
      for(unsigned int nneus = 0; nneus < atm.n_neutrals_species(); nneus++)
@@ -186,8 +178,8 @@ namespace Planet
         {
           CoeffType z = atm.min_alt() + (CoeffType)iz * atm.step_alt();
           As[nneus][iz] = diffusion_matrix[nneus][iz] + K[iz]; //cm2.s-1
-          Bs[nneus][iz] = dDs_dz[ineu][iz] + dK_dz[iz] + diffusion_matrix[ineu][iz] * 
-                        ( CoeffType(1.L)/scale_height[ineu][iz] + 
+          Bs[nneus][iz] = dDs_dz[nneus][iz] + dK_dz[iz] + diffusion_matrix[nneus][iz] * 
+                        ( CoeffType(1.L)/species_scale_height[nneus][iz] + 
                           (CoeffType(1.L) + alpha[nneus] * (CoeffType(1.L) - neutral_densities[nneus][iz]/nTot[iz])) / 
                           T[iz] * dT_dz[iz]
                         ) + K[iz] * (CoeffType(1.L)/scale_height[iz] + CoeffType(1.L) / T[iz] * dT_dz[iz] ); //cm2.s-1.km-1
@@ -195,13 +187,13 @@ namespace Planet
                           (diffusion_matrix[nneus][iz] + K[iz]); //cm2.s-1.km-1 (additional radial term in spherical coordinates)
           Bs[nneus][iz] += Bsr[nneus][iz];
           Cs[nneus][iz] = dDs_dz[nneus][iz] * 
-                          ( CoeffType(1.L)/neutral_scale_height[nneus][iz] + 
+                          ( CoeffType(1.L)/species_scale_height[nneus][iz] + 
                             ( CoeffType(1.L) + alpha[nneus] * (CoeffType(1.L) - neutral_densities[nneus][iz] / nTot[iz])) / 
                               T[iz]  * dT_dz[iz]
-                          ) + Ds[nneus][iz] * 
-                          ( - gradH_dz[nneus][iz] / Antioch::ant_pow(neutral_scale_height[nneus][iz],2) + alpha[nneus] /
+                          ) + diffusion_matrix[nneus][iz] * 
+                          ( - gradH_dz[nneus][iz] / Antioch::ant_pow(species_scale_height[nneus][iz],2) + alpha[nneus] /
                             nTot[iz] * 
-                            (-dneut_dz[nneus][iz] + dnTot_dz[iz](2:lalt) * neutral_densities[nneus][iz] / nTot[iz] ) /
+                            (-dneut_dz[nneus][iz] + dntot_dz[iz] * neutral_densities[nneus][iz] / nTot[iz] ) /
                             T[iz] * dT_dz[iz] + 
                             (CoeffType(1.L) + alpha[nneus] * ( CoeffType(1.L) - neutral_densities[nneus][iz] / nTot[iz])) * 
                             ( (-Antioch::ant_pow(dT_dz[iz],2) / Antioch::ant_pow(T[iz],2) + ddT_ddz[iz] / T[iz] ) )
@@ -214,7 +206,7 @@ namespace Planet
                            ); //cm2.s-1.km-2
           Csr[nneus][iz] = CoeffType(2.L) / (Constants::Titan::radius<CoeffType>() + z ) * 
                           ( diffusion_matrix[nneus][iz] * 
-                            ( CoeffType(1.L) / neutral_scale_height[nneus][iz] + 
+                            ( CoeffType(1.L) / species_scale_height[nneus][iz] + 
                               (CoeffType(1.L) + alpha[nneus] * (CoeffType(1.L) - neutral_densities[nneus][iz] / nTot[iz])) /
                               T[iz] * dT_dz[nneus][iz]
                             ) + K[iz] * (CoeffType(1.L) / scale_height[iz] + CoeffType(1.L) / T[iz] * dT_dz[iz])
@@ -238,12 +230,13 @@ namespace Planet
      //Only a slope constraint at the bottom of the profile
      CoeffType ntot1 = nTot[1] * (CoeffType(1.L) + dz / CoeffType(2.L) * (CoeffType(1.L) / scale_height[1] + dT_dz[1] / T[1] ) ) / 
                             (CoeffType(1.L) - dz / CoeffType(2.L) * (CoeffType(1.L) / scale_height[0] + dT_dz[0] / T[0] ));                 
-
+/*
      //For the species with long lifetime, the lower molar fraction boundary condition is kept:
      VectorCoeffType neut1,molfracfloat,Phyfloat;
      neut1.resize(atm.n_neutral_species(),0.L);
      molfracfloat.resize(atm.n_neutral_species(),0.L);
      Phifloat.resize(atm.n_neutral_species(),0.L);
+
      if(floating(1)>0)
      {
             for(unsigned int lp = 0; lp < floating.size(); lp++)
@@ -277,7 +270,7 @@ namespace Planet
                 end
             end         
             c(2,:)=c(2,:)-b(2,:).*neut1;
-
+*/
   }
 
 }
