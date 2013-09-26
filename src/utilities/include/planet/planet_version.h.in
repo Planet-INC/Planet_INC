@@ -1,0 +1,48 @@
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// Planet - An atmospheric code for planetary bodies, adapted to Titan
+//
+// Copyright (C) 2013 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+#ifndef PLANET_VERSION_H
+#define PLANET_VERSION_H
+
+#define PLANET_MAJOR_VERSION  @GENERIC_MAJOR_VERSION@
+#define PLANET_MINOR_VERSION  @GENERIC_MINOR_VERSION@
+#define PLANET_MICRO_VERSION  @GENERIC_MICRO_VERSION@
+
+#define PLANET_BUILD_USER     "@BUILD_USER@"
+#define PLANET_BUILD_ARCH     "@BUILD_ARCH@"
+#define PLANET_BUILD_HOST     "@BUILD_HOST@"
+#define PLANET_BUILD_DATE     "@BUILD_DATE@"
+#define PLANET_BUILD_VERSION  "@BUILD_VERSION@"
+
+#define PLANET_LIB_VERSION    "@VERSION@"
+#define PLANET_LIB_RELEASE    "@BUILD_DEVSTATUS@"
+
+#define PLANET_CXX            "@CXX@"
+#define PLANET_CXXFLAGS       "@CXXFLAGS@"
+
+namespace Planet
+{
+  void planet_version_stdout();
+  int  get_planet_version();
+} // end namespace Antioch
+
+#endif //PLANET_VERSION_H
