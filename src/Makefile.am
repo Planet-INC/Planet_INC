@@ -39,14 +39,14 @@ include_HEADERS += photon_flux/include/planet/chapman.h
 include_HEADERS += photon_flux/include/planet/photon_flux.h
 
 # absorption
-include_HEADERS += absorption/include/planet/absorption.h
+include_HEADERS += absorption/include/planet/absorption_grid.h
 
 # atmosphere
 include_HEADERS += atmosphere/include/planet/atmosphere.h
 
 # diffusion
 include_HEADERS += diffusion/include/planet/binary_diffusion.h
-include_HEADERS += diffusion/include/planet/diffusion_evaluator.h
+include_HEADERS += diffusion/include/planet/molecular_diffusion_evaluator.h
 
 # solvers
 include_HEADERS += solver/include/planet/crank_nicholson.h

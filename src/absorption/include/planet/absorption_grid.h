@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef _ABSORPTION_
-#define _ABSORPTION_
+#ifndef _ABSORPTION_GRID_
+#define _ABSORPTION_GRID_
 
 //Antioch
 #include "antioch/metaprogramming.h"
@@ -36,12 +36,12 @@
 namespace Planet{
 
 template <typename CoeffType = double, typename VectorCoeffType = std::vector<double> >
-class Absorption
+class AbsorptionGrid
 {
      public:
-        Absorption(const VectorCoeffType &x, const VectorCoeffType &y);
-        Absorption();
-        ~Absorption();
+        AbsorptionGrid(const VectorCoeffType &x, const VectorCoeffType &y);
+        AbsorptionGrid();
+        ~AbsorptionGrid();
 
         //!
         void set_x_grid(const VectorCoeffType &x);
@@ -66,14 +66,14 @@ class Absorption
 
 template <typename CoeffType, typename VectorCoeffType>
 inline
-Absorption<CoeffType,VectorCoeffType>::Absorption()
+AbsorptionGrid<CoeffType,VectorCoeffType>::AbsorptionGrid()
 {
   return;
 }
 
 template <typename CoeffType, typename VectorCoeffType>
 inline
-Absorption<CoeffType,VectorCoeffType>::Absorption(const VectorCoeffType &x, const VectorCoeffType &y)
+AbsorptionGrid<CoeffType,VectorCoeffType>::AbsorptionGrid(const VectorCoeffType &x, const VectorCoeffType &y)
 {
   set_x_grid(x);
   set_y_grid(y);
@@ -82,21 +82,21 @@ Absorption<CoeffType,VectorCoeffType>::Absorption(const VectorCoeffType &x, cons
 
 template <typename CoeffType, typename VectorCoeffType>
 inline
-Absorption<CoeffType,VectorCoeffType>::~Absorption()
+AbsorptionGrid<CoeffType,VectorCoeffType>::~AbsorptionGrid()
 {
   return;
 }
 
 template <typename CoeffType, typename VectorCoeffType>
 inline
-void Absorption<CoeffType,VectorCoeffType>::set_x_grid(const VectorCoeffType &x)
+void AbsorptionGrid<CoeffType,VectorCoeffType>::set_x_grid(const VectorCoeffType &x)
 {
  _x = x;
 }
 
 template <typename CoeffType, typename VectorCoeffType>
 inline
-void Absorption<CoeffType,VectorCoeffType>::set_y_grid(const VectorCoeffType &y)
+void AbsorptionGrid<CoeffType,VectorCoeffType>::set_y_grid(const VectorCoeffType &y)
 {
   _y = y;
   _y_on_custom = _y;
@@ -104,7 +104,7 @@ void Absorption<CoeffType,VectorCoeffType>::set_y_grid(const VectorCoeffType &y)
 
 template <typename CoeffType, typename VectorCoeffType>
 inline
-void Absorption<CoeffType,VectorCoeffType>::y_on_x_grid(const VectorCoeffType &x)
+void AbsorptionGrid<CoeffType,VectorCoeffType>::y_on_x_grid(const VectorCoeffType &x)
 {
   
   _y_on_custom.clear();

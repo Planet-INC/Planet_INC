@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef _PLANET_DIFFUSION_EVALUATOR_
-#define _PLANET_DIFFUSION_EVALUATOR_
+#ifndef _PLANET_MOLECULAR_DIFFUSION_EVALUATOR_
+#define _PLANET_MOLECULAR_DIFFUSION_EVALUATOR_
 
 //Antioch
 #include "antioch/metaprogramming_decl.h"
@@ -38,11 +38,11 @@
 namespace Planet
 {
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  class DiffusionEvaluator
+  class MolecularDiffusionEvaluator
   {
      private:
         //!
-        DiffusionEvaluator();
+        MolecularDiffusionEvaluator();
 
         MatrixCoeffType _Dtilde;
         std::vector<std::vector<BinaryDiffusion<CoeffType> > > _diffusion;
@@ -52,22 +52,22 @@ namespace Planet
 
      public:
         //!
-        DiffusionEvaluator(Antioch::ChemicalMixture<CoeffType> &comp);
+        MolecularDiffusionEvaluator(Antioch::ChemicalMixture<CoeffType> &comp);
         //!
-        ~DiffusionEvaluator();
+        ~MolecularDiffusionEvaluator();
 
         //! update Dtilde
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
         void make_diffusion(const Atmosphere<StateType,VectorStateType,MatrixStateType> &atm);
 
         //!
-        CoeffType diffusion_coefficient(unsigned int s, unsigned int iz) const;
+        CoeffType Dtilde(unsigned int s, unsigned int iz) const;
 
         //!
-        VectorCoeffType species_top_to_bottom(unsigned int ineu) const;
+        VectorCoeffType Dtilde_top_to_bottom(unsigned int ineu) const;
 
         //!
-        VectorCoeffType species_bottom_to_top(unsigned int ineu) const;
+        void Dtilde_bottom_to_top(unsigned int ineu, VectorCoeffType &diff_bottom_top) const;
 
         //!
         template<typename StateType>
@@ -109,36 +109,35 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  CoeffType DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::diffusion_coefficient(unsigned int s, unsigned int iz) const
+  CoeffType MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::Dtilde(unsigned int s, unsigned int iz) const
   {
       return _Dtilde.at(iz).at(s);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  VectorCoeffType DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::species_top_to_bottom(unsigned int ineu) const
+  VectorCoeffType MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::Dtilde_top_to_bottom(unsigned int ineu) const
   {
      return _Dtilde[ineu];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  VectorCoeffType DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::species_bottom_to_top(unsigned int ineu) const
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::Dtilde_bottom_to_top(unsigned int ineu, VectorCoeffType &diff_bottom_top) const
   {
-     VectorCoeffType out;
-     out.resize(_Dtilde[ineu].size(),0.L);
+     diff_bottom_top.resize(_Dtilde[ineu].size(),0.L);
      for(unsigned int iz = 0; iz < _Dtilde[ineu].size(); iz++)
      {
-        out[iz] = _Dtilde[ineu][_Dtilde[ineu].size() - 1 - iz];
+        diff_bottom_top[iz] = _Dtilde[ineu][_Dtilde[ineu].size() - 1 - iz];
      }
 
-     return out;
+     return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType, typename MatrixStateType>
   inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_diffusion(const Atmosphere<StateType,VectorStateType,MatrixStateType> &atm)
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_diffusion(const Atmosphere<StateType,VectorStateType,MatrixStateType> &atm)
   {
     _Dtilde.resize(_composition.n_species()); //from top to bottom
     std::vector<CoeffType> meanM;
@@ -178,21 +177,21 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::DiffusionEvaluator()
+  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::MolecularDiffusionEvaluator()
   {
      antioch_error();
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::~DiffusionEvaluator()
+  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::~MolecularDiffusionEvaluator()
   {
      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::DiffusionEvaluator(Antioch::ChemicalMixture<CoeffType> &comp):
+  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::MolecularDiffusionEvaluator(Antioch::ChemicalMixture<CoeffType> &comp):
        _composition(comp),
        _n_medium(2)
   {
@@ -206,14 +205,14 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::set_binary_coefficient(unsigned int i, unsigned int j, const BinaryDiffusion<CoeffType> &bin_coef)
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::set_binary_coefficient(unsigned int i, unsigned int j, const BinaryDiffusion<CoeffType> &bin_coef)
   {
       _diffusion[i][j] = bin_coef;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::set_chemical_mixture(Antioch::ChemicalMixture<CoeffType> &comp)
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::set_chemical_mixture(Antioch::ChemicalMixture<CoeffType> &comp)
   {
      _composition = comp;
      return;
