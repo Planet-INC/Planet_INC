@@ -33,8 +33,6 @@
 #include "planet/diffusion_enum.h"
 
 //C++
-#include <string>
-#include <map>
 
 namespace Planet{
 
