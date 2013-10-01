@@ -71,16 +71,22 @@ $T$ (K) & $D_{12}$ \\
 The diffusion coefficient for one species is calculated as diffusing through
 a medium of \ce{N2} and \ce{CH4}, using equation~\ref{Titan:Ds}.
 \begin{equation}
-\diff_s = \frac{\conc_{\text{total}} - \conc_s}{\displaystyle\sum_{j_m \neq s}\frac{\conc_{j_m}}{\diff_{j_m,s}}}
+\diff_s = \frac{\concAtm - \conc_s}{\displaystyle\sum_{j_m \neq s}\frac{\conc_{j_m}}{\diff_{j_m,s}}}
 \label{Titan:Ds}
 \end{equation}
 The final diffusion coefficient is given by the equation~\ref{Titan:Ds-tilde}.
 \begin{equation}
-\tilde{\diff} = \frac{\diff_s}{1-\frac{\conc_s}{\conc_{\text{total}}}\left(1 - \frac{\Mm_s}{\mean{\Mm_{\neq s}}}\right)}
+\tilde{\diff} = \frac{\diff_s}{1-\frac{\conc_s}{\concAtm}\left(1 - \frac{\Mm_s}{\mean{\Mm_{\neq s}}}\right)}
 \label{Titan:Ds-tilde}
 \end{equation}
 avec \mean{\Mm_{\neq s}} the mean molecular mass of the atmosphere without
 species $s$.
+\begin{equation}
+\omega_s = -\tilde{\diff} \left[\frac{1}{\conc_s}\doverd{\conc_s}{z} + \frac{1}{\sch_s} + 
+                                \frac{1}{T}\doverd{T}{z}\left(1 + \frac{\concAtm - \conc_s}{\concAtm}\thermcoef_{T_s}\right)\right] - 
+                  \eddy_s \left[\frac{1}{\conc_s}\doverd{\conc_s}{z} + \frac{1}{\sch_a} + \frac{1}{T}\doverd{T}{z}\right]
+\label{Titan:omega_diff}
+\end{equation}
 
 \begin{remark}
 From \citet{WilsonPhD,Haye2005} to \citet{Massman1998} and \citet{Wakeham1973}.
