@@ -45,8 +45,8 @@ template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 class Atmosphere;
 
   template <typename CoeffType = double, 
-            typename VectorCoeffType = std::vector<double>, 
-            typename MatrixCoeffType = std::vector<std::vector<double> >
+            typename VectorCoeffType = std::vector<CoeffType>, 
+            typename MatrixCoeffType = std::vector<std::vector<CoeffType> >
            >
   class PhotonFlux
   {
@@ -69,7 +69,7 @@ class Atmosphere;
 
 //!
           void set_photon_flux_top_atmosphere(const VectorCoeffType &lambda, const VectorCoeffType& phyAU, const CoeffType& dSunTopAtm);
-//! update photon flux at altitude z
+//! update photon flux at all altitudes
           void update_photon_flux();
 //! photon flux at altitude z
           VectorCoeffType phy(const CoeffType& z) const;
