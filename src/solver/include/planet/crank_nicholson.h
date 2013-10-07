@@ -6,11 +6,19 @@
 #define _PLANET_THOMAS_SOLVER_
 
 //Antioch
+#include "antioch/cmath_shims.h"
 //Planet
 //C++
+#include <Eigen/Dense>
 
 namespace Planet
 {
+/*! solve (n/dt - theta * J)Delta Y = F
+ *  n: vector of densities
+ *  J: jacobian
+ *  Delta Y: step increase of molar fractions vectors
+ *  F: 
+ */
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class CrankNicholson
   {
@@ -20,14 +28,77 @@ namespace Planet
        void derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx);
 
        CoeffType dt;
+       CoeffType theta;
+       Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> J;
+       Eigen::Matrix<CoeffType,Eigen::Dynamic,1> N;
+       Eigen::Matrix<CoeffType,Eigen::Dynamic,1> F;
 
      public:  
        CrankNicholson();
        ~CrankNicholson();
 
        void solve(Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> &atm);
+       void solve(VectorCoeffType &n_tot, VectorStateType &Y, VectorCoefType &F, MatrixCoeffType &J) const;
+
+       void set_theta(const CoeffType &angle);
+       void set_dt(const CoeffType &delta_t);
 
   };
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  void CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::set_theta(const CoeffType &angle)
+  {
+      theta = angle;
+      return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  void CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::set_dt(const CoeffType &delta_t)
+  {
+     dt = delta_t;
+     return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  inline
+  void CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::solve(VectorStateType &n_tot, VectorStateType &Y, VectoStateType &F, MatrixStateType &J) const
+  {
+/*! For a serial calculations:
+ *   - n_tot is the total density at all altitudes: n_tot.size() == atmosphere.n_altitude()
+ *   - F is the function dni/dt at all altitudes for all species: F.size() == atmosphere.n_altitudes() * atmosphere.n_neutral_species()
+ *   - J is the jacobian matrix, it is square: J.size() == atmosphere.n_altitudes() * atmosphere.n_neutral_species()
+ * 
+ * We solve the molar fraction: Y / Y.size() == atmosphere.n_altitudes()
+ *
+ */
+      antioch_assert_not_equal(J.size(),F.size());
+      for(unsigned int i = 0; i < J.size(); i++)
+      {
+        antioch_assert_equal(J[i].size(),F.size());
+      }
+
+      Eigen::Matrix<StateType,J.size(),J.size()> A; 
+      
+      {
+//filling A = N/dt - theta * J, N/dt terms only on the diagonal
+        for(unsigned int c = 0; c < J.size(); c++)
+        {
+          for(unsigned int r = 0; r < J[c].size(); r++)
+          {
+             A(c,r) = (c==r)?n_tot[Antioch::ant_floor(c/N.size())]/dt - theta * J[c][r]: - theta * J[c][r];
+          }
+        }
+//Inversing and solving
+        Eigen::PartialPivLU<Eigen::Matrix<StateType,Eigen::Dynamic,Eigen::Dynamic> > mypartialPivLu(A);
+        Eigen::Matrix<StateType,F.size(),1> Dy;
+        Dy = mypartialPivLu.solve(F);
+
+     }
+  }
+
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
@@ -45,7 +116,8 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
   CrankNicholson<CoeffType,VectorCoeffType,MatrixCoeffType>::CrankNicholson():
-        dt(1e-5L)
+        dt(1e-5L),
+        theta(0.501)
   {
      return;
   }
@@ -176,7 +248,7 @@ namespace Planet
      {
         for(unsigned int iz = 1; iz < atm.n_altitudes()-1; iz++)
         {
-          CoeffType z = atm.min_alt() + (CoeffType)iz * atm.step_alt();
+          CoeffType z = altitude[iz];
           As[nneus][iz] = diffusion_matrix[nneus][iz] + K[iz]; //cm2.s-1
           Bs[nneus][iz] = dDs_dz[nneus][iz] + dK_dz[iz] + diffusion_matrix[nneus][iz] * 
                         ( CoeffType(1.L)/species_scale_height[nneus][iz] + 
@@ -196,14 +268,13 @@ namespace Planet
                             (-dneut_dz[nneus][iz] + dntot_dz[iz] * neutral_densities[nneus][iz] / nTot[iz] ) /
                             T[iz] * dT_dz[iz] + 
                             (CoeffType(1.L) + alpha[nneus] * ( CoeffType(1.L) - neutral_densities[nneus][iz] / nTot[iz])) * 
-                            ( (-Antioch::ant_pow(dT_dz[iz],2) / Antioch::ant_pow(T[iz],2) + ddT_ddz[iz] / T[iz] ) )
+                            ( -Antioch::ant_pow(dT_dz[iz],2) / Antioch::ant_pow(T[iz],2) + ddT_ddz[iz] / T[iz] )
                           ) + 
-                          dK_dz[iz] * ((CoeffType(1.L)/scale_height[iz] + CoeffType(1.L) / T[iz] * dT_dz[nneus]) ) +
+                          dK_dz[iz] * (CoeffType(1.L)/scale_height[iz] + CoeffType(1.L) / T[iz] * dT_dz[nneus]) +
                           K[iz] * 
-                          ( ( - gradH_dz[iz] / Antioch::ant_pow(scale_height[iz],2) - Antioch::ant_pow(dT_dz[iz],2) /
-                                Antioch::ant_pow(T[iz],2) + ddT_ddz[iz] / T[iz]
-                            )
-                           ); //cm2.s-1.km-2
+                          ( - gradH_dz[iz] / Antioch::ant_pow(scale_height[iz],2) - Antioch::ant_pow(dT_dz[iz],2) /
+                               Antioch::ant_pow(T[iz],2) + ddT_ddz[iz] / T[iz]
+                          ); //cm2.s-1.km-2
           Csr[nneus][iz] = CoeffType(2.L) / (Constants::Titan::radius<CoeffType>() + z ) * 
                           ( diffusion_matrix[nneus][iz] * 
                             ( CoeffType(1.L) / species_scale_height[nneus][iz] + 
@@ -230,13 +301,13 @@ namespace Planet
      //Only a slope constraint at the bottom of the profile
      CoeffType ntot1 = nTot[1] * (CoeffType(1.L) + dz / CoeffType(2.L) * (CoeffType(1.L) / scale_height[1] + dT_dz[1] / T[1] ) ) / 
                             (CoeffType(1.L) - dz / CoeffType(2.L) * (CoeffType(1.L) / scale_height[0] + dT_dz[0] / T[0] ));                 
-/*
+
      //For the species with long lifetime, the lower molar fraction boundary condition is kept:
      VectorCoeffType neut1,molfracfloat,Phyfloat;
      neut1.resize(atm.n_neutral_species(),0.L);
      molfracfloat.resize(atm.n_neutral_species(),0.L);
      Phifloat.resize(atm.n_neutral_species(),0.L);
-
+/*
      if(floating(1)>0)
      {
             for(unsigned int lp = 0; lp < floating.size(); lp++)
@@ -252,24 +323,24 @@ namespace Planet
               molfracfloat(lp)=neut0float/ntot(1); //mean(neut(2:3,floating(lp))./ntot(2:3));
             }
             molfrac0(floating)=molfracfloat;
-          }
+      }
             
-            for lp=1:NbNeutSp
-                if molfrac0(i)>0 
-                    neut1(lp)=molfrac0(lp)*ntot1;
-                else
-                    neut1(lp)=neut(2,i)*(1+dz/2*(1/Ha(2)+dTdz(2)/T(2)))/(1-dz/2*(1/Ha(1)+dTdz(1)/T(1)));
-                end
-            end
+      for lp=1:NbNeutSp
+        if molfrac0(i)>0 
+          neut1(lp)=molfrac0(lp)*ntot1;
+        else
+          neut1(lp)=neut(2,i)*(1+dz/2*(1/Ha(2)+dTdz(2)/T(2)))/(1-dz/2*(1/Ha(1)+dTdz(1)/T(1)));
+        end
+      end
 
  
-            //For the species with short lifetime Prod=Loss*neut1
-            if Ind_shortlifetime(1)~=0
-                for it_slt=1:length(Ind_shortlifetime)
-                    neut1(Ind_shortlifetime(it_slt))=Prod(1,Ind_shortlifetime(it_slt))/Loss(1,Ind_shortlifetime(it_slt));
-                end
-            end         
-            c(2,:)=c(2,:)-b(2,:).*neut1;
+      //For the species with short lifetime Prod=Loss*neut1
+      if Ind_shortlifetime(1)~=0
+        for it_slt=1:length(Ind_shortlifetime)
+          neut1(Ind_shortlifetime(it_slt))=Prod(1,Ind_shortlifetime(it_slt))/Loss(1,Ind_shortlifetime(it_slt));
+        end
+      end         
+      c(2,:)=c(2,:)-b(2,:).*neut1;
 */
   }
 
