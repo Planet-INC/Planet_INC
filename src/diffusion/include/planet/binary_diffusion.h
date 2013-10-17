@@ -26,7 +26,6 @@
 
 //Antioch
 #include "antioch/species_enum.h"
-#include "antioch/metaprogramming_decl.h"
 #include "antioch/cmath_shims.h"
 
 //Planet
@@ -201,13 +200,13 @@ void BinaryDiffusion<CoeffType>::set_parameters(const CoeffType &par1, const Coe
 
   switch(_diffusion_model)
   {
-    case Massman:
+    case DiffusionType::Massman:
     {
       _D01  = par1;
       _beta = par2;
       return;
     }
-    case Wilson:
+    case DiffusionType::Wilson:
     {
       _D01 = par1 * Antioch::ant_pow(Constants::Convention::T_standard<CoeffType>(),par2 + CoeffType(1.L)) * 
                     Constants::Universal::kb<CoeffType>() / 
@@ -215,7 +214,7 @@ void BinaryDiffusion<CoeffType>::set_parameters(const CoeffType &par1, const Coe
       _beta = par2 + CoeffType(1.L);
       return;
     } 
-    case Wakeham:
+    case DiffusionType::Wakeham:
     {
        _D01 = par1 * Antioch::ant_pow(Constants::Convention::T_standard<CoeffType>(),par2);
        _beta = par2;

@@ -52,6 +52,20 @@ namespace Planet
     {
       return 1.3806488e-23;
     }
+
+    /*!
+     * Gravitationnal constant, giving
+     * radius of body (km),
+     * altitude (in km) and 
+     * mass (kg)
+     */
+    template<typename CoeffType>
+    inline
+    CoeffType g(const CoeffType &radius, const CoeffType &alt, const CoeffType &mass)
+    {
+       return Constants::Universal::G<CoeffType>() * mass / (StateType(1e6L) * (radius + alt) * (radius + alt));
+    }
+
     } //end namespace Universal
 
     namespace Saturn

@@ -6,11 +6,14 @@ check_PROGRAMS  =
 check_PROGRAMS += atmosphere_tests
 check_PROGRAMS += photon_tests
 check_PROGRAMS += chapman_tests
-check_PROGRAMS += solver_test
+check_PROGRAMS += tests
+#check_PROGRAMS += solver_test
 
 AM_CPPFLAGS  = 
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/atmosphere/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/kinetics/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
@@ -29,14 +32,16 @@ LDADD = $(top_builddir)/src/libplanet.la
 atmosphere_tests_SOURCES = atmosphere_tests.C
 photon_tests_SOURCES = photon_tests.C
 chapman_tests_SOURCES = chapman_tests.C
-solver_tests_SOURCES = solver_test.C
+tests_SOURCES = tests.C
+#solver_tests_SOURCES = solver_test.C
 
 #Define tests to actually be run
 TESTS = 
 TESTS  += atmosphere_tests
 TESTS  += photon_tests
 TESTS  += chapman_tests
-TESTS  += solver_test
+TESTS  += tests
+#TESTS  += solver_test
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

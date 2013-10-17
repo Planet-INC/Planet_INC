@@ -25,7 +25,6 @@
 #define _PLANET_MOLECULAR_DIFFUSION_EVALUATOR_
 
 //Antioch
-#include "antioch/metaprogramming_decl.h"
 #include "antioch/cmath_shims.h"
 #include "antioch/chemical_mixture.h"
 

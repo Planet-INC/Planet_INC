@@ -31,6 +31,14 @@ namespace Planet
         CrossSection(const VectorCoeffType &x, const VectorCoeffType &y);
         ~CrossSection();
 
+        //!sets the abscissa
+        template<typename VectorStateType>
+        void set_abscissa(const VectorStateType &x);
+
+        //!sets the cross section
+        template<typename VectorStateType>
+        void set_cross_section(const VectorStateType &cs);
+
         template<typename VectorStateType>
         void update_cross_section(const VectorStateType &custom_x);
 
@@ -41,7 +49,7 @@ namespace Planet
         const VectorCoeffType cross_section() const;
 
         //!\return the cross-section on custom grid
-        const VectorCoeffType cross_section_on_custom_grid() const;
+        const VectorCoeffType &cross_section_on_custom_grid() const;
   };
 
   template<typename VectorCoeffType>
@@ -60,6 +68,22 @@ namespace Planet
   _cross_section(rhs.cross_section()),
   {
     return;
+  }
+
+  template<typename VectorCoeffType>
+  template<typename VectorStateType>
+  inline
+  void CrossSection<VectorCoeffType>::set_abscissa(const VectorStateType &x)
+  {
+      _abscissa = x;
+  }
+
+  template<typename VectorCoeffType>
+  template<typename VectorStateType>
+  inline
+  void CrossSection<VectorCoeffType>::set_cross_section(const VectorStateType &cs)
+  {
+     _cross_section = cs;
   }
 
   template<typename VectorCoeffType>
@@ -89,7 +113,7 @@ namespace Planet
 
   template<typename VectorCoeffType>
   inline
-  const VectorCoeffType CrossSection<VectorCoeffType>::cross_section_on_custom_grid() const
+  const VectorCoeffType &CrossSection<VectorCoeffType>::cross_section_on_custom_grid() const
   {
      return _cross_section_on_custom_grid;
   }

@@ -21,17 +21,17 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_PHOTON_FLUX_H
-#define PLANET_PHOTON_FLUX_H
+#ifndef PLANET_PHOTON_OPACITY_H
+#define PLANET_PHOTON_OPACITY_H
 
 //Planet
 #include "planet/chapman.h"
+#include "planet/atmospheric_mixture.h"
 
 //Antioch
 #include "antioch/antioch_asserts.h"
-#include "antioch/metaprogramming_decl.h"
-#include "antioch/metaprogramming.h"
 #include "antioch/cmath_shims.h"
+#include "antioch/particle_flux.h"
 
 //C++
 #include <vector>
@@ -40,198 +40,77 @@
 namespace Planet
 {
 
-//forward declarations
-template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-class Atmosphere;
-
   template <typename CoeffType = double, 
-            typename VectorCoeffType = std::vector<CoeffType>, 
             typename MatrixCoeffType = std::vector<std::vector<CoeffType> >
            >
-  class PhotonFlux
+  class PhotonOpacity
   {
         private:
-          PhotonFlux();
-          void make_lambda_map(const VectorCoeffType &lambda);
+          PhotonOpacity(){antioch_error();return;}
 
-          VectorCoeffType _phy_at_top;
-          MatrixCoeffType _phy; //alt, lambda
+          MatrixCoeffType _tau;
 
-          std::map<CoeffType,unsigned int> _map_lambda;
-          std::map<unsigned int,CoeffType> _inverse_map_lambda;
-
-          Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> *_atm;
+          //dependencies
           Chapman<CoeffType> &_chap;
-          
+
         public:
-          PhotonFlux(Chapman<CoeffType> &chapman, Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> *atm = NULL);
-          ~PhotonFlux();
+          PhotonOpacity(Chapman<CoeffType> &chapman);
+          ~PhotonOpacity();
 
-//!
-          void set_photon_flux_top_atmosphere(const VectorCoeffType &lambda, const VectorCoeffType& phyAU, const CoeffType& dSunTopAtm);
-//! update photon flux at all altitudes
-          void update_photon_flux();
-//! photon flux at altitude z
-          VectorCoeffType phy(const CoeffType& z) const;
-//! tau = Chap * sum_species sigma(lambda) int_z^top n_s(z')dz'
-          VectorCoeffType tau(const CoeffType& z, const VectorCoeffType &sum_densities) const;
+          //! tau = Chap * sum_species sigma(lambda) int_z^top n_s(z')dz'
+          template<typename StateType, typename VectorStateType, typename MatrixStateType>
+          void update_tau(const StateType &a, const VectorStateType &totdens, const MatrixStateType &sigma);
 
-          const std::map<CoeffType,unsigned int> map_lambda()         const {return _map_lambda;}
-          const std::map<unsigned int,CoeffType> inverse_map_lambda() const {return _inverse_map_lambda;}
-
-          void set_atmosphere(Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> *atm);
-          void set_chapman(const Chapman<CoeffType> &chap);
-
-          //!lambda vector
-          const VectorCoeffType lambda() const;
-          //!phy at top vector
-          const VectorCoeffType phy_at_top() const;
-
+          //!\returns photon opacity
+          const MatrixCoeffType &tau() const;
   };
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename MatrixCoeffType>
   inline
-  PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonFlux(Chapman<CoeffType> &chapman, 
-                                                                    Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> *atm):
-  _atm(atm),_chap(chapman)
+  PhotonOpacity<CoeffType,MatrixCoeffType>::PhotonOpacity(Chapman<CoeffType> &chapman):
+  _chap(chapman)
   {
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename MatrixCoeffType>
   inline
-  PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonFlux()
+  PhotonOpacity<CoeffType,MatrixCoeffType>::~PhotonOpacity()
   {
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename MatrixCoeffType>
   inline
-  PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::~PhotonFlux()
+  const MatrixCoeffType &PhotonOpacity<CoeffType,VectorCoeffType>::tau() const
   {
-     return;
+     return _tau;
   }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const VectorCoeffType PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::phy_at_top() const
-  {
-     return _phy_at_top;
-  }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const VectorCoeffType PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::lambda() const
-  {
-     VectorCoeffType out_lambda;
-     for(unsigned int i = 0; i < _inverse_map_lambda.size(); i++)
-     {
-        out_lambda.push_back(_inverse_map_lambda.at(i));
-     }
 
-     return out_lambda;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename MatrixStateType>
   inline
-  VectorCoeffType PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::tau(const CoeffType& z, const VectorCoeffType &sum_densities) const
+  void PhotonOpacity<CoeffType,VectorCoefftype>::update_tau(const StateType &a, const MatrixStateType &totdens, const MatrixStateType &sigma)
   {
-    VectorCoeffType tau;
-    tau.resize(_map_lambda.size(),0.L);
-    for(unsigned int ilambda = 0; ilambda < _map_lambda.size(); ilambda++) //lambda loop
-    {
-      for(unsigned int ns = 0; ns < _atm->n_photon_absorbing_species(); ns++)
+      _tau.clear();
+      _tau.resize(totdens[0].size());
+      for(unsigned int iz = 0; iz < totdens[0].size(); iz++)
       {
-         tau[ilambda] += sum_densities[ns] * _atm->photon_sigma(ns).y_on_custom()[ilambda]; //filtering
+        _tau[iz].resize(sigma[0].size(),0.L);
+        for(unsigned int il = 0; il < sigma[0].size(); il++)
+        {
+          for(unsigned int s = 0; s < totdens.size(); s++)
+          {
+             _tau[iz][il] += sigma[s][ilambda] * totdens[s][iz];
+          }
+          _tau[iz][il] *= _chap.chapman(a);
+        }
       }
-      tau[ilambda] *= _chap.chapman(_atm->a(z));
-    }
-
-    return tau;
+      return;
   }
 
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  VectorCoeffType PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::phy(const CoeffType& z) const
-  {
-     antioch_assert_less_equal(_phy.size(),_atm->altitude_map().size());
-     return _phy[_atm->altitude_map().at(z)];
-  }
-
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::update_photon_flux()
-  {
-
-     antioch_assert_equal_to(_map_lambda.size(),_phy_at_top.size());
-     _phy.resize(_atm->altitude_map().size());
-     VectorCoeffType sum_densities;
-     sum_densities.resize(_atm->n_neutral_species(),0.L);
-//from top to bottom
-     for(unsigned int nalt = 0; nalt < _atm->altitude_map().size(); nalt++)
-     {
-       _phy[nalt].resize(_map_lambda.size(),0.L);
-//add altitude densities
-       for(unsigned int nabs = 0; nabs < _atm->n_photon_absorbing_species(); nabs++)
-       {
-         sum_densities[nabs] += _atm->neutral_molar_density(nabs,nalt);
-       }
-       VectorCoeffType tau_on_the_fly = this->tau(_atm->altitude(nalt),sum_densities);
-
-       for(unsigned int ilambda = 0; ilambda < _map_lambda.size(); ilambda++)
-       {
-          _phy[nalt][ilambda] = _phy_at_top[ilambda] * Antioch::ant_exp(- tau_on_the_fly[ilambda]);
-       }
-     }
-
-     return; 
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::set_atmosphere(Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType> *atm)
-  {
-     _atm = atm;
-     return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::set_chapman(const Chapman<CoeffType> &chap)
-  {
-     _chap = chap;
-     return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::make_lambda_map(const VectorCoeffType &lambda)
-  {
-     for(unsigned int i = 0; i < lambda.size(); i++)
-     {
-        _map_lambda[lambda[i]] = i;
-        _inverse_map_lambda[i] = lambda[i];
-     }
-
-     return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux_top_atmosphere(const VectorCoeffType &lambda, 
-                                                                                             const VectorCoeffType& phyAU, 
-                                                                                             const CoeffType& dSunTopAtm)
-  {
-     antioch_assert_equal_to(lambda.size(),phyAU.size());
-     this->make_lambda_map(lambda);
-     _phy_at_top.resize(phyAU.size(),0.L);
-     for(unsigned int i = 0; i < phyAU.size(); i++)
-     {
-        _phy_at_top[i] = phyAU[i]/(dSunTopAtm * dSunTopAtm);
-     }
-  }
 
 }
 

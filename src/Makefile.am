@@ -33,13 +33,22 @@ include_HEADERS =
 
 # core
 include_HEADERS += core/include/planet/diffusion_enum.h
+include_HEADERS += core/include/planet/altitude.h
+include_HEADERS += core/include/planet/atmospheric_mixture.h
 
 # photon_flux
 include_HEADERS += photon_flux/include/planet/chapman.h
-include_HEADERS += photon_flux/include/planet/photon_flux.h
+include_HEADERS += photon_flux/include/planet/photon_opacity.h
+include_HEADERS += photon_flux/include/planet/photon_evaluator.h
 
 # absorption
-include_HEADERS += absorption/include/planet/absorption_grid.h
+include_HEADERS += absorption/include/planet/cross_section.h
+
+# kinetics
+include_HEADERS += kinetics/include/planet/atmospheric_kinetics.h
+
+# temperature
+include_HEADERS += temperature/include/planet/atmospheric_temperature.h
 
 # atmosphere
 include_HEADERS += atmosphere/include/planet/atmosphere.h
@@ -47,6 +56,8 @@ include_HEADERS += atmosphere/include/planet/atmosphere.h
 # diffusion
 include_HEADERS += diffusion/include/planet/binary_diffusion.h
 include_HEADERS += diffusion/include/planet/molecular_diffusion_evaluator.h
+include_HEADERS += diffusion/include/planet/eddy_diffusion_evaluator.h
+include_HEADERS += diffusion/include/planet/diffusion_evaluator.h
 
 # solvers
 include_HEADERS += solver/include/planet/crank_nicholson.h
@@ -72,6 +83,8 @@ AM_CPPFLAGS  =
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/atmosphere/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/kinetics/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include

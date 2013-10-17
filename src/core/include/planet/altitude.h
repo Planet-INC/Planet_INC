@@ -79,31 +79,33 @@ namespace Planet
   {
      _altitudes.clear();
      _map_altitudes.clear();
-     for(CoeffType z = _alt_min, unsigned int iz = 0; z <= _alt_max; z += _alt_step, iz++)
+     unsigned int iz(0);
+     for(CoeffType z = _alt_min; z <= _alt_max; z += _alt_step)
      {
         _altitudes.push_back(z);
         _map_altitudes[z] = iz;
+        iz++;
      }
      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
-  const Altitude<CoeffType,VectorCoeffType>::CoeffType alt_min() const
+  const CoeffType Altitude<CoeffType,VectorCoeffType>::alt_min() const
   {
      return _alt_min;
   }
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
-  const Altitude<CoeffType,VectorCoeffType>::CoeffType alt_step() const
+  const CoeffType Altitude<CoeffType,VectorCoeffType>::alt_step() const
   {
      return _alt_step;
   }
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
-  const Altitude<CoeffType,VectorCoeffType>::CoeffType alt_max() const
+  const CoeffType Altitude<CoeffType,VectorCoeffType>::alt_max() const
   {
      return _alt_max;
   }
