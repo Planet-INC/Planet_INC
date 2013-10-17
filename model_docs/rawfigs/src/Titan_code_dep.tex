@@ -1,0 +1,79 @@
+\documentclass{article}
+\usepackage{tikz,geometry}
+\usetikzlibrary{trees,backgrounds,calc,fit}
+\geometry{
+paperwidth=20cm,paperheight=7.5cm,
+left=0pt,right=0pt,top=1pt,bottom=0pt}
+\begin{document}
+\centering
+\tikzset{
+limit/.style={ultra thick, loosely dashed, gray!50}
+}
+\begin{tikzpicture}[every node/.append style={anchor=base}]%,fill=white,opacity=0.8}]
+\node (atm) at (0,0) {Atmosphere} [grow'=up, sibling distance=6cm]
+        child {
+                node {diffusion}
+                 [sibling distance=3cm]
+                  child {
+                           node {molecular diffusion} child {
+                                                                node {binary diffusion}
+                                                             }
+                        }
+                  child {
+                           node {eddy diffusion}
+                        }
+              }
+        child {
+                node (kin) {kinetics} [sibling distance=3.2cm]
+                        child {
+                                 node (neukineval) {kinetics evaluator}
+                                         child {
+                                                  node (neureac) {reaction set}
+                                                        child {
+                                                                 node (neucomp) {neutral composition}
+                                                              }
+                                               }
+                              }
+                        child {
+                                 node (ionkineval) {kinetics evaluator}
+                                         child {
+                                                  node (ionreac) {reaction set}
+                                                        child {
+                                                                 node (ioncomp) {ionic composition}
+                                                              }
+                                               }
+                              }
+              }
+        child[sibling distance=3cm] 
+             { child
+                { child [level distance=1.7cm]
+                    { 
+                      node (temp) {temperature}
+                         child[level distance=1.6cm] {
+                                 node (alt) {altitude}
+                               }
+                     }
+                 }
+              }
+        child[sibling distance=4cm] 
+              {
+                child {node (atmmix) {atmospheric mixture}}
+              }
+;
+\coordinate (gauche) at (current bounding box.west);
+\coordinate (droite) at (current bounding box.east);
+\coordinate (l1)     at ($(neucomp)!0.5!(neureac)$);
+\coordinate (l2)     at ($(neureac)!0.5!(neukineval)$);
+\coordinate (l3)     at ($(neukineval)!0.5!(kin)$);
+\coordinate (l4)     at ($(kin)!0.5!(atm)$);
+\begin{pgfonlayer}{background}
+\node[fit= (neucomp) (ioncomp) (neukineval) (ionkineval),draw,rounded corners=1cm,inner sep=5pt,fill=gray!10] {};
+\draw (alt) -| (atmmix);
+\draw (temp) -- (atmmix);
+\draw (neucomp.-20) ..controls (kin) .. (atmmix);
+\draw (ioncomp.-15) ..controls (ionkineval.north east) .. (atmmix);
+\foreach \level in {1,...,4}
+  \draw[limit] ( gauche |- l\level)  -- (l\level -| droite);
+\end{pgfonlayer}
+\end{tikzpicture}
+\end{document}
