@@ -13,20 +13,16 @@ limit/.style={ultra thick, loosely dashed, gray!50}
 \node (atm) at (0,0) {Atmosphere} [grow'=up]
         child[sibling distance=5cm] {
           child {
-          child {
-          child {
                 node (diff) {diffusion}
                  [sibling distance=3cm]
                   child {
-                           node {molecular diffusion} child {
-                                                                node {binary diffusion}
-                                                             }
+                           node (eddy) {eddy diffusion}
                         }
                   child {
-                           node {eddy diffusion}
+                           node (moldiff) {molecular diffusion} child {
+                                                                node (bindiff) {binary diffusion}
+                                                             }
                         }
-              }
-              }
               }
               }
         child[sibling distance=3.5cm] {
@@ -109,7 +105,7 @@ limit/.style={ultra thick, loosely dashed, gray!50}
 \coordinate (gauche) at (current bounding box.west);
 \coordinate (droite) at (current bounding box.east);
 \coordinate (l1)     at ($(alt)!0.5!(hvtau)$);
-\coordinate (l2)     at ($(temp)!0.5!(diff)$);
+\coordinate (l2)     at ($(temp)!0.5!(atmmix)$);
 \coordinate (l3)     at ($(atmmix)!0.5!(hvfeval)$);
 \coordinate (l4)     at ($(hvfeval)!0.5!(neukineval)$);
 \coordinate (l5)     at ($(neukineval)!0.5!(kin)$);
@@ -123,6 +119,14 @@ limit/.style={ultra thick, loosely dashed, gray!50}
 \draw (ioncomp) -- (atmmix);
 \draw (alt) ..controls(atmmix.north east).. (hvfeval);
 \draw (atmmix) -- (hvfeval);
+\draw (atmmix) -- (moldiff);
+\draw (temp) -- (moldiff);
+\draw (alt) ..controls ([yshift=-20pt]temp.south east) .. (moldiff);
+\draw (atmmix) ..controls(moldiff.north west).. (eddy);
+\draw (alt) ..controls ([yshift=-10pt]ionreac.south east) and (bindiff.south east).. (eddy);
+\draw (atmmix) -- (diff);
+\draw (temp) -- (diff);
+\draw (alt) -- (diff);
 \draw[dashed] (hvfeval) ..controls([yshift=1cm]ionkineval.north).. (neukineval);
 \draw[dashed] (hvfeval) -- (ionkineval);
 \foreach \level in {1,...,5}
