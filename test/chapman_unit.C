@@ -37,12 +37,10 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
   if(std::abs((theory-cal)/cal) < tol)return 0;
-  std::cout << "failed test:\n"
-            << "theory: " << theory
+  std::cout << "failed test: " << words << "\n"
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
             << "\ntolerance: " << tol << std::endl;
-  std::cout << words << std::endl;
   return 1;
 }
 
@@ -64,7 +62,6 @@ int test()
 {
   Planet::Chapman<Scalar> chap;
 
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
   int return_flag(0);
   Scalar x(70e3L);// (R + z) / H
   for(Scalar chi = 30.; chi <= 75.; chi += 5.)// Chap = 1/cos(chi)
@@ -73,58 +70,37 @@ int test()
     chap.set_chi(chi);
     Scalar chap_one = chap.chapman();
     Scalar chap_two = chap.chapman(x);
+    Scalar chap_three = chap();
+    Scalar chap_four = chap(x);
     Scalar chap_theo = 1.L/std::cos(rchi);
-    if(std::abs((chap_theo - chap_one)/chap_theo) > tol)
-    {
-      std::cout << "failed test: Chapman low angle\n"
-                << "chi: " << chi
-                << std::setprecision(25)
-                << "\ntheory: " << chap_theo
-                << "\ncalculated: " << chap_one
-                << "\ndifference: " << std::abs((chap_theo-chap_one)/chap_theo)
-                << "\ntolerance: " << tol << std::endl;
-      return_flag = 1;
-    }
-    if(std::abs((chap_theo - chap_two)/chap_theo) > tol)
-    {
-      std::cout << "failed test: Chapman low angle\n"
-                << "chi: " << chi
-                << std::setprecision(25)
-                << "theory: " << chap_theo
-                << "\ncalculated: " << chap_two
-                << "\ndifference: " << std::abs((chap_theo-chap_two)/chap_two)
-                << "\ntolerance: " << tol << std::endl;
-      return_flag = 1;
-    }
+    return_flag = return_flag &&
+                  check_test(chap_theo,chap_one,"Chapman low angles") &&
+                  check_test(chap_theo,chap_two,"Chapman low angles") &&
+                  check_test(chap_theo,chap_three,"Chapman low angles") &&
+                  check_test(chap_theo,chap_four,"Chapman low angles");
   }
 
   for(Scalar chi = 80.L; chi <= 89.L; chi += 2.L)// Chap = sqrt(pi*x/2)...
   {
     Scalar rchi = Planet::Constants::pi<Scalar>()/180.L * chi;
     chap.set_chi(chi);
-    Scalar chap_cal = chap.chapman(x);
+    Scalar chap_one = chap.chapman(x);
+    Scalar chap_two = chap(x);
     Scalar chap_theo = std::sqrt(Planet::Constants::pi<Scalar>() * x /2.L)        *
                        (1.L - erf(std::sqrt(x/2.L) * std::abs(std::cos(rchi)) ) ) *
                        std::exp(x/2.L * std::pow(std::cos(rchi),2));
 
-    if(std::abs((chap_theo - chap_cal)/chap_theo) > tol)
-    {
-      std::cout << "failed test: Chapman med angle\n"
-                << "chi: " << chi
-                << std::setprecision(25)
-                << "\ntheory: " << chap_theo
-                << "\ncalculated: " << chap_cal
-                << "\ndifference: " << std::abs((chap_theo-chap_cal)/chap_theo)
-                << "\ntolerance: " << tol << std::endl;
-      return_flag = 1;
-    }
+    return_flag = return_flag &&
+                  check_test(chap_theo,chap_one,"Chapman medium angles") &&
+                  check_test(chap_theo,chap_two,"Chapman medium angles");
   }
 
   for(Scalar chi = 92.; chi <= 180.; chi += 2.)// Chap = sqrt(2*pi*x)...
   {
     Scalar rchi = Planet::Constants::pi<Scalar>()/180.L * chi;
     chap.set_chi(chi);
-    Scalar chap_cal = chap.chapman(x);
+    Scalar chap_one = chap.chapman(x);
+    Scalar chap_two = chap.chapman(x);
     Scalar chap_theo = std::sqrt(Planet::Constants::pi<Scalar>() * x * 2.L) * 
                 (
                    std::sqrt(std::sin(rchi)) * std::exp(x * (1.L - std::sin(rchi)) ) -
@@ -133,18 +109,10 @@ int test()
                                      (1.L - erf(std::sqrt(x/2.L) * std::abs(std::cos(rchi))))
                                   )
                 );
-    if(std::abs((chap_theo - chap_cal)/chap_theo) > tol)
-    {
-      std::cout << "failed test: Chapman high angle\n"
-                << "chi: " << chi
-                << std::scientific << std::setprecision(25)
-                << "\ntheory: " << chap_theo
-                << "\ncalculated: " << chap_cal
-                << "\ndifference: " << std::abs((chap_theo-chap_cal)/chap_theo)
-                << "\ntolerance: " << tol << std::endl;
-      return_flag = 1;
+    return_flag = return_flag &&
+                  check_test(chap_theo,chap_one,"Chapman high angles") &&
+                  check_test(chap_theo,chap_two,"Chapman high angles");
     }
-  }
 
   return return_flag;
 }
