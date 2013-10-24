@@ -57,92 +57,84 @@ class Atmosphere{
 
         Atmosphere(){antioch_error();return;}
 
-//caracteristics
-        VectorCoeffType _exobase;
-
-
 //dependencies
 
 //altitude grid
         Altitude<CoeffType,VectorCoeffType> &_altitude;
-
-//composition
-        AtmosphericMixture<CoeffType,VectorCoeffType> &_composition;
-
-//kinetics, photo/electrochemistry swallowed
-        AtmosphericKinetics<CoeffType> &_kinetics;
-
 //temperature
         AtmosphericTemperature<CoeffType,VectorCoeffType> &_temperature;
-
+//composition
+        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
+//kinetics, photo/electrochemistry swallowed in Antioch
+        AtmosphericKinetics<CoeffType> &_kinetics;
 //photon
-        PhotonEvaluator<CoeffType,VectorCoeffType> &_photon_eval;
+        PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_photon_eval;
 //electron
-
+//        ElectronEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_electron_eval;
 //diffusion, bimolecular + eddy
         DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_diffusion;
 
+        //!initialize everything
+        void initialize_atmosphere();
 
       public:
+        //!
+        Atmosphere(Altitude<CoeffType,VectorCoeffType> &alt,
+                   AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
+                   AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                   AtmosphericKinetics<CoeffType> &kin,
+                   PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux,
+                   DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &diff);
 
-        //! \return temperature at given altitude
-        template <typename StateType>
-        ANTIOCH_AUTO(StateType)
-        temperature(const StateType &z) const 
-        ANTIOCH_AUTOFUNC(StateType,_temperature[_altitudes.at(z)])
+        //!
+        ~Atmosphere();
 
-        //! \return pressure at given altitude
-        template <typename StateType>
-        ANTIOCH_AUTO(StateType)
-        pressure(const StateType &z) const 
-        ANTIOCH_AUTOFUNC(StateType,_total_density[_altitudes.at(z)] * 1e-6 / Antioch::Constants::Avogadro<StateType>() * //cm-3 -> m-3 -> mol/m-3
-                                   Antioch::Constants::R_universal<StateType>() * 1e-3 * // J/kmol/K -> J/mol/K
-                                   _temperature[_altitudes.at(z)]) // K
+        //! \return pressure at altitude iz, p = nRT
+        CoeffType pressure(unsigned int iz) const;
 
-        //! \return a factor at altitude z, a = (R + z)/H
+        //! ideal gas equation
+        //
+        //BEWARE, once Antioch unit merged, R in SI!!!
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
-        a(const StateType &z) const 
-        ANTIOCH_AUTOFUNC(StateType,StateType(1e3L)*(Constants::Titan::radius<StateType>() + z)/this->H(z))
+        p_ideal_gas(const StateType &n, const StateType &T) const
+        ANTIOCH_AUTOFUNC(StateType, n * Antioch::Constants::R_universal<CoeffType>() * CoeffType(1e-3) * T) // J/kmol/K -> J/mol/K
 
-        //!
-        unsigned int n_neutral_species()          const;
-        //!
-        unsigned int n_ionic_species()            const;
-        //!
-        unsigned int n_photon_absorbing_species() const;
-
-        //!printing methods
+        //!printing composition
         void print_composition(std::ostream &out) const;
-        void print_temperature(std::ostream &out) const;
-        void print_photon_flux(std::ostream &out) const;
 
+        //!printing temperature
+        void print_temperature(std::ostream &out) const;
+
+        //!printing photon
+        void print_photon_flux(std::ostream &out) const;
+        
 };
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::exobase_altitude(VectorCoeffType &exo_altitudes) const
+CoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::pressure(unsigned int iz) const
 {
-  exo_altitudes.resize(_neutral_composition.n_species(),0.L);
-  for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
-  {
-      exo_altitudes[s] = exobase_altitude(s);
-  }
-
-  return;  
+  return p_ideal_gas(_composition.total_density()[iz] * CoeffType(1e-6) / Antioch::Constants::Avogadro<CoeffType>(), * //cm-3 -> m-3 -> mol/m-3
+                     _temperature.altitudes()[iz]);
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::Atmosphere(const std::vector<std::string> &neutral_spec,
-                                  const std::vector<std::string> &ionic_spec,
-                                  PhotonFlux<CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux):
-  _neutral_composition(neutral_spec),
-  _ionic_composition(ionic_spec),
-  _hv_flux(hv_flux),
-  _mol_diffusion(_neutral_composition)
+Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::Atmosphere(Altitude<CoeffType,VectorCoeffType> &alt,
+                                  AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
+                                  AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                                  AtmosphericKinetics<CoeffType> &kin,
+                                  PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux,
+                                  DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &diff):
+        _altitude(alt),
+        _temperature(temp),
+        _composition(comp),
+        _kinetics(kin),
+        _photon_eval(hv_flux),
+        _diffusion(diff)
 {
-  _hv_flux.set_atmosphere(this);
+  initialize_atmosphere();
   return;
 }
 
@@ -153,6 +145,16 @@ Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::~Atmosphere()
   return;
 }
 
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+inline
+void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::initialize_atmosphere()
+{
+   _temperature.initialize();
+   _composition.initialize();
+   _kinetics.initialize();
+   _photon_eval.initialize();
+   _diffusion.initialize();
+}
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
@@ -160,28 +162,28 @@ void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::print_composition(st
 {
   out << "altitude dens ";
 //neutral
-  for(unsigned int n = 0; n < this->n_neutral_species(); n++)
+  for(unsigned int n = 0; n < _composition.neutral_composition().n_species(); n++)
   {
-      out << _neutral_composition.species_inverse_name_map().at(_neutral_composition.species_list()[n]) << " ";
+      out << _composition.neutral_composition().species_inverse_name_map().at(_composition.neutral_composition().species_list()[n]) << " ";
   }
 //ionic
-  for(unsigned int n = 0; n < this->n_ionic_species(); n++)
+  for(unsigned int n = 0; n < _composition.ionic_composition().n_species(); n++)
   {
-      out << _ionic_composition.species_inverse_name_map().at(_ionic_composition.species_list()[n]) << " ";
+      out << _composition.ionic_composition().species_inverse_name_map().at(_composition.ionic_composition().species_list()[n]) << " ";
   }
   out << "(km cm-3 -)" << std::endl;
-  for(unsigned int nalt = 0; nalt < _altitudes.size(); nalt++)
+  for(unsigned int nalt = 0; nalt < _altitude.altitudes().size(); nalt++)
   {
-     out << _altitudes_list[nalt] << " " << _total_density[nalt] << " ";
+     out << _altitude.altitudes()[nalt] << " " << _composition.total_density()[nalt] << " ";
 //neutral
-    for(unsigned int n = 0; n < this->n_neutral_species(); n++)
+    for(unsigned int n = 0; n < _composition.neutral_composition().n_species(); n++)
     {
-        out << _neutral_molar_fraction[n][nalt] << " ";
+        out << _composition.neutral_molar_fraction()[n][nalt] << " ";
     }
 //ionic
-    for(unsigned int n = 0; n < this->n_ionic_species(); n++)
+    for(unsigned int n = 0; n < _composition.ionic_composition().n_species(); n++)
     {
-        out << _ionic_molar_fraction[n][nalt] << " ";
+        out << _composition.ionic_molar_fraction()[n][nalt] << " ";
     }
     out << std::endl;
   }
@@ -192,9 +194,9 @@ inline
 void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::print_temperature(std::ostream &out) const
 {
   out << "Temperature altitudes (K km)" << std::endl; 
-  for(unsigned int nalt = 0; nalt < _altitudes.size(); nalt++)
+  for(unsigned int nalt = 0; nalt < _altitude.altitudes().size(); nalt++)
   {
-    out << _temperature[nalt] << " " << _altitudes_list[nalt] << std::endl;
+    out << _temperature.neutral_temperature()[nalt] << " " << _altitude.altitudes()[nalt] << std::endl;
   }
 }
 
@@ -203,37 +205,15 @@ inline
 void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::print_photon_flux(std::ostream &out) const
 {
   out << "Altitude lambda photon_flux (K nm W/m2/nm)" << std::endl; 
-  _hv_flux.update_photon_flux();
-  VectorCoeffType lambda = _hv_flux.lambda();
-  for(unsigned int nalt = 0; nalt < _altitudes.size(); nalt++)
+  for(unsigned int nalt = 0; nalt < _altitude.altitudes().size(); nalt++)
   {
-    VectorCoeffType phy = _hv_flux.phy(_altitudes_list[nalt]);
-    for(unsigned int il = 0; il < lambda.size(); il++)
+    for(unsigned int il = 0; il < _photon_eval.photon_flux()[nalt].abscissa().size(); il++)
     {
-      out << _altitudes_list[nalt] << " " << lambda[il] << " " << phy[il] << std::endl;
+      out << _altitude.altitudes()[nalt] << " " 
+          << _photon_eval.photon_flux()[nalt].abscissa()[il] << " " 
+          << _photon_eval.photon_flux()[nalt].flux()[il] << std::endl;
     }
   }
-}
-
-template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-template<typename StateType, typename VectorStateType>
-inline
-void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_mass_fraction(const StateType &z, VectorStateType &neutral_y) const
-{
-  neutral_y.resize(_neutral_molar_fraction.at(_altitudes.at(z)).size(),0.L);
-  StateType mass_sum;
-  Antioch::set_zero(mass_sum);
-  for(unsigned int s = 0; s < this->n_neutral_species(); s++)
-  {
-    neutral_y[s] = _neutral_molar_fraction.at(_altitudes.at(z)).at(s) * this->_neutral_composition.M(s);
-    mass_sum += neutral_y[s];
-  }
-  for(unsigned int s = 0; s < this->n_neutral_species(); s++)
-  {
-    neutral_y[s] /= mass_sum;
-  }
-
-  return;
 }
 
 } //namespace Planet

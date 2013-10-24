@@ -26,7 +26,7 @@
 
 //Planet
 #include "planet/chapman.h"
-#include "planet/atmospheric_mixture.h"
+#include "planet/altitude.h"
 
 //Antioch
 #include "antioch/antioch_asserts.h"
@@ -41,7 +41,8 @@ namespace Planet
 {
 
   template <typename CoeffType = double, 
-            typename MatrixCoeffType = std::vector<std::vector<CoeffType> >
+            typename VectorCoeffType = std::vector<CoeffType>, 
+            typename MatrixCoeffType = std::vector<VectorCoeffType> 
            >
   class PhotonOpacity
   {
@@ -51,61 +52,65 @@ namespace Planet
           MatrixCoeffType _tau;
 
           //dependencies
-          Chapman<CoeffType> &_chap;
+          Altitude<CoeffType,VectorCoeffType> &_altitude;
+          Chapman<CoeffType> &_chapman;
 
         public:
-          PhotonOpacity(Chapman<CoeffType> &chapman);
+          PhotonOpacity(Altitude<CoeffType,VectorCoeffType> &alt, Chapman<CoeffType> &chapman);
           ~PhotonOpacity();
 
           //! tau = Chap * sum_species sigma(lambda) int_z^top n_s(z')dz'
-          template<typename StateType, typename VectorStateType, typename MatrixStateType>
-          void update_tau(const StateType &a, const VectorStateType &totdens, const MatrixStateType &sigma);
+          template<typename VectorStateType, typename MatrixStateType>
+          void update_tau(const VectorStateType &a, const MatrixStateType &sumdens, const MatrixStateType &sigma);
 
           //!\returns photon opacity
           const MatrixCoeffType &tau() const;
   };
 
-  template<typename CoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  PhotonOpacity<CoeffType,MatrixCoeffType>::PhotonOpacity(Chapman<CoeffType> &chapman):
-  _chap(chapman)
+  PhotonOpacity<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonOpacity(Altitude<CoeffType,VectorCoeffType> &alt,
+                                                          Chapman<CoeffType> &chapman):
+  _altitude(alt),
+  _chapman(chapman)
   {
      return;
   }
 
-  template<typename CoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  PhotonOpacity<CoeffType,MatrixCoeffType>::~PhotonOpacity()
+  PhotonOpacity<CoeffType,VectorCoeffType,MatrixCoeffType>::~PhotonOpacity()
   {
      return;
   }
 
-  template<typename CoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const MatrixCoeffType &PhotonOpacity<CoeffType,VectorCoeffType>::tau() const
+  const MatrixCoeffType &PhotonOpacity<CoeffType,VectorCoeffType,MatrixCoeffType>::tau() const
   {
      return _tau;
   }
 
 
 
-  template<typename CoeffType, typename MatrixCoeffType>
-  template<typename StateType, typename MatrixStateType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename VectorStateType, typename MatrixStateType>
   inline
-  void PhotonOpacity<CoeffType,VectorCoefftype>::update_tau(const StateType &a, const MatrixStateType &totdens, const MatrixStateType &sigma)
+  void PhotonOpacity<CoeffType,VectorCoeffType,MatrixCoeffType>::update_tau(const VectorStateType &a, const MatrixStateType &sumdens, const MatrixStateType &sigma)
   {
+      antioch_assert_equal_to(_altitude.altitudes().size(),a.size());
       _tau.clear();
-      _tau.resize(totdens[0].size());
-      for(unsigned int iz = 0; iz < totdens[0].size(); iz++)
+      _tau.resize(_altitude.altitudes().size());
+      for(unsigned int iz = 0; iz < _altitude.altitudes().size(); iz++) //alt
       {
         _tau[iz].resize(sigma[0].size(),0.L);
-        for(unsigned int il = 0; il < sigma[0].size(); il++)
+        for(unsigned int il = 0; il < sigma[0].size(); il++) //lambda
         {
-          for(unsigned int s = 0; s < totdens.size(); s++)
+          for(unsigned int s = 0; s < sumdens.size(); s++) // neutrals
           {
-             _tau[iz][il] += sigma[s][ilambda] * totdens[s][iz];
+             _tau[iz][il] += sigma[s][il] * sumdens[s][iz];
           }
-          _tau[iz][il] *= _chap.chapman(a);
+          _tau[iz][il] *= _chapman(a[iz]);
         }
       }
       return;

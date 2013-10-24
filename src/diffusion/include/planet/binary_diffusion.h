@@ -25,11 +25,13 @@
 #define PLANET_DIFFUSION_H
 
 //Antioch
+#include "antioch/antioch_asserts.h"
 #include "antioch/species_enum.h"
 #include "antioch/cmath_shims.h"
 
 //Planet
 #include "planet/diffusion_enum.h"
+#include "planet/planet_constants.h"
 
 //C++
 
@@ -70,8 +72,8 @@ class BinaryDiffusion{
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         binary_coefficient(const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,_D01 * Constants::Convention::P_standard<StateType>() / P * 
-                                    Antioch::ant_pow((Constants::Convention::T_standard<StateType>()/T),_beta))
+        ANTIOCH_AUTOFUNC(StateType,_D01 * Constants::Convention::P_normal<StateType>() / P * 
+                                    Antioch::ant_pow((T/Constants::Convention::T_standard<StateType>()),_beta))
 
         //!
         template<typename StateType>

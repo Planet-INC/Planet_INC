@@ -1,5 +1,24 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
+//
+// Planet - An atmospheric code for planetary bodies, adapted to Titan
+//
+// Copyright (C) 2013 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
 //-----------------------------------------------------------------------el-
 
 #ifndef _PLANET_EDDY_DIFFUSION_
@@ -9,98 +28,89 @@
 #include "antioch/cmath_shims.h"
 
 //Planet
+#include "planet/altitude.h"
+#include "planet/atmospheric_mixture.h"
 
 //C++
 #include <vector>
 
 namespace Planet{
 
-  template<typename CoeffType = double, typename VectorCoeffType = std::vector<double> >
+  template<typename CoeffType = double, 
+           typename VectorCoeffType = std::vector<double>, 
+           typename MatrixCoeffType = std::vector<std::vector<double> >
+           >
   class EddyDiffusionEvaluator
   {
         private:
          CoeffType _K0;
-         VectorCoeffType &_ntot;
          VectorCoeffType _K;
 
-         EddyDiffusionEvaluator();
+//dependencies
+         AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
+         Altitude<CoeffType,VectorCoeffType> &_altitude;
 
-         template<typename VectorStateType>
-         void make_eddy_diffusion();
+         EddyDiffusionEvaluator() {antioch_error();return;}
 
          template<typename StateType>
-         void reset_K0(const StateType &K0);
-
-         template<typename VectorStateType>
-         void reset_ntot(const VectorStateType &ntot);
-
-         const VectorCoeffType K() const;
+         void set_K0(const StateType &K0);
 
         public:
-         EddyDiffusionEvaluator(const CoeffType K0, const VectorCoeffType &ntot);
+         const VectorCoeffType& K() const;
+
+         void make_eddy_diffusion();
+
+         EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
+                                Altitude<CoeffType,VectorCoeffType> &alt);
          ~EddyDiffusionEvaluator();
   };
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::EddyDiffusionEvaluator():
-  _K0(-1.L),
+EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
+                                                                          Altitude<CoeffType,VectorCoeffType> &alt):
+  _K0(-1.),
+  _mixture(mix),
+  _altitude(alt)
 {
   return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::EddyDiffusionEvaluator(const CoeffType &K0, const VectorCoeffType &ntot):
-  _K0(K0),
-  _ntot(ntot)
-{
-  this->make_eddy_diffusion();
-  return;
-}
-
-template<typename CoeffType, typename VectorCoeffType>
-inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::~EddyDiffusionEvaluator()
+EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::~EddyDiffusionEvaluator()
 {
   return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 template<typename StateType>
 inline
-void EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::reset_K0(const StateType &K0)
+void EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_K0(const StateType &K0)
 {
    _K0 = K0;
+   this->make_eddy_diffusion();
    return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
-template<typename VectorStateType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-void EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::reset_K0(const VectorStateType &ntot)
+void EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::make_eddy_diffusion()
 {
-   _ntot = ntot;
-   return;
-}
 
-template<typename CoeffType, typename VectorCoeffType>
-inline
-void EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::make_eddy_diffusion()
-{
-//bottom to top
-  antioch_assert_greater(_K0,0.)
-  _K.resize(tot_dens.size,0.L);
-  for(unsigned int ialt = 0; ialt < _ntot.size(); ialt++)
+  antioch_assert_greater(_K0,0.);
+  _K.resize(_mixture.total_density().size(),0.L);
+  CoeffType nbottom = _mixture.total_density()[_altitude.altitudes()[_altitude.altitudes_map()[_altitude.alt_min()]]];
+  for(unsigned int ialt = 0; ialt < _altitude.altitudes().size(); ialt++)
   {
-     _K[ialt] = _K0 * Antioch::ant_sqrt(_ntot[ialt]/_ntot[0]);
+     _K[ialt] = _K0 * Antioch::ant_sqrt(nbottom/_mixture.total_density()[ialt]);
   }
   return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-const EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::VectorCoeffType K() const
+const VectorCoeffType &EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::K() const
 {
   return _K;
 }

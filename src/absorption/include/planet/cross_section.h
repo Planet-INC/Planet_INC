@@ -1,5 +1,24 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
+//
+// Planet - An atmospheric code for planetary bodies, adapted to Titan
+//
+// Copyright (C) 2013 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
 //-----------------------------------------------------------------------el-
 
 #ifndef PLANET_CROSS_SECTION_H
@@ -22,7 +41,7 @@ namespace Planet
         VectorCoeffType _cross_section;
         VectorCoeffType _cross_section_on_custom_grid;
 
-        SigmaBinConverter<VectorCoeffType> _converter;
+        Antioch::SigmaBinConverter<VectorCoeffType> _converter;
 
       public:
 
@@ -56,16 +75,23 @@ namespace Planet
   inline
   CrossSection<VectorCoeffType>::CrossSection(const VectorCoeffType &x, const VectorCoeffType &y):
   _abscissa(x),
-  _cross_section(y),
+  _cross_section(y)
   {
     return;
   }
 
   template<typename VectorCoeffType>
   inline
-  CrossSection<VectorCoeffType>::CrossSection(const CrossSection<VectorCoeffType> &x):
+  CrossSection<VectorCoeffType>::~CrossSection()
+  {
+    return;
+  }
+
+  template<typename VectorCoeffType>
+  inline
+  CrossSection<VectorCoeffType>::CrossSection(const CrossSection<VectorCoeffType> &rhs):
   _abscissa(rhs.abscissa()),
-  _cross_section(rhs.cross_section()),
+  _cross_section(rhs.cross_section())
   {
     return;
   }

@@ -53,6 +53,8 @@ namespace Planet
       return 1.3806488e-23;
     }
 
+    } //end namespace Universal
+
     /*!
      * Gravitationnal constant, giving
      * radius of body (km),
@@ -63,10 +65,8 @@ namespace Planet
     inline
     CoeffType g(const CoeffType &radius, const CoeffType &alt, const CoeffType &mass)
     {
-       return Constants::Universal::G<CoeffType>() * mass / (StateType(1e6L) * (radius + alt) * (radius + alt));
+       return Constants::Universal::G<CoeffType>() * mass / (CoeffType(1e6L) * (radius + alt) * (radius + alt));
     }
-
-    } //end namespace Universal
 
     namespace Saturn
     {

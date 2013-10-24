@@ -1,5 +1,24 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
+//
+// Planet - An atmospheric code for planetary bodies, adapted to Titan
+//
+// Copyright (C) 2013 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
 //-----------------------------------------------------------------------el-
 
 #ifndef PLANET_DIFFUSION_EVALUATOR_H
@@ -26,58 +45,58 @@ namespace Planet{
   class DiffusionEvaluator
   {
       private:
-       DiffusionEvaluator();
+       DiffusionEvaluator() {antioch_error();return;}
 
-       MolecularDiffusionEvaluator<CoeffType,MatrixCoeffType> _molecular_diff;
-       EddyDiffusionEvaluator<CoeffType,VectorCoeffType> _eddy_diff;
+       MatrixCoeffType _omega;
+
+//dependencies
+       MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_molecular_diffusion;
+       EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &_eddy_diffusion;
+       AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &_mixture;
+       Altitude<CoeffType,VectorCoeffType>                                    &_altitude;
+       AtmosphericTemperature<CoeffType,VectorCoeffType>                      &_temperature;
+
+
+       
+       void derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx);
 
       public:
-       DiffusionEvaluator(const Antioch::ChemicalMixture<CoeffType> &comp, const CoeffType K0, const VectorCoeffType &ntot);
+       //!
+       DiffusionEvaluator(MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
+                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
+                          AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
+                          Altitude<CoeffType,VectorCoeffType>                                    &alt,
+                          AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp);
+
+        //!
        ~DiffusionEvaluator();
 
-//eddy coeff
-// - make
-// - get
-// - reset
+       //!
+       void make_diffusion();
 
-       //!compute the eddy diffusion
-       void make_eddy_diffusion();
+       //!
+       void initialize();
 
-       //!returns the eddy diffusion factor K
-       const VectorCoeffType eddy_diffusion_coeff() const;
-
-       //!reset the eddy coefficient parameters
-       template<typename StateType, typename VectorStateType>
-       void reset_eddy_coefficient(const StateType &K0, const VectorStateType &ntot);
-
-//molecular
-// - set
-// - make
-// - get
-// - reset
-       //!sets a binary molecular diffusion coefficient
-       template<typename StateType>
-       void set_molecular_diffusion_coeff(unsigned int i, unsigned int j, const BinaryDiffusion<StateType> &bin_coef);
-
-       //!evaluate the molecular diffusion for a given atmosphere
-       template <typename StateType, typename VectorStateType, typename MatrixStateType>
-       void make_molecular_diffusion(const Atmosphere<StateType,VectorStateType,MatrixStateType> &atm);
-
-       //!returns the molecular diffusion matrix
-       const MatrixCoeffType molecular_diffusion() const;
-
-       //!reset the chemical mixture
-       template <typename StateType>
-       void reset_molecular_diffusion(Antioch::ChemicalMixture<StateType> &comp);
-
+       //!
+       const MatrixCoeffType &diffusion() const;
 
   };
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::DiffusionEvaluator()
+  DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::DiffusionEvaluator(
+                          MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
+                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
+                          AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
+                          Altitude<CoeffType,VectorCoeffType>                                    &alt,
+                          AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp):
+    _molecular_diffusion(mol_diff),
+    _eddy_diffusion(eddy_diff),
+    _mixture(mix),
+    _altitude(alt),
+    _temperature(temp)
   {
-     antioch_error();
+     return;
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -87,75 +106,62 @@ namespace Planet{
      return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+/*
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::DiffusionEvaluator(const Antioch::ChemicalMixture<CoeffType> &comp, 
-                                                                                      const CoeffType K0, const VectorCoeffType &ntot)
-    _molecular_diff(comp),
-    _eddy_diff(K0,ntot)
+  CoeffType DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::derivative(const VectorCoeffType &vec, const VectorCoeffType &dx, unsigned int iz)
   {
-     return;
+     return (deriv[ix] = (vec[iz+1] - vec[iz-1]) / (dx[iz+1] - dx[iz-1]));
   }
-
-  
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_eddy_diffusion()
-  {
-      _eddy_diff.make_eddy_diffusion();
-      return;
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const VectorCoeffType DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::eddy_diffusion_coeff()const
-  {
-      return _eddy_diff.K();
-  }
-  
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType, typename VectorStateType>
-  inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::reset_eddy_coefficient(const StateType &K0, const VectorStateType &ntot)
-  {
-     _eddy_diff.reset_K0(K0);
-     _eddy_diff.reset_ntot(ntot);
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType>
-  inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::set_molecular_diffusion_coeff(unsigned int i, 
-                                                                                                      unsigned int j, 
-                                                                                                      const BinaryDiffusion<StateType> &bin_coef)
-  {
-     _molecular_diff.set_binary_coefficient(i,j,bin_coef);
-     return;
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType, typename VectorStateType, typename MatrixStateType>
-  inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_molecular_diffusion(const Atmosphere<StateType,VectorStateType,MatrixStateType> &atm)
-  {
-     _molecular_diff.make_diffusion(atm);
-     return;
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::MatrixCoeffType molecular_diffusion() const
-  {
-     return _molecular_diff.Dtilde();
-  }
+*/
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType>
   inline
-  void MolecularDiffusionEvaluator<CoeffType, MatrixCoeffType>::reset_molecular_diffusion(Antioch::ChemicalMixture<StateType> &comp)
+  const MatrixCoeffType &DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion() const
   {
-     _molecular_diff.reset_chemical_mixture(comp);
+     return _omega;
+  }
+
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::initialize()
+  {
+     _molecular_diffusion->make_molecular_diffusion();
+     _eddy_diffusion->make_eddy_diffusion();
+     this->make_diffusion();
      return;
+  }
+
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_diffusion()
+  {
+
+     _omega.clear();
+     _omega.resize(_mixture.neutral_composition().n_species());
+     for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
+     {
+        _omega[s].resize(_altitude.altitudes().size(),0.L);
+        for(unsigned int iz = 1; iz < _altitude.altitudes().size() - 1; iz++)
+        {
+            _omega[s][iz] = - _molecular_diffusion.Dtilte()[s][iz] * (
+            CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * 
+( /// dn_dz 
+   _mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - _mixture.total_density()[iz-1] * _mixture.neutral_molar_fraction()[s][iz-1] 
+)  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]) + 
+        CoeffType(1.)/_mixture.scale_height()[s][iz] + CoeffType(1.)/_temperature.neutral_temperature()[iz] * 
+(_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1])
+        * (CoeffType(1.) + (CoeffType(1.) - _mixture.neutral_molar_fraction()[s][iz]) * _mixture.thermal_coefficient()[s])
+                                                ) - _eddy_diffusion.K()[iz] * (
+            CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * 
+( /// dn_dz 
+   _mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - _mixture.total_density()[iz-1] * _mixture.neutral_molar_fraction()[s][iz-1] 
+)  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]) + 
+        CoeffType(1.)/_mixture.mean_scale_height()[iz] + 
+CoeffType(1.)/_temperature.neutral_temperature()[iz] * 
+(_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]));
+        }
+     }
   }
   
 }

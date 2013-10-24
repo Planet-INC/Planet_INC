@@ -30,7 +30,7 @@
 #include "antioch/antioch_asserts.h"
 //
 //Planet
-#include "planet/maths_constants.h"
+#include "planet/math_constants.h"
 
 //C++
 #include <cmath>
@@ -113,9 +113,25 @@ class Chapman{
      template <typename StateType>
      StateType chapman(const StateType &x) const; // x = (R + z)/H
 
+     //! \return the rate evaluated at low angle.
+     CoeffType operator()() const;
+
+     //! \return the rate evaluated at \p a.
+     template <typename StateType>
+     ANTIOCH_AUTO(StateType) 
+     operator()(const StateType& a) const
+     ANTIOCH_AUTOFUNC(StateType, this->chapman(a))
+
      //! Approach angle
      CoeffType chi() const;
 };
+
+template<typename CoeffType>
+inline
+CoeffType Chapman<CoeffType>::operator()() const
+{
+   return this->chapman();
+}
 
 template<typename CoeffType>
 inline
