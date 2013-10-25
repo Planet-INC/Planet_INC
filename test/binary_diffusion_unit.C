@@ -44,7 +44,7 @@ int tester()
   Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, p31, p32, Planet::DiffusionType::Wakeham);
 
   Scalar T(1500.),P(1e5);
-  Scalar n = T * Antioch::Constants::R_universal<Scalar>()/1000.L/P;
+  Scalar n = P / (T * Antioch::Constants::R_universal<Scalar>()/1000.L);
 
   Scalar n2n2 = p11 * Planet::Constants::Convention::P_normal<Scalar>() / P * Antioch::ant_pow(T/Planet::Constants::Convention::T_standard<Scalar>(),p12);
   Scalar n2ch4 = p21 * Antioch::ant_pow(T,p22)/n;
@@ -56,8 +56,8 @@ int tester()
 
   int return_flag(0);
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
-  return_flag = check(nn,n2n2,tol,"Massman")  && 
-                check(nc,n2ch4,tol,"Wilson") &&
+  return_flag = check(nn,n2n2,tol,"Massman")  || 
+                check(nc,n2ch4,tol,"Wilson") ||
                 check(cc,ch4ch4,tol,"Wakeham");
 
 
@@ -68,7 +68,7 @@ int tester()
 int main()
 {
 
-  return (tester<float>()  && 
-          tester<double>() && 
+  return (tester<float>()  || 
+          tester<double>() || 
           tester<long double>());
 }

@@ -25,11 +25,12 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
   if(std::abs((theory-cal)/theory) < tol)return 0;
-  std::cout << "failed test: " << words << "\n"
-            << "theory: " << theory
+  std::cout << std::scientific  << std::setprecision(20)
+            << "failed test: "  << words << "\n"
+            << "theory: "       << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
-            << "\ntolerance: " << tol << std::endl;
+            << "\ntolerance: "  << tol << std::endl;
   return 1;
 }
 
@@ -95,7 +96,7 @@ int tester()
 //ionic system contains neutral system
   ions = neutrals;
   ions.push_back("N2+");
-  Scalar MN(14.008L), MC(12.011), MH(1.008L);
+  Scalar MN(14.008L), MC(12.011L), MH(1.008L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
@@ -123,23 +124,23 @@ int tester()
   molar_frac.push_back(0.96L);
   molar_frac.push_back(0.04L);
   molar_frac.push_back(0.L);
-  Scalar dens_tot(1e12L);
+  Scalar dens_tot(1e12L); //cm-3
   composition.init_composition(molar_frac,dens_tot);
 
 //hard sphere radius
   std::vector<Scalar> hard_sphere_radius;
-  hard_sphere_radius.push_back(2.0675e-8L * 1e-5L); //N2  in cm -> km
-  hard_sphere_radius.push_back(2.3482e-8L * 1e-5L); //CH4 in cm -> km
+  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
+  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
   composition.set_hard_sphere_radius(hard_sphere_radius);
 
   composition.initialize();
 
   std::vector<Scalar> exobase;
-  Scalar mean_exo;
+  Scalar mean_exo(0.L);
   exobase.resize(2);
   std::vector<Scalar> minexobase;
-  Scalar mean_minexo(1e50);
-  minexobase.resize(2,1e50);
+  Scalar mean_minexo(1e303);
+  minexobase.resize(2,1e303);
 
   int return_flag(0);
 
@@ -158,8 +159,8 @@ int tester()
     Scalar n_tot_the = dens_tot * std::exp(-(z - 600.) / 
                        ( (z + Planet::Constants::Titan::radius<Scalar>())    *
                          (600. + Planet::Constants::Titan::radius<Scalar>()) * 1e3L * //to m
-                         ( (Planet::Constants::Universal::kb<Scalar>() * Antioch::Constants::Avogadro<Scalar>() * temperature.neutral_temperature()[iz]) /
-                           (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * M_the * 1e-3L) //to kg/mol
+                         ( (Planet::Constants::Universal::kb<Scalar>() * Antioch::Constants::Avogadro<Scalar>()   * temperature.neutral_temperature()[iz]) /
+                           (Planet::Constants::Universal::G<Scalar>()  * Planet::Constants::Titan::mass<Scalar>() * M_the * 1e-3L) //to kg/mol
                          )
                        ));
 
@@ -169,13 +170,15 @@ int tester()
     {
        Scalar scale_height = Planet::Constants::Universal::kb<Scalar>() * temperature.neutral_temperature()[iz] / 
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), altitude.altitudes()[iz],Planet::Constants::Titan::mass<Scalar>()) *
-                        Mm[s] * molar_frac[s] * n_tot_the);
+                        Mm[s]/Antioch::Constants::Avogadro<Scalar>() * 1e-3L);
 
        Scalar free_path(1.L);
        Scalar ftmp(0.L);
        for(unsigned int ineu = 0; ineu < 2; ineu++)
        {
-          ftmp += n_tot_the * molar_frac[ineu] * hard_sphere_radius[ineu] * Antioch::ant_sqrt(1.L + Mm[s] * molar_frac[s]/(Mm[ineu]*molar_frac[ineu]));
+          ftmp += 1e6L * n_tot_the * molar_frac[ineu] * Planet::Constants::pi<Scalar>() *
+                  Antioch::ant_pow(hard_sphere_radius[ineu] + hard_sphere_radius[s],2) * 
+                  Antioch::ant_sqrt(1.L + Mm[s]/Mm[ineu]);
        }
        free_path /= ftmp;
        free_path_theo += free_path * molar_frac[s];
@@ -185,15 +188,15 @@ int tester()
           exobase[s] = altitude.altitudes()[iz];
        }
 
-       return_flag = return_flag &&
-                     check_test(free_path, composition.free_path()[s][iz], "free path of species at altitude") &&
+       return_flag = return_flag ||
+                     check_test(free_path, composition.free_path()[s][iz], "free path of species at altitude") ||
                      check_test(scale_height, composition.scale_height()[s][iz], "scale height of species at altitude");
     }
        
 
     Scalar H_the = Planet::Constants::Universal::kb<Scalar>() * temperature.neutral_temperature()[iz] /
                    (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), altitude.altitudes()[iz],Planet::Constants::Titan::mass<Scalar>()) *
-                    M_the / Antioch::Constants::Avogadro<Scalar>()*n_tot_the); //kb*T/(g(z) * M/Navo * n)
+                    M_the * 1e-3L / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
 
     if(Antioch::ant_abs(H_the - free_path_theo) < mean_minexo)
     {
@@ -203,23 +206,22 @@ int tester()
 
     Scalar a_theo = (Planet::Constants::Titan::radius<Scalar>() + altitude.altitudes()[iz]) / H_the;
 
-    return_flag = return_flag &&
-                  check_test(n_tot_the, composition.total_density()[iz], "total density at altitude")                   &&
-                  check_test(free_path_theo, composition.atmosphere_free_path()[iz], "atmospheric mean free path at altitude") &&
-                  check_test(H_the, composition.atmosphere_scale_height()[iz], "atmospheric scale height at altitude")        &&
+    return_flag = return_flag ||
+                  check_test(n_tot_the, composition.total_density()[iz], "total density at altitude")                   ||
+                  check_test(free_path_theo, composition.atmosphere_free_path()[iz], "atmospheric mean free path at altitude") ||
+                  check_test(H_the, composition.atmosphere_scale_height()[iz], "atmospheric scale height at altitude")        ||
                   check_test(a_theo, composition.a_factor()[iz], "a factor at altitude");
 
   }
 
   for(unsigned int s = 0; s < 2; s++)
   {
-    return_flag = return_flag &&
+    return_flag = return_flag ||
                   check_test(exobase[s], altitude.altitudes()[composition.exobase()[s]], "exobase of species at altitude");
   }
 
-  return_flag = return_flag &&
+  return_flag = return_flag ||
                 check_test(mean_exo, altitude.altitudes()[composition.atmosphere_exobase()], "exobase of atmosphere at altitude");
-
 
   return return_flag;
 }

@@ -235,7 +235,8 @@ namespace Planet
          CoeffType sum(0.L);
          for(unsigned int jneu = 0; jneu <_neutral_composition.n_species(); jneu++)
          {
-           sum += _neutral_molar_fraction[jneu][iz] * _total_density[iz] * Constants::pi<CoeffType>() * 
+           sum += _neutral_molar_fraction[jneu][iz] * _total_density[iz] * 1e6 * //cm-3 -> m-3
+                  Constants::pi<CoeffType>() *
                   Antioch::ant_pow(_hard_sphere_radius[jneu] + _hard_sphere_radius[ineu],2) * 
                   Antioch::ant_sqrt(CoeffType(1.L) + _neutral_composition.M(ineu)/_neutral_composition.M(jneu));
          }
@@ -340,7 +341,7 @@ namespace Planet
         _scale_height[ineu].resize(_altitude.altitudes().size(),0.L);
         for(unsigned int iz = 0; iz < _altitude.altitudes().size(); iz++)
         {
-           _scale_height[ineu][iz] = this->H(_neutral_composition.M(ineu), 
+           _scale_height[ineu][iz] = this->H(_neutral_composition.M(ineu),
                                              _temperature.neutral_temperature()[iz],
                                              _altitude.altitudes()[iz]);
         }
@@ -507,7 +508,7 @@ namespace Planet
                            (Antioch::Constants::Avogadro<StateType>() * Constants::Universal::kb<StateType>() 
                                                                       * _temperature.neutral_temperature()[i] /   //(kb * T /
                                 (Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() * meanmass * 1e-3L))//g/mol to kg/mol //(G * m_Titan * <M>))))
-                          )                              );
+                         )                              );
 
     }
 

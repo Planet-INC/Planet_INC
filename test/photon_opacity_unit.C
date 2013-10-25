@@ -77,7 +77,7 @@ int tester()
   read_crossSection<Scalar>(lambda,"./input/CH4_hv_cross-sections.dat",9,sigma_tmp);
   sigma.push_back(sigma_tmp);
   std::vector<Scalar> a;
-  a.resize(altitude.altitudes().size(),1e5);
+  a.resize(altitude.altitudes().size(),45.);
 //totdens
   std::vector<std::vector<Scalar> > totdens;
   totdens.resize(2);
@@ -106,7 +106,7 @@ int tester()
            tau_exact += sigma[s][il] * totdens[s][iz];
         }
         tau_exact *= chapman(a[iz]);
-        return_flag = return_flag && 
+        return_flag = return_flag || 
                       check(tau.tau()[iz][il],tau_exact,tol,"tau at altitude and wavelength");
      }
   }
@@ -117,7 +117,7 @@ int tester()
 
 int main()
 {
-  return (tester<float>() &&
-          tester<double>() &&
+  return (tester<float>()  ||
+          tester<double>() ||
           tester<long double>());
 }

@@ -211,7 +211,7 @@ void BinaryDiffusion<CoeffType>::set_parameters(const CoeffType &par1, const Coe
     case DiffusionType::Wilson:
     {
       _D01 = par1 * Antioch::ant_pow(Constants::Convention::T_standard<CoeffType>(),par2 + CoeffType(1.L)) * 
-                    Constants::Universal::kb<CoeffType>() / 
+                    Antioch::Constants::R_universal<CoeffType>()/CoeffType(1000.L) / 
                     Constants::Convention::P_normal<CoeffType>();
       _beta = par2 + CoeffType(1.L);
       return;
