@@ -163,7 +163,7 @@ void calculate_densities(MatrixScalar &densities, const Scalar &tot_dens, const 
 template<typename Scalar, typename VectorScalar, typename MatrixScalar>
 void calculate_tau(MatrixScalar &opacity, const Planet::Chapman<Scalar> &chapman, 
                    const std::vector<VectorScalar*> &cs, const VectorScalar &lambda_ref,
-                   const MatrixScalar &sum_dens, const Scalar &bot_tot_dens, const VectorScalar &molar_frac,
+                   const MatrixScalar &sum_dens, const VectorScalar &molar_frac,
                    const VectorScalar &mm, const VectorScalar &T,
                    const Scalar &zmin, const Scalar &zmax, const Scalar &zstep)
 {
@@ -344,7 +344,7 @@ int tester()
   cs.push_back(&lambda_CH4);
   cs.push_back(&sigma_CH4);
   calculate_tau(opacity,chapman,cs,lambda_hv,
-                densities,dens_tot,molar_frac,mm,
+                densities,molar_frac,mm,
                 neutral_temperature,
                 zmin,zmax,zstep);
 
