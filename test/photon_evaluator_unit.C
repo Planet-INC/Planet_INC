@@ -5,6 +5,7 @@
 //Antioch
 #include "antioch/vector_utils_decl.h"
 #include "antioch/physical_constants.h"
+#include "antioch/sigma_bin_converter.h"
 #include "antioch/vector_utils.h"
 
 //Planet
@@ -25,7 +26,8 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
   if(std::abs((theory-cal)/theory) < tol)return 0;
-  std::cout << "failed test: " << words << "\n"
+  std::cout << std::scientific << std::setprecision(20)
+            << "failed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -143,6 +145,7 @@ void calculate_densities(MatrixScalar &densities, const Scalar &tot_dens, const 
    {
       Mm += molar_frac[s] * mm[s];
    }
+   Mm *= 1e-3;//to kg
    densities.clear();
    densities.resize(molar_frac.size());
    for(Scalar z = zmin; z <= zmax; z += zstep)
@@ -155,6 +158,49 @@ void calculate_densities(MatrixScalar &densities, const Scalar &tot_dens, const 
    }
 
    return;
+}
+
+template<typename Scalar, typename VectorScalar, typename MatrixScalar>
+void calculate_tau(MatrixScalar &opacity, const Planet::Chapman<Scalar> &chapman, 
+                   const std::vector<VectorScalar*> &cs, const VectorScalar &lambda_ref,
+                   const MatrixScalar &sum_dens, const Scalar &bot_tot_dens, const VectorScalar &molar_frac,
+                   const VectorScalar &mm, const VectorScalar &T,
+                   const Scalar &zmin, const Scalar &zmax, const Scalar &zstep)
+{
+  Scalar Mm;
+  Antioch::set_zero(Mm);
+  for(unsigned int s = 0; s < molar_frac.size(); s++)
+  {
+     Mm += molar_frac[s] * mm[s];
+  }
+  Mm *= 1e-3; //to kg
+  opacity.resize(T.size());
+  Antioch::SigmaBinConverter<VectorScalar> bin_converter;
+
+  unsigned int iz(0);
+  for(Scalar z = zmin; z <= zmax; z += zstep)
+  {
+    Scalar g = Planet::Constants::g(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>());
+    Scalar H = Planet::Constants::Universal::kb<Scalar>() * T[iz] / (g * Mm ) * Antioch::Constants::Avogadro<Scalar>(); //to m-3
+    Scalar a = (Planet::Constants::Titan::radius<Scalar>() + z) / H; //to m
+
+    opacity[iz].resize(lambda_ref.size(),0.L);
+    for(unsigned int s = 0; s < sum_dens.size(); s++)
+    {
+      VectorScalar sigma_process;
+      bin_converter.y_on_custom_grid(*(cs[2*s]),*(cs[2*s+1]),lambda_ref,sigma_process);
+      for(unsigned int il = 0; il < lambda_ref.size(); il++)
+      {
+        opacity[iz][il] += sigma_process[il] * sum_dens[s][iz];
+      }
+    }
+    for(unsigned int il = 0; il < lambda_ref.size(); il++)
+    {
+      opacity[iz][il] *= chapman(a);
+    }
+    iz++;
+  }
+
 }
 
 
@@ -184,8 +230,8 @@ int tester()
 
 //hard sphere radius
   std::vector<Scalar> hard_sphere_radius;
-  hard_sphere_radius.push_back(2.0675e-8L * 1e-5L); //N2  in cm -> km
-  hard_sphere_radius.push_back(2.3482e-8L * 1e-5L); //CH4 in cm -> km
+  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
+  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
 
 //zenith angle
   Scalar chi(120);
@@ -273,23 +319,64 @@ int tester()
  * checks
  ************************/
 
+  molar_frac.pop_back();//get the ion outta here
+
   std::vector<std::vector<Scalar> > densities;
   std::vector<Scalar> mm;
   mm.push_back(MN2);
   mm.push_back(MCH4);
   calculate_densities(densities,dens_tot,molar_frac,zmin,zmax,zstep,neutral_temperature,mm);
 
+  for(Scalar z = zmax-zstep; z >= zmin; z -= zstep)
+  {
+     unsigned int iz = altitude.altitudes_map().at(z);
+     unsigned int jz = altitude.altitudes_map().at(z+zstep);
+     for(unsigned int s = 0; s < densities.size(); s++)
+     {
+        densities[s][iz] += densities[s][jz];
+     }
+  }
+
   std::vector<std::vector<Scalar> > opacity;
-  calculate_tau(opacity,);
+  std::vector<std::vector<Scalar>*> cs;
+  cs.push_back(&lambda_N2);
+  cs.push_back(&sigma_N2);
+  cs.push_back(&lambda_CH4);
+  cs.push_back(&sigma_CH4);
+  calculate_tau(opacity,chapman,cs,lambda_hv,
+                densities,dens_tot,molar_frac,mm,
+                neutral_temperature,
+                zmin,zmax,zstep);
+
+
+  std::vector<std::vector<Scalar> > phy_theo;
+  phy_theo.resize(altitude.altitudes().size());
+  for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
+  {
+    phy_theo[iz].resize(lambda_hv.size());
+    for(unsigned int il = 0; il < lambda_hv.size(); il++)  
+    {
+      phy_theo[iz][il] = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>()) 
+                        * Antioch::ant_exp(-opacity[iz][il]);
+    }
+  }
 
 
   int return_flag(0);
 
   for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
   {
-
+    for(unsigned int il = 0; il < lambda_hv.size(); il++)
+    {
+        return_flag = return_flag ||
+                      check_test(phy_theo[iz][il], photon.photon_flux()[iz].flux()[il], "phy at altitude and wavelength");
+        if(return_flag)
+        {
+         std::cout << altitude.altitudes()[iz] << " " << lambda_hv[il] << std::endl;
+          return return_flag;
+        }
+    }
   }
-
 
   return return_flag;
 }

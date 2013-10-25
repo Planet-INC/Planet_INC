@@ -110,7 +110,6 @@ int tester()
                       check(tau.tau()[iz][il],tau_exact,tol,"tau at altitude and wavelength");
      }
   }
-
   return return_flag;
 }
 

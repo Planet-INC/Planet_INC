@@ -39,14 +39,14 @@ int tester()
 
   int return_flag(0);
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
-  return_flag = check(altitude.alt_min(),min,tol,"minimum altitude") &&
-                check(altitude.alt_max(),max,tol,"maximum altitude") &&
+  return_flag = check(altitude.alt_min(),min,tol,"minimum altitude") ||
+                check(altitude.alt_max(),max,tol,"maximum altitude") ||
                 check(altitude.alt_step(),step,tol,"step altitude");
 
   unsigned int iz(0);
   for(Scalar alt = min; alt <= max; alt += step)
   {
-      return_flag = return_flag && check(altitude.altitudes()[iz],alt,tol,"altitude");
+      return_flag = return_flag || check(altitude.altitudes()[iz],alt,tol,"altitude");
       iz++;
   }
 
@@ -56,7 +56,7 @@ int tester()
 
 int main()
 {
-  return (tester<float>() &&
-          tester<double>() &&
+  return (tester<float>()  ||
+          tester<double>() ||
           tester<long double>());
 }
