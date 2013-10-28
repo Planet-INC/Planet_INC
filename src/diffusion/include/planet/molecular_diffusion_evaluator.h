@@ -55,13 +55,32 @@ namespace Planet
         Altitude<CoeffType,VectorCoeffType> &_altitude;
         AtmosphericTemperature<CoeffType,VectorCoeffType> &_temperature;
 
+        //! The coefficients are known
+        template<typename StateType>
+        ANTIOCH_AUTO(StateType)
+        binary_coefficient_known(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
+        ANTIOCH_AUTOFUNC(StateType,_diffusion[i][j].binary_coefficient(T,P))
+
+        //! The coefficients are unknown, i heavier than j
+        template<typename StateType>
+        ANTIOCH_AUTO(StateType)
+        binary_coefficient_unknown_ji(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
+        ANTIOCH_AUTOFUNC(StateType,_diffusion[i][i].binary_coefficient(T,P) * 
+                                   Antioch::ant_sqrt( (_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(i) + StateType(1.L)) / StateType(2.L) )
+                                   )
+        //! The coefficients are unknown, j heavier than i
+        template<typename StateType>
+        ANTIOCH_AUTO(StateType)
+        binary_coefficient_unknown_ij(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
+        ANTIOCH_AUTOFUNC(StateType,_diffusion[i][i].binary_coefficient(T,P) * Antioch::ant_sqrt(_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(i)))
+
 
      public:
         //!
-        MolecularDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+        MolecularDiffusionEvaluator(const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
+                                    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
                                     Altitude<CoeffType,VectorCoeffType> &alt,
-                                    AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
-                                    const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff);
+                                    AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
         //!
         ~MolecularDiffusionEvaluator();
 
@@ -85,25 +104,6 @@ namespace Planet
                                                         this->binary_coefficient_unknown_ji(i,j,T,P):
                                                         this->binary_coefficient_unknown_ij(i,j,T,P))
 
-        //!
-        template<typename StateType>
-        ANTIOCH_AUTO(StateType)
-        binary_coefficient_known(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,_diffusion[i][j].binary_coefficient(T,P))
-
-        //!
-        template<typename StateType>
-        ANTIOCH_AUTO(StateType)
-        binary_coefficient_unknown_ji(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,_diffusion[i][i].binary_coefficient(T,P) * 
-                                   Antioch::ant_sqrt( (_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(i) + StateType(1.L)) / StateType(2.L) )
-                                   )
-        //!
-        template<typename StateType>
-        ANTIOCH_AUTO(StateType)
-        binary_coefficient_unknown_ij(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,_diffusion[i][i].binary_coefficient(T,P) * Antioch::ant_sqrt(_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(i)))
-
   };
 
 
@@ -118,7 +118,7 @@ namespace Planet
   inline
   void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_molecular_diffusion()
   {
-    _Dtilde.resize(_mixture.neutral_composition().n_species()); //from bottom to top
+    _Dtilde.resize(_mixture.neutral_composition().n_species());
     std::vector<CoeffType> meanM;
 
     for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
@@ -130,7 +130,7 @@ namespace Planet
         for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
         {
           if(i == s)continue;
-          meanM[iz] += _mixture.neutral_composition().M(i) * _mixture.neutral_molar_fraction[i][iz];
+          meanM[iz] += _mixture.neutral_composition().M(i) * _mixture.neutral_molar_fraction()[i][iz];
         }
         meanM[iz] /= CoeffType(_mixture.neutral_composition().n_species() - 1);
       }
@@ -144,10 +144,10 @@ namespace Planet
           {
             if(i == s)continue;
             CoeffType p = _mixture.total_density()[iz] * Constants::Universal::kb<CoeffType>() * _temperature.neutral_temperature()[iz];
-            n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction[i][iz] / this->binary_coefficient(i,s,_temperature.neutral_temperature()[iz],p);
+            n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[i][iz] / this->binary_coefficient(i,s,_temperature.neutral_temperature()[iz],p);
           }
-          CoeffType Ds = (_mixture.total_density()[iz] - _mixture.neutral_molar_fraction[s][iz] * _mixture.total_density()[iz])/n_D;
-          _Dtilde[s][iz] = Ds / (CoeffType(1.L) - _mixture.neutral_molar_fraction[s][iz] * 
+          CoeffType Ds = (_mixture.total_density()[iz] - _mixture.neutral_molar_fraction()[s][iz] * _mixture.total_density()[iz])/n_D;
+          _Dtilde[s][iz] = Ds / (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz] * 
                                 (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM[iz])
                                 );
        }
@@ -164,16 +164,16 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
   MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::MolecularDiffusionEvaluator
-                       (AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                       (const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
+                        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
                         Altitude<CoeffType,VectorCoeffType> &alt,
-                        AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
-                        const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff
+                        AtmosphericTemperature<CoeffType,VectorCoeffType> &temp
                        ):
-       _temperature(temp),
        _diffusion(diff),
        _n_medium(2),
        _mixture(comp),
-       _altitude(alt)
+       _altitude(alt),
+       _temperature(temp)
   {
      _diffusion.resize(_n_medium); //N2,CH4
      for(unsigned int i = 0; i < _diffusion.size(); i++)

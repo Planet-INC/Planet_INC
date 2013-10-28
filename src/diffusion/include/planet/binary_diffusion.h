@@ -57,6 +57,8 @@ class BinaryDiffusion{
         BinaryDiffusion();
         //!
         BinaryDiffusion(const BinaryDiffusion &rhs);
+        //! no data
+        BinaryDiffusion(const Antioch::Species &mol1, const Antioch::Species & mol2);
         //!
         BinaryDiffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, const CoeffType &par1, const CoeffType &par2, const DiffusionType &model);
         //!
@@ -150,7 +152,20 @@ inline
 BinaryDiffusion<CoeffType>::BinaryDiffusion():
 _D01(-1.L),
 _beta(0.L),
-_diffusion_model(NoData)
+_diffusion_model(DiffusionType::NoData)
+{
+  return;
+}
+
+template<typename CoeffType>
+inline
+BinaryDiffusion<CoeffType>::BinaryDiffusion(const Antioch::Species &mol1, 
+                                            const Antioch::Species &mol2):
+_D01(-1.L),
+_beta(0.L),
+_diffusion_model(DiffusionType::NoData),
+_mol1(mol1),
+_mol2(mol2)
 {
   return;
 }
@@ -220,6 +235,12 @@ void BinaryDiffusion<CoeffType>::set_parameters(const CoeffType &par1, const Coe
     {
        _D01 = par1 * Antioch::ant_pow(Constants::Convention::T_standard<CoeffType>(),par2);
        _beta = par2;
+       return;
+    }
+    case DiffusionType::NoData:
+    {
+       _D01 = -1.L;
+       _beta = -1.L;
        return;
     }
     default:
