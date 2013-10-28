@@ -499,7 +499,7 @@ namespace Planet
     for(unsigned int i = 0 ; i < _altitude.altitudes().size(); i++)
     {
   //mean
-      StateType meanmass = this->mean_neutral_molar_mass(i);
+      StateType meanmass = this->mean_neutral_molar_mass(i) * 1e-3L; //g/mol to kg/mol
 
       _total_density[i] = dens_tot_bot * Antioch::ant_exp(-(_altitude.altitudes()[i] - _altitude.alt_min())/   //n_tot * exp(-(z - z0) / ( 
                          (
@@ -507,7 +507,7 @@ namespace Planet
                            (Constants::Titan::radius<StateType>() + _altitude.alt_min()) * 1e3L * //to m       //(r_Titan + z0) *
                            (Antioch::Constants::Avogadro<StateType>() * Constants::Universal::kb<StateType>() 
                                                                       * _temperature.neutral_temperature()[i] /   //(kb * T /
-                                (Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() * meanmass * 1e-3L))//g/mol to kg/mol //(G * m_Titan * <M>))))
+                                (Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() * meanmass)) //(G * m_Titan * <M>))))
                          )                              );
 
     }

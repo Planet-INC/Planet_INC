@@ -52,16 +52,26 @@ namespace Planet{
 
          EddyDiffusionEvaluator() {antioch_error();return;}
 
+
+        public:
+         //!\return eddy coefficient vector
+         const VectorCoeffType& K() const;
+
+         //!\return K0
+         const CoeffType K0() const;
+
+         //!calculate eddy coefficient
+         void make_eddy_diffusion();
+
+         //!sets K0
          template<typename StateType>
          void set_K0(const StateType &K0);
 
-        public:
-         const VectorCoeffType& K() const;
-
-         void make_eddy_diffusion();
-
+         //!
          EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                 Altitude<CoeffType,VectorCoeffType> &alt);
+
+         //!
          ~EddyDiffusionEvaluator();
   };
 
@@ -99,8 +109,8 @@ void EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::make_edd
 {
 
   antioch_assert_greater(_K0,0.);
-  _K.resize(_mixture.total_density().size(),0.L);
-  CoeffType nbottom = _mixture.total_density()[_altitude.altitudes()[_altitude.altitudes_map()[_altitude.alt_min()]]];
+  _K.resize(_altitude.altitudes().size(),0.L);
+  CoeffType nbottom = _mixture.total_density()[_altitude.altitudes_map().at(_altitude.alt_min())];
   for(unsigned int ialt = 0; ialt < _altitude.altitudes().size(); ialt++)
   {
      _K[ialt] = _K0 * Antioch::ant_sqrt(nbottom/_mixture.total_density()[ialt]);
@@ -115,6 +125,12 @@ const VectorCoeffType &EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCo
   return _K;
 }
 
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+inline
+const CoeffType EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::K0() const
+{
+  return _K0;
+}
 
 }
 
