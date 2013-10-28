@@ -24,8 +24,7 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() < 1e-18)?1000.L:100.L;
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
@@ -141,7 +140,7 @@ Scalar binary_coefficient(const Scalar &Dii, const Scalar &Mi, const Scalar &Mj)
 template<typename Scalar>
 Scalar pressure(const Scalar &n, const Scalar &T)
 {
-   return n * Antioch::Constants::R_universal<Scalar>() * T / Scalar(1000.L);
+   return n * 1e6L * Planet::Constants::Universal::kb<Scalar>() * T; //cm-3 -> m-3
 }
 
 template <typename Scalar>
@@ -165,8 +164,9 @@ int tester()
 
 //densities
   std::vector<Scalar> molar_frac;
-  molar_frac.push_back(0.96L);
-  molar_frac.push_back(0.04L);
+  molar_frac.push_back(0.95999L);
+  molar_frac.push_back(0.04000L);
+  molar_frac.push_back(0.00001L);
   molar_frac.push_back(0.L);
   Scalar dens_tot(1e12L);
 
@@ -189,11 +189,11 @@ int tester()
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
 //binary diffusion
-  Scalar bCN1(1.04e-5),bCN2(1.76);
+  Scalar bCN1(1.04e-5 * 1e-4),bCN2(1.76); //cm-2 -> m-2
   Planet::DiffusionType CN_model(Planet::DiffusionType::Wakeham);
-  Scalar bCC1(5.73e16),bCC2(0.5);
+  Scalar bCC1(5.73e16 * 1e-4),bCC2(0.5); //cm-2 -> m-2
   Planet::DiffusionType CC_model(Planet::DiffusionType::Wilson);
-  Scalar bNN1(0.1783),bNN2(1.81);
+  Scalar bNN1(0.1783 * 1e-4),bNN2(1.81); //cm-2 -> m-2
   Planet::DiffusionType NN_model(Planet::DiffusionType::Massman);
 
 /************************
@@ -285,6 +285,7 @@ int tester()
   {
      Matm += molar_frac[s] * composition.neutral_composition().M(s);
   }
+  Matm *= 1e-3L; //to kg
 
   std::vector<std::vector<Scalar> > densities;
   calculate_densities(densities, dens_tot, molar_frac, zmin,zmax,zstep, temperature.neutral_temperature(), Mm);
@@ -294,10 +295,6 @@ int tester()
   Dij[0].resize(3,0.L);
   Dij[1].resize(3,0.L);
 
-  std::vector<Scalar> Ds,Dtilde;
-  Ds.resize(molar_frac.size(),0.L);
-  Dtilde.resize(molar_frac.size(),0.L);
-
   int return_flag(0);
   for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
   {
@@ -305,7 +302,7 @@ int tester()
       Scalar T = temperature.neutral_temperature()[iz];
       Dij[0][0] = binary_coefficient(T,P,bNN1,bNN2); //N2 N2
       Dij[1][1] = binary_coefficient(T,P,bCC1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCC2 + Scalar(1.L)) 
-                                              * Antioch::Constants::R_universal<Scalar>()/Scalar(1000.L)
+                                              * Planet::Constants::Universal::kb<Scalar>()
                                               / Planet::Constants::Convention::P_normal<Scalar>(),bCC2 + Scalar(1.L)); //CH4 CH4
       Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
       Dij[0][2] = binary_coefficient(Dij[0][0],Mm[0],Mm[2]); //N2 C2H
@@ -318,18 +315,21 @@ int tester()
         for(unsigned int medium = 0; medium < 2; medium++)
         {
            if(s == medium)continue;
-           tmp += densities[s][iz]/Dij[medium][s];
+           tmp += densities[medium][iz]/Dij[medium][s];
         }
-        Ds[s] = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) - densities[s][iz]) / tmp;
+        Scalar Ds = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) - densities[s][iz]) / tmp;
+if(Ds < 0.)std::cout << barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) << "\n\t" 
+                     << zmin << " " << altitude.altitudes()[iz] << " " << neutral_temperature[iz] << " " << Matm << " " << dens_tot << "\n" 
+                     << densities[s][iz] << " " << tmp << std::endl;
         for(unsigned int j = 0; j < molar_frac.size(); j++)
         {
            if(s == j)continue;
            M_diff += composition.neutral_molar_fraction()[j][iz] * composition.neutral_composition().M(j);
         }
-        Dtilde[s] = Ds[s] / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
+        Scalar Dtilde = Ds / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
 
-/*        return_flag = return_flag ||
-                      check_test(Dtilde[s],molecular_diffusion.Dtilde()[s][iz],"D tilde of species at altitude");*/
+        return_flag = return_flag ||
+                      check_test(Dtilde,molecular_diffusion.Dtilde()[s][iz],"D tilde of species at altitude");
 
       }
       return_flag = return_flag ||
@@ -346,6 +346,6 @@ int tester()
 int main()
 {
   return (tester<float>()  ||
-          tester<double>() ||
-          tester<long double>());
+          tester<double>());/* ||
+          tester<long double>());*/
 }

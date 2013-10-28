@@ -35,20 +35,20 @@ template<typename Scalar>
 int tester()
 {
 
-  Scalar p11(5.09e16),p12(0.81);
-  Scalar p21(7.34e16),p22(0.75);
-  Scalar p31(1.04e-5),p32(1.76);
+  Scalar p11(0.1783),p12(1.81);
+  Scalar p21(1.04e-5),p22(1.76);
+  Scalar p31(5.73e16),p32(0.5);
 
   Planet::BinaryDiffusion<Scalar> N2N2(   Antioch::Species::N2,  Antioch::Species::N2 , p11, p12, Planet::DiffusionType::Massman);
-  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, p21, p22, Planet::DiffusionType::Wilson);
-  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, p31, p32, Planet::DiffusionType::Wakeham);
+  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, p21, p22, Planet::DiffusionType::Wakeham);
+  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, p31, p32, Planet::DiffusionType::Wilson);
 
   Scalar T(1500.),P(1e5);
-  Scalar n = P / (T * Antioch::Constants::R_universal<Scalar>()/1000.L);
+  Scalar n = P / (T * Planet::Constants::Universal::kb<Scalar>());
 
   Scalar n2n2 = p11 * Planet::Constants::Convention::P_normal<Scalar>() / P * Antioch::ant_pow(T/Planet::Constants::Convention::T_standard<Scalar>(),p12);
-  Scalar n2ch4 = p21 * Antioch::ant_pow(T,p22)/n;
-  Scalar ch4ch4 = p31 * Antioch::ant_pow(T,p32) * Planet::Constants::Convention::P_normal<Scalar>() / P;
+  Scalar n2ch4 = p21 * Antioch::ant_pow(T,p22)* Planet::Constants::Convention::P_normal<Scalar>() / P;
+  Scalar ch4ch4 = p31 * Antioch::ant_pow(T,p32)/n;
 
   Scalar nn = N2N2.binary_coefficient(T,P);
   Scalar nc = N2CH4.binary_coefficient(T,P);
@@ -59,7 +59,6 @@ int tester()
   return_flag = check(nn,n2n2,tol,"Massman")  || 
                 check(nc,n2ch4,tol,"Wilson") ||
                 check(cc,ch4ch4,tol,"Wakeham");
-
 
   return return_flag;
 }

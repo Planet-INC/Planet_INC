@@ -132,7 +132,7 @@ namespace Planet
           if(i == s)continue;
           meanM[iz] += _mixture.neutral_composition().M(i) * _mixture.neutral_molar_fraction()[i][iz];
         }
-        meanM[iz] /= CoeffType(_mixture.neutral_composition().n_species() - 1);
+        
       }
 
        _Dtilde[s].resize(_altitude.altitudes().size(),0.L);
@@ -143,10 +143,11 @@ namespace Planet
           for(unsigned int i = 0; i < _n_medium; i++)
           {
             if(i == s)continue;
-            CoeffType p = _mixture.total_density()[iz] * Constants::Universal::kb<CoeffType>() * _temperature.neutral_temperature()[iz];
+            CoeffType p = _mixture.total_density()[iz] * 1e6 //cm-3 -> m-3
+                          * Constants::Universal::kb<CoeffType>() * _temperature.neutral_temperature()[iz];
             n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[i][iz] / this->binary_coefficient(i,s,_temperature.neutral_temperature()[iz],p);
           }
-          CoeffType Ds = (_mixture.total_density()[iz] - _mixture.neutral_molar_fraction()[s][iz] * _mixture.total_density()[iz])/n_D;
+          CoeffType Ds = _mixture.total_density()[iz] * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz])/n_D;
           _Dtilde[s][iz] = Ds / (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz] * 
                                 (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM[iz])
                                 );
