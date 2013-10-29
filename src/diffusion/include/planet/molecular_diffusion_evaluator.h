@@ -173,12 +173,6 @@ namespace Planet
        _altitude(alt),
        _temperature(temp)
   {
-     _diffusion.resize(_n_medium); //N2,CH4
-     for(unsigned int i = 0; i < _diffusion.size(); i++)
-     {
-        _diffusion[i].resize(_mixture.neutral_composition().n_species());
-     }
-//
     _Dtilde.resize(_mixture.neutral_composition().n_species());
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
