@@ -143,10 +143,10 @@ namespace Planet
           if(i == s)continue;
           n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[i][iz] / this->binary_coefficient(i,s,_temperature.neutral_temperature()[iz],p);
         }
-        CoeffType Ds = _mixture.total_density()[iz] * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz])/n_D;
-//Dtilde
-        _Dtilde[s][iz] = Ds / (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz] * 
-                              (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM)
+//Dtilde = Ds / ...
+        _Dtilde[s][iz] = _mixture.total_density()[iz] * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz])
+                            / ( n_D * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz] * 
+                                      (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM))
                               );
        }
     }

@@ -56,9 +56,11 @@ namespace Planet{
        Altitude<CoeffType,VectorCoeffType>                                    &_altitude;
        AtmosphericTemperature<CoeffType,VectorCoeffType>                      &_temperature;
 
+       //! \returns \f$\frac{\partial n_s}{\partial z}\f$ at a given altitude for a given species
+       CoeffType dn_dz(unsigned int iz, unsigned int s) const;
 
-       
-       void derive(VectorCoeffType &deriv, const VectorCoeffType &vec, const CoeffType &dx);
+       //! \returns \f$\frac{\partial T}{\partial z}\f$ at a given altitude
+       CoeffType dT_dz(unsigned int iz) const;
 
       public:
        //!
@@ -106,15 +108,6 @@ namespace Planet{
      return;
   }
 
-/*
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  CoeffType DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::derivative(const VectorCoeffType &vec, const VectorCoeffType &dx, unsigned int iz)
-  {
-     return (deriv[ix] = (vec[iz+1] - vec[iz-1]) / (dx[iz+1] - dx[iz-1]));
-  }
-*/
-
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
   const MatrixCoeffType &DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion() const
@@ -137,6 +130,10 @@ namespace Planet{
   void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_diffusion()
   {
 
+/*     
+ *     omega = - Dtilde * (1/ns * dns_dz + 1/Hs + 1/T * dT_dz * (1 + (1 - xs) * alphas)) 
+ *             - K      * (1/ns * dns_dz + 1/Ha + 1/T * dT_dz) 
+ */
      _omega.clear();
      _omega.resize(_mixture.neutral_composition().n_species());
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
@@ -144,26 +141,46 @@ namespace Planet{
         _omega[s].resize(_altitude.altitudes().size(),0.L);
         for(unsigned int iz = 1; iz < _altitude.altitudes().size() - 1; iz++)
         {
-            _omega[s][iz] = - _molecular_diffusion.Dtilte()[s][iz] * (
-            CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * 
-( /// dn_dz 
-   _mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - _mixture.total_density()[iz-1] * _mixture.neutral_molar_fraction()[s][iz-1] 
-)  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]) + 
-        CoeffType(1.)/_mixture.scale_height()[s][iz] + CoeffType(1.)/_temperature.neutral_temperature()[iz] * 
-(_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1])
-        * (CoeffType(1.) + (CoeffType(1.) - _mixture.neutral_molar_fraction()[s][iz]) * _mixture.thermal_coefficient()[s])
-                                                ) - _eddy_diffusion.K()[iz] * (
-            CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * 
-( /// dn_dz 
-   _mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - _mixture.total_density()[iz-1] * _mixture.neutral_molar_fraction()[s][iz-1] 
-)  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]) + 
-        CoeffType(1.)/_mixture.mean_scale_height()[iz] + 
-CoeffType(1.)/_temperature.neutral_temperature()[iz] * 
-(_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]));
+            _omega[s][iz] =  - _molecular_diffusion.Dtilde()[s][iz] * // - Dtilde * (
+            (
+              CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * this->dn_dz(iz,s) // 1/ns * dns_dz
+            + CoeffType(1.)/_mixture.scale_height()[s][iz]  // + 1/Hs
+            + CoeffType(1.)/_temperature.neutral_temperature()[iz] * this->dT_dz(iz) // + 1/T * dT_dz * (
+                * (CoeffType(1.) + (CoeffType(1.) - _mixture.neutral_molar_fraction()[s][iz]) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) )
+            )
+             - _eddy_diffusion.K()[iz] * // - K * (
+            ( 
+              CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * this->dn_dz(iz,s) // 1/ns * dns_dz
+            + CoeffType(1.)/_mixture.atmosphere_scale_height()[iz]  // + 1/Ha
+            + CoeffType(1.)/_temperature.neutral_temperature()[iz] * this->dT_dz(iz) //+1/T * dT_dz )
+            );
         }
      }
   }
   
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  CoeffType DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::dn_dz(unsigned int iz, unsigned int s) const
+  {
+     antioch_assert_greater(iz,0);
+     antioch_assert_less(iz,_altitude.altitudes().size()-1);
+     antioch_assert_less(s,_mixture.neutral_composition().n_species());
+     return  (_mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - 
+                                        _mixture.total_density()[iz-1] * _mixture.neutral_molar_fraction()[s][iz-1])  / 
+                        (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]);
+  }
+
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  CoeffType DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::dT_dz(unsigned int iz) const
+  {
+     antioch_assert_greater(iz,0);
+     antioch_assert_less(iz,_altitude.altitudes().size()-1);
+     return  (_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  
+                                / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]);
+  }
+
+
 }
 
 #endif
