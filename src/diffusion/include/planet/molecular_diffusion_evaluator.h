@@ -130,9 +130,9 @@ namespace Planet
         for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
         {
           if(i == s)continue;
-          meanM[iz] += _mixture.neutral_composition().M(i) * _mixture.neutral_molar_fraction()[i][iz];
+          meanM[iz] += _mixture.neutral_composition().M(i) * _mixture.neutral_molar_fraction()[i][iz] * _mixture.total_density()[iz];
         }
-        
+        meanM[iz] /= CoeffType(_mixture.neutral_composition().n_species() - 1);
       }
 
        _Dtilde[s].resize(_altitude.altitudes().size(),0.L);

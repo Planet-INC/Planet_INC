@@ -189,11 +189,11 @@ int tester()
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
 //binary diffusion
-  Scalar bCN1(1.04e-5 * 1e-4),bCN2(1.76); //cm-2 -> m-2
+  Scalar bCN1(1.04e-5 * 1e-4),bCN2(1.76); //cm2 -> m2
   Planet::DiffusionType CN_model(Planet::DiffusionType::Wakeham);
-  Scalar bCC1(5.73e16 * 1e-4),bCC2(0.5); //cm-2 -> m-2
+  Scalar bCC1(5.73e16 * 1e-4),bCC2(0.5); //cm2 -> m2
   Planet::DiffusionType CC_model(Planet::DiffusionType::Wilson);
-  Scalar bNN1(0.1783 * 1e-4),bNN2(1.81); //cm-2 -> m-2
+  Scalar bNN1(0.1783 * 1e-4),bNN2(1.81); //cm2 -> m2
   Planet::DiffusionType NN_model(Planet::DiffusionType::Massman);
 
 /************************
@@ -318,14 +318,12 @@ int tester()
            tmp += densities[medium][iz]/Dij[medium][s];
         }
         Scalar Ds = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) - densities[s][iz]) / tmp;
-if(Ds < 0.)std::cout << barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) << "\n\t" 
-                     << zmin << " " << altitude.altitudes()[iz] << " " << neutral_temperature[iz] << " " << Matm << " " << dens_tot << "\n" 
-                     << densities[s][iz] << " " << tmp << std::endl;
         for(unsigned int j = 0; j < molar_frac.size(); j++)
         {
            if(s == j)continue;
-           M_diff += composition.neutral_molar_fraction()[j][iz] * composition.neutral_composition().M(j);
+           M_diff += composition.total_density()[iz] * composition.neutral_molar_fraction()[j][iz] * composition.neutral_composition().M(j);
         }
+        M_diff /= Scalar(molar_frac.size() - 1);
         Scalar Dtilde = Ds / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
 
         return_flag = return_flag ||
