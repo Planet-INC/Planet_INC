@@ -110,7 +110,7 @@ namespace Planet
           {
              _tau[iz][il] += sigma[s][il] * sumdens[s][iz];
           }
-          _tau[iz][il] *= _chapman(a[iz]);
+          _tau[iz][il] *= _chapman(a[iz]) * _altitude.alt_step() * 1e5; //km -> cm
         }
       }
       return;

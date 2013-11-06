@@ -142,6 +142,20 @@ namespace Planet
         //!\return the total number of species
         unsigned int n_total_species() const;
 
+        //! \return Jeans' escape flux
+        template<typename StateType>
+        ANTIOCH_AUTO(StateType)
+        Jeans_flux(const StateType &ms, const StateType &ns, const StateType &T, const StateType &z) const
+        ANTIOCH_AUTOFUNC(StateType, ns * Antioch::ant_sqrt(Constants::Universal::kb<StateType>() * T / (StateType(2.L) * ms * Constants::pi<StateType>())) 
+                                       * Antioch::ant_exp(- ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() 
+                                                         / (StateType(1e3L) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T)
+                                                         )
+                                       * (StateType(1.L) + 
+                                               (StateType(1e3L) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T)
+                                                / (ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>())
+                                         
+                                         ))
+
 
         //!sets the hard sphere radius
         template <typename VectorStateType>
@@ -479,9 +493,11 @@ namespace Planet
                                                                                        const StateType &dens_tot_bot)
   {
 
+    antioch_assert_less_equal(_neutral_composition.n_species(),bot_compo.size());
+
     _total_density.resize(_altitude.altitudes().size(),dens_tot_bot);
     _neutral_molar_fraction.resize(_neutral_composition.n_species());
-    _ionic_molar_fraction.resize(bot_compo.size() - _neutral_composition.n_species());
+    if(bot_compo.size() > _neutral_composition.n_species())_ionic_molar_fraction.resize(bot_compo.size() - _neutral_composition.n_species());
   // molar fractions kept constant
   // first neutral, then ionic
     unsigned int bc(0);
@@ -495,7 +511,6 @@ namespace Planet
        _ionic_molar_fraction[n].resize(_altitude.altitudes().size(),bot_compo[bc]);
        bc++;
     }
-
     for(unsigned int i = 0 ; i < _altitude.altitudes().size(); i++)
     {
   //mean

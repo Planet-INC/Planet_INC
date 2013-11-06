@@ -105,7 +105,7 @@ int tester()
         {
            tau_exact += sigma[s][il] * totdens[s][iz];
         }
-        tau_exact *= chapman(a[iz]);
+        tau_exact *= chapman(a[iz]) * altitude.alt_step() * 1e5; //to cm
         return_flag = return_flag || 
                       check(tau.tau()[iz][il],tau_exact,tol,"tau at altitude and wavelength");
      }

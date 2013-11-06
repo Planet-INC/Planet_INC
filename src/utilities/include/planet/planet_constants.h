@@ -24,6 +24,8 @@
 #ifndef PLANET_CONSTANTS_H
 #define PLANET_CONSTANTS_H
 
+#include "antioch/cmath_shims.h"
+
 namespace Planet 
 {
   namespace Constants
@@ -43,7 +45,7 @@ namespace Planet
     }
 
     /*!
-     * Boltzmann constant in J.K-1
+     * Boltzmann constant in J.K-1 (kg.m2.s-2.K-1)
      * error is 0.0000013e-23 J.K-1
      */
     template<typename CoeffType>
@@ -56,16 +58,30 @@ namespace Planet
     } //end namespace Universal
 
     /*!
-     * Gravitationnal constant, giving
+     * Gravitationnal constant in m.s-2, giving
      * radius of body (km),
      * altitude (in km) and 
      * mass (kg)
+     * \f$g = \frac{G m}{(R + z)^2}\f$
      */
     template<typename CoeffType>
     inline
     CoeffType g(const CoeffType &radius, const CoeffType &alt, const CoeffType &mass)
     {
        return Constants::Universal::G<CoeffType>() * mass / (CoeffType(1e6L) * (radius + alt) * (radius + alt));
+    }
+
+    /*!
+     * Jeans' escape velocity in m.s-1, giving
+     * body's mass (kg),
+     * body's radius (km),
+     * altitude (km) 
+     */
+    template<typename CoeffType>
+    inline
+    CoeffType escape_velocity(const CoeffType &radius, const CoeffType &alt, const CoeffType &mass)
+    {
+       return Antioch::ant_sqrt(CoeffType(2.L) * Constants::Universal::G<CoeffType>() * mass / (CoeffType(1e3L) * (radius + alt) ));
     }
 
     namespace Saturn
@@ -110,6 +126,18 @@ namespace Planet
     {
       return 2575.5L;
     }
+
+    /*!
+     * Titan's rotationnal period in seconds,
+     * ~ 16 Earth days, so 16 * 24 * 3600 = 1,382,400 s
+     */
+    template<typename CoeffType>
+    inline
+    CoeffType rotational_period()
+    {
+      return 1.3824e6L;
+    }
+
     } //end namespace Titan
 
 

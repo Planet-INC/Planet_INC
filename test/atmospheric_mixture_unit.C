@@ -87,6 +87,19 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
 }
 
 template <typename Scalar>
+Scalar Jeans(const Scalar &m, const Scalar &n, const Scalar &T, const Scalar &z)
+{
+  Scalar Vesc2 = Scalar(2.L) * Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() /
+                ((z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
+
+  Scalar Us2 = Scalar(2.L) * Planet::Constants::Universal::kb<Scalar>() * T / m;
+
+  return n * Antioch::ant_sqrt(Us2) / (Scalar(2.L) * Antioch::ant_sqrt(Planet::Constants::pi<Scalar>())) 
+                         * Antioch::ant_exp(-Vesc2/Us2) 
+                         *  (Scalar(1.L) + Vesc2/Us2);
+}
+
+template <typename Scalar>
 int tester()
 {
   std::vector<std::string> neutrals;
@@ -102,13 +115,32 @@ int tester()
   Mm.push_back(MN2);
   Mm.push_back(MCH4);
 
+//densities
+  std::vector<Scalar> molar_frac;
+  molar_frac.push_back(0.96L);
+  molar_frac.push_back(0.04L);
+  molar_frac.push_back(0.L);
+  Scalar dens_tot(1e12L); //cm-3
 
+//hard sphere radius
+  std::vector<Scalar> hard_sphere_radius;
+  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
+  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
+
+/*******************************
+ * first level
+ *******************************/
 //altitude
   Planet::Altitude<Scalar,std::vector<Scalar> > altitude(600.,1400.,10.);
 //neutrals
   Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
 //ions
   Antioch::ChemicalMixture<Scalar> ionic_species(ions); 
+
+/*********************************
+ * second level
+ *********************************/
+
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
@@ -116,24 +148,20 @@ int tester()
   linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
 
+/*********************************
+ * third level
+ *********************************/
+
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, altitude, temperature);
-
-//densities
-  std::vector<Scalar> molar_frac;
-  molar_frac.push_back(0.96L);
-  molar_frac.push_back(0.04L);
-  molar_frac.push_back(0.L);
-  Scalar dens_tot(1e12L); //cm-3
   composition.init_composition(molar_frac,dens_tot);
-
-//hard sphere radius
-  std::vector<Scalar> hard_sphere_radius;
-  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
-  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
   composition.set_hard_sphere_radius(hard_sphere_radius);
 
   composition.initialize();
+
+/********************
+ * checks
+ ********************/
 
   std::vector<Scalar> exobase;
   Scalar mean_exo(0.L);
@@ -187,6 +215,21 @@ int tester()
           minexobase[s] = Antioch::ant_abs(free_path - scale_height);
           exobase[s] = altitude.altitudes()[iz];
        }
+
+       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>(), //m
+                                 n_tot_the * molar_frac[s], //n
+                                 neutral_temperature[iz],altitude.altitudes()[iz]); //T,alt
+
+       if(Jeans_flux != 0.)
+       {
+       return_flag = return_flag ||
+                     check_test(Jeans_flux,composition.Jeans_flux(composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>(),
+                                                                  composition.total_density()[iz] * composition.neutral_molar_fraction()[s][iz], //n
+                                                                  temperature.neutral_temperature()[iz],altitude.altitudes()[iz]),
+                                "Jeans escape flux of species at altitude");
+       }
+
+
 
        return_flag = return_flag ||
                      check_test(free_path, composition.free_path()[s][iz], "free path of species at altitude") ||

@@ -75,8 +75,11 @@ namespace Planet
         template<typename StateType, typename VectorStateType>
         void set_photon_flux_at_top(const VectorStateType &lambda, const VectorStateType &hv, const StateType &d = 1.L);
 
-        //!\return photon flux
+        //!\return const ref photon flux
         const std::vector<Antioch::ParticleFlux<VectorCoeffType> > &photon_flux() const;
+
+        //!\return pointer to photon flux
+        Antioch::ParticleFlux<VectorCoeffType> *photon_flux_ptr(unsigned int iz);
 
         //!calculate photon flux
         void update_photon_flux();
@@ -87,9 +90,15 @@ namespace Planet
         //!\return absorbing species cross-section map
         const std::vector<CrossSection<VectorCoeffType> > &absorbing_species_cs() const;
 
+        //!\return photon flux at top of atmosphere
+        const Antioch::ParticleFlux<VectorCoeffType> &photon_flux_at_top() const;
+
         //!adds a photon cross-section
         template<typename VectorStateType>
         void add_cross_section(const VectorStateType &lambda, const VectorStateType &cs, const Antioch::Species &sp);
+
+        //!
+        const std::map<Antioch::Species, unsigned int> cross_sections_map() const;
 
         //!
         void initialize();
@@ -164,9 +173,24 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
+  const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_at_top() const
+  {
+    return _phy_at_top;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
   const std::vector<Antioch::ParticleFlux<VectorCoeffType> > &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux() const
   {
      return _phy;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  Antioch::ParticleFlux<VectorCoeffType> *PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_ptr(unsigned int iz)
+  {
+     antioch_assert_less(iz,_phy.size());
+     return &(_phy[iz]);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -181,6 +205,14 @@ namespace Planet
   const std::vector<CrossSection<VectorCoeffType> > &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::absorbing_species_cs() const
   {
       return _absorbing_species_cs;
+  }
+
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  const std::map<Antioch::Species, unsigned int> PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::cross_sections_map() const
+  {
+     return _cross_sections_map;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -215,15 +247,16 @@ namespace Planet
      totdens.resize(_absorbing_species.size());
      for(unsigned int s = 0; s < _absorbing_species.size(); s++)
      {
+       unsigned int is = _mixture.neutral_composition().species_list_map().at(_absorbing_species[s]);
        totdens[s].resize(_altitude.altitudes().size(),0.L);
 //from top to bottom
        unsigned int iz = _altitude.altitudes_map().at(_altitude.alt_max());
-       totdens[s][iz]  = _mixture.neutral_molar_fraction()[s][iz] * _mixture.total_density()[iz];
+       totdens[s][iz]  = _mixture.neutral_molar_fraction()[is][iz] * _mixture.total_density()[iz];
        unsigned int izb = iz;
        for(CoeffType z = _altitude.alt_max() - _altitude.alt_step(); z >= _altitude.alt_min(); z -= _altitude.alt_step())
        {
          iz = _altitude.altitudes_map().at(z);
-         totdens[s][iz] = totdens[s][izb] + _mixture.neutral_molar_fraction()[s][iz] * _mixture.total_density()[iz];
+         totdens[s][iz] = totdens[s][izb] + _mixture.neutral_molar_fraction()[is][iz] * _mixture.total_density()[iz];
          izb = iz;
        }
      }

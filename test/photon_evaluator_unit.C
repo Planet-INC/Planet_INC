@@ -24,7 +24,8 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
+  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e3:100.;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
@@ -98,8 +99,8 @@ void read_crossSection(const std::string &file, unsigned int nbr, VectorScalar &
      Scalar wv,sigt,sigbr;
      sig_f >> wv >> sigt;
      for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
-     lambda.push_back(wv/10.);//A -> nm
-     sigma.push_back(sigt*10.);//cm-2/A -> m-2/nm
+     lambda.push_back(wv);//A
+     sigma.push_back(sigt);//cm-2/A
   }
   sig_f.close();
 
@@ -117,8 +118,9 @@ void read_hv_flux(VectorScalar &lambda, VectorScalar &phy1AU, const std::string 
      Scalar wv,ir,dirr;
      flux_1AU >> wv >> ir >> dirr;
      if(!lambda.empty() && wv == lambda.back())continue;
-     lambda.push_back(wv);//nm
-     phy1AU.push_back(ir);//W/m2/nm
+     lambda.push_back(wv * 10.L);//nm -> A
+     phy1AU.push_back(ir * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<Scalar>() * 
+                                        Antioch::Constants::light_celerity<Scalar>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A
   }
   flux_1AU.close();
   return;
@@ -196,7 +198,7 @@ void calculate_tau(MatrixScalar &opacity, const Planet::Chapman<Scalar> &chapman
     }
     for(unsigned int il = 0; il < lambda_ref.size(); il++)
     {
-      opacity[iz][il] *= chapman(a);
+      opacity[iz][il] *= chapman(a) * zstep * 1e5;
     }
     iz++;
   }
@@ -249,6 +251,11 @@ int tester()
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
+//temperature
+  std::vector<Scalar> T0,Tz;
+  read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
+  std::vector<Scalar> neutral_temperature;
+
 /************************
  * first level
  ************************/
@@ -273,9 +280,6 @@ int tester()
  ************************/
 
 //temperature
-  std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
-  std::vector<Scalar> neutral_temperature;
   linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
 
@@ -372,7 +376,7 @@ int tester()
                       check_test(phy_theo[iz][il], photon.photon_flux()[iz].flux()[il], "phy at altitude and wavelength");
         if(return_flag)
         {
-         std::cout << altitude.altitudes()[iz] << " " << lambda_hv[il] << std::endl;
+          std::cout << altitude.altitudes()[iz] << " " << lambda_hv[il] << std::endl;
           return return_flag;
         }
     }
