@@ -66,25 +66,25 @@ class Atmosphere{
 //composition
         AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
 //kinetics, photo/electrochemistry swallowed in Antioch
-        AtmosphericKinetics<CoeffType> &_kinetics;
+        AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> &_kinetics;
 //photon
         PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_photon_eval;
 //electron
 //        ElectronEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_electron_eval;
-//diffusion, bimolecular + eddy
+//diffusion
         DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_diffusion;
 
-        //!initialize everything
-        void initialize_atmosphere();
+        //!update everything
+        void update_atmosphere();
 
       public:
         //!
-        Atmosphere(Altitude<CoeffType,VectorCoeffType> &alt,
-                   AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
-                   AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                   AtmosphericKinetics<CoeffType> &kin,
-                   PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux,
-                   DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &diff);
+        Atmosphere(Altitude              <CoeffType,VectorCoeffType>                 &alt,
+                   AtmosphericTemperature<CoeffType,VectorCoeffType>                 &temp,
+                   AtmosphericMixture    <CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                   AtmosphericKinetics   <CoeffType,VectorCoeffType,MatrixCoeffType> &kin,
+                   PhotonEvaluator       <CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux,
+                   DiffusionEvaluator    <CoeffType,VectorCoeffType,MatrixCoeffType> &diff);
 
         //!
         ~Atmosphere();
@@ -121,12 +121,13 @@ CoeffType Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::pressure(unsign
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::Atmosphere(Altitude<CoeffType,VectorCoeffType> &alt,
-                                  AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
-                                  AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                                  AtmosphericKinetics<CoeffType> &kin,
-                                  PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux,
-                                  DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &diff):
+Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::Atmosphere(
+                                  Altitude              <CoeffType,VectorCoeffType>                 &alt,
+                                  AtmosphericTemperature<CoeffType,VectorCoeffType>                 &temp,
+                                  AtmosphericMixture    <CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                                  AtmosphericKinetics   <CoeffType,VectorCoeffType,MatrixCoeffType> &kin,
+                                  PhotonEvaluator       <CoeffType,VectorCoeffType,MatrixCoeffType> &hv_flux,
+                                  DiffusionEvaluator    <CoeffType,VectorCoeffType,MatrixCoeffType> &diff):
         _altitude(alt),
         _temperature(temp),
         _composition(comp),
@@ -134,7 +135,6 @@ Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::Atmosphere(Altitude<Coeff
         _photon_eval(hv_flux),
         _diffusion(diff)
 {
-  initialize_atmosphere();
   return;
 }
 
@@ -147,12 +147,12 @@ Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::~Atmosphere()
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::initialize_atmosphere()
+void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::update_atmosphere()
 {
    _temperature.initialize();
    _composition.initialize();
-   _kinetics.initialize();
    _photon_eval.initialize();
+   _kinetics.initialize();
    _diffusion.initialize();
 }
 
@@ -204,7 +204,7 @@ template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
 void Atmosphere<CoeffType,VectorCoeffType,MatrixCoeffType>::print_photon_flux(std::ostream &out) const
 {
-  out << "Altitude lambda photon_flux (K nm W/m2/nm)" << std::endl; 
+  out << "Altitude lambda photon_flux (km A s-1.cm-2.A-1)" << std::endl; 
   for(unsigned int nalt = 0; nalt < _altitude.altitudes().size(); nalt++)
   {
     for(unsigned int il = 0; il < _photon_eval.photon_flux()[nalt].abscissa().size(); il++)

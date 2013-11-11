@@ -49,6 +49,7 @@ namespace Planet
         MatrixCoeffType _Dtilde;
         std::vector<std::vector<BinaryDiffusion<CoeffType> > > _diffusion;
         const unsigned int _n_medium;
+        std::vector<unsigned int> _i_medium;
 
 //dependencies
         AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
@@ -140,8 +141,9 @@ namespace Planet
         Antioch::set_zero(n_D);
         for(unsigned int i = 0; i < _n_medium; i++)
         {
-          if(i == s)continue;
-          n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[i][iz] / this->binary_coefficient(i,s,_temperature.neutral_temperature()[iz],p);
+          if(_i_medium[i] == s)continue;
+          n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[_i_medium[i]][iz] / 
+                                        this->binary_coefficient(_i_medium[i],s,_temperature.neutral_temperature()[iz],p);
         }
 //Dtilde = Ds / ...
         _Dtilde[s][iz] = _mixture.total_density()[iz] * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz])
@@ -178,6 +180,11 @@ namespace Planet
      {
        _Dtilde[s].resize(_altitude.altitudes().size(),0.L);
      }
+//// hard-coded, N2 then CH4
+    _i_medium.resize(_n_medium);
+    _i_medium[0] = _mixture.neutral_composition().species_list_map().at(Antioch::Species::N2);
+    _i_medium[0] = _mixture.neutral_composition().species_list_map().at(Antioch::Species::CH4);
+  
      return; 
   }
 

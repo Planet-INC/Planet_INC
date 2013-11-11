@@ -69,7 +69,8 @@ namespace Planet{
 
          //!
          EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
-                                Altitude<CoeffType,VectorCoeffType> &alt);
+                                Altitude<CoeffType,VectorCoeffType> &alt,
+                                const CoeffType &K0 = -1.);
 
          //!
          ~EddyDiffusionEvaluator();
@@ -78,8 +79,9 @@ namespace Planet{
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
 EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
-                                                                          Altitude<CoeffType,VectorCoeffType> &alt):
-  _K0(-1.),
+                                                                          Altitude<CoeffType,VectorCoeffType> &alt,
+                                                                          const CoeffType &K0):
+  _K0(K0),
   _mixture(mix),
   _altitude(alt)
 {

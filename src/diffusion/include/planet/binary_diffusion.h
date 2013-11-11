@@ -69,7 +69,13 @@ class BinaryDiffusion{
         //!
         void set_diffusion_model(const DiffusionType &model);
         //!
-        void set_parameters(const CoeffType &par1, const CoeffType &par2);
+        template<typename StateType>
+        void set_parameters(const StateType &par1, const StateType &par2);
+        //!
+        template<typename StateType>
+        void set_binary_diffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, 
+                                  const StateType &par1, const StateType &par2, const DiffusionType &model);
+
         //!
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
@@ -211,8 +217,9 @@ void BinaryDiffusion<CoeffType>::set_diffusion_model(const DiffusionType &model)
 }
 
 template<typename CoeffType>
+template<typename StateType>
 inline
-void BinaryDiffusion<CoeffType>::set_parameters(const CoeffType &par1, const CoeffType &par2)
+void BinaryDiffusion<CoeffType>::set_parameters(const StateType &par1, const StateType &par2)
 {
 
   switch(_diffusion_model)
@@ -251,6 +258,17 @@ void BinaryDiffusion<CoeffType>::set_parameters(const CoeffType &par1, const Coe
   }
 
   return;
+}
+
+template<typename CoeffType>
+template<typename StateType>
+inline
+void BinaryDiffusion<CoeffType>::set_binary_diffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, 
+                                                      const StateType &par1, const StateType &par2, const DiffusionType &model)
+{
+  this->set_diffusion_model(model);
+  this->set_molecules(mol1,mol2);
+  this->set_parameters(par1,par2);
 }
 
 template<typename CoeffType>
