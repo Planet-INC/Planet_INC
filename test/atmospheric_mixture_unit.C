@@ -23,7 +23,9 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
+  Scalar coeff(100.);
+  if(std::numeric_limits<Scalar>::epsilon() < 1e-17)coeff *= 5.;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific  << std::setprecision(20)
             << "failed test: "  << words << "\n"
@@ -89,14 +91,11 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
 template <typename Scalar>
 Scalar Jeans(const Scalar &m, const Scalar &n, const Scalar &T, const Scalar &z)
 {
-  Scalar Vesc2 = Scalar(2.L) * Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() /
-                ((z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
+  Scalar lambda =  Planet::Constants::Universal::G<Scalar>()  * Planet::Constants::Titan::mass<Scalar>() * m / 
+                  (Planet::Constants::Universal::kb<Scalar>() * T * (z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
 
-  Scalar Us2 = Scalar(2.L) * Planet::Constants::Universal::kb<Scalar>() * T / m;
-
-  return n * Antioch::ant_sqrt(Us2) / (Scalar(2.L) * Antioch::ant_sqrt(Planet::Constants::pi<Scalar>())) 
-                         * Antioch::ant_exp(-Vesc2/Us2) 
-                         *  (Scalar(1.L) + Vesc2/Us2);
+  return n * Antioch::ant_sqrt(Planet::Constants::Universal::kb<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
+           * Antioch::ant_exp(-lambda) * (Scalar(1.) + lambda);
 }
 
 template <typename Scalar>
@@ -216,17 +215,22 @@ int tester()
           exobase[s] = altitude.altitudes()[iz];
        }
 
-       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>(), //m
+       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //m (kg)
                                  n_tot_the * molar_frac[s], //n
                                  neutral_temperature[iz],altitude.altitudes()[iz]); //T,alt
 
-       if(Jeans_flux != 0.)
+//       if(Jeans_flux != 0.)
        {
        return_flag = return_flag ||
-                     check_test(Jeans_flux,composition.Jeans_flux(composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>(),
-                                                                  composition.total_density()[iz] * composition.neutral_molar_fraction()[s][iz], //n
-                                                                  temperature.neutral_temperature()[iz],altitude.altitudes()[iz]),
-                                "Jeans escape flux of species at altitude");
+                     check_test(Jeans_flux,composition.Jeans_flux(
+                                        composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //g/mol -> kg/mol
+                                        composition.total_density()[iz] * composition.neutral_molar_fraction()[s][iz], //n, cm-3
+                                        temperature.neutral_temperature()[iz],// T (K)
+                                        altitude.altitudes()[iz]), //km -> m
+                                "Jeans escape flux of species " + 
+                                composition.neutral_composition().species_inverse_name_map().at(composition.neutral_composition().species_list()[s]) + 
+                                " at altitude");
+                                        
        }
 
 

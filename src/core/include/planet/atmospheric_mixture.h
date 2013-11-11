@@ -143,6 +143,11 @@ namespace Planet
         unsigned int n_total_species() const;
 
         //! \return Jeans' escape flux
+        //
+        // \param ms: mass of molecule (kg)
+        // \param ns: molecular density (any density unit, reported in the flux)
+        // \param T: temperature (K)
+        // \param z: altitude (km)
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         Jeans_flux(const StateType &ms, const StateType &ns, const StateType &T, const StateType &z) const
@@ -151,9 +156,8 @@ namespace Planet
                                                          / (StateType(1e3L) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T)
                                                          )
                                        * (StateType(1.L) + 
-                                               (StateType(1e3L) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T)
-                                                / (ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>())
-                                         
+                                           ((ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>())
+                                                / (StateType(1e3L) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T))
                                          ))
 
 
@@ -476,8 +480,7 @@ namespace Planet
   {
     CoeffType meanmass;
     Antioch::set_zero(meanmass);
-    unsigned int n(_neutral_composition.n_species());
-    for(unsigned int ispec = 0; ispec < n; ispec++)
+    for(unsigned int ispec = 0; ispec < _neutral_composition.n_species(); ispec++)
     {
         meanmass += _neutral_molar_fraction[ispec][iz] * _neutral_composition.M(ispec);
     }
@@ -492,7 +495,6 @@ namespace Planet
   void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::init_composition(const VectorStateType &bot_compo,
                                                                                        const StateType &dens_tot_bot)
   {
-
     antioch_assert_less_equal(_neutral_composition.n_species(),bot_compo.size());
 
     _total_density.resize(_altitude.altitudes().size(),dens_tot_bot);
