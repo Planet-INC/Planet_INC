@@ -13,10 +13,6 @@ check_PROGRAMS += photon_evaluator_unit
 check_PROGRAMS += eddy_diffusion_evaluator_unit
 check_PROGRAMS += molecular_diffusion_evaluator_unit
 check_PROGRAMS += diffusion_evaluator_unit
-#check_PROGRAMS += atmosphere_tests
-#check_PROGRAMS += photon_tests
-#check_PROGRAMS += tests
-#check_PROGRAMS += solver_test
 
 AM_CPPFLAGS  = 
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
@@ -26,7 +22,6 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
-AM_CPPFLAGS += -I$(top_srcdir)/src/solver/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
@@ -48,10 +43,6 @@ photon_evaluator_unit_SOURCES = photon_evaluator_unit.C
 eddy_diffusion_evaluator_unit_SOURCES = eddy_diffusion_evaluator_unit.C
 molecular_diffusion_evaluator_unit_SOURCES = molecular_diffusion_evaluator_unit.C
 diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
-#atmosphere_tests_SOURCES = atmosphere_tests.C
-#photon_tests_SOURCES = photon_tests.C
-#tests_SOURCES = tests.C
-#solver_tests_SOURCES = solver_test.C
 
 #Define tests to actually be run
 TESTS = 
@@ -65,10 +56,6 @@ TESTS  += photon_evaluator_unit
 TESTS  += eddy_diffusion_evaluator_unit
 TESTS  += molecular_diffusion_evaluator_unit
 TESTS  += diffusion_evaluator_unit
-#TESTS  += atmosphere_tests
-#TESTS  += photon_tests
-#TESTS  += tests
-#TESTS  += solver_test
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

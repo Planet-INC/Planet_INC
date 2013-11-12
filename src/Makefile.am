@@ -59,9 +59,6 @@ include_HEADERS += diffusion/include/planet/molecular_diffusion_evaluator.h
 include_HEADERS += diffusion/include/planet/eddy_diffusion_evaluator.h
 include_HEADERS += diffusion/include/planet/diffusion_evaluator.h
 
-# solvers
-include_HEADERS += solver/include/planet/crank_nicholson.h
-
 # sampling
 include_HEADERS += 
 
@@ -88,7 +85,6 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
-AM_CPPFLAGS += -I$(top_srcdir)/src/solver/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 AM_CPPFLAGS +=  $(planet_optional_INCLUDES)
