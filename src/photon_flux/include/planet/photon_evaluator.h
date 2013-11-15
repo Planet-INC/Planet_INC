@@ -32,7 +32,6 @@
 #include "planet/photon_opacity.h"
 #include "planet/cross_section.h"
 #include "planet/atmospheric_mixture.h"
-#include "planet/photon_evaluator.h"
 
 //C++
 #include <vector>
