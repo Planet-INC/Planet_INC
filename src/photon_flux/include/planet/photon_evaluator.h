@@ -141,9 +141,10 @@ namespace Planet
 //phy at top
      _phy_at_top.set_abscissa(lambda);
      VectorCoeffType flux;
+     flux.resize(hv.size());
      for(unsigned int i = 0; i < hv.size(); i++)
      {
-        flux.push_back(hv[i]/(d * d));
+        flux[i] = hv[i]/(d * d);
      }
      _phy_at_top.set_flux(flux);
 
