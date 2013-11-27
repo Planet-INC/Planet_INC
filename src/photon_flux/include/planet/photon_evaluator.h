@@ -27,6 +27,7 @@
 //Antioch
 #include "antioch/species_enum.h"
 #include "antioch/particle_flux.h"
+#include "antioch/reaction_set.h"
 
 //Planet
 #include "planet/photon_opacity.h"
@@ -49,6 +50,7 @@ namespace Planet
 //parameters & output
         Antioch::ParticleFlux<VectorCoeffType> _phy_at_top;
         std::vector<Antioch::ParticleFlux<VectorCoeffType> > _phy; //alt
+        Antioch::ParticleFlux<VectorCoeffType> *_phy_ptr;
 
 //store
         std::map<Antioch::Species, unsigned int> _cross_sections_map;
@@ -77,8 +79,12 @@ namespace Planet
         //!\return const ref photon flux
         const std::vector<Antioch::ParticleFlux<VectorCoeffType> > &photon_flux() const;
 
-        //!\return pointer to photon flux
-        Antioch::ParticleFlux<VectorCoeffType> *photon_flux_ptr(unsigned int iz);
+        //!Sets the pointer to photon flux for reactions
+        template <typename StateType>
+        void set_photon_flux_ptr(Antioch::ReactionSet<StateType> &reaction_set);
+
+        //!sets the pointer to the right flux
+        void set_photon_flux(unsigned int iz);
 
         //!calculate photon flux
         void update_photon_flux();
@@ -109,6 +115,7 @@ namespace Planet
   PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonEvaluator(Altitude<CoeffType,VectorCoeffType> &alt,
                                                               PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
                                                               AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix):
+  _phy_ptr(NULL),
   _hv_tau(hv_tau),
   _altitude(alt),
   _mixture(mix)
@@ -183,14 +190,6 @@ namespace Planet
   const std::vector<Antioch::ParticleFlux<VectorCoeffType> > &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux() const
   {
      return _phy;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  Antioch::ParticleFlux<VectorCoeffType> *PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_ptr(unsigned int iz)
-  {
-     antioch_assert_less(iz,_phy.size());
-     return &(_phy[iz]);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -277,6 +276,21 @@ namespace Planet
      }
 
      return; 
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType>
+  inline
+  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux_ptr(Antioch::ReactionSet<StateType> &reaction_set)
+  {
+      reaction_set.set_particle_flux(_phy_ptr);
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux(unsigned int iz)
+  {
+     _phy_ptr = &_phy[iz];
   }
 
 }

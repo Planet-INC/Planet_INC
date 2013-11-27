@@ -130,10 +130,12 @@ namespace Planet
 //M_{/=}
         CoeffType meanM;
         Antioch::set_zero(meanM);
+        CoeffType ntot_s = _mixture.total_density()[iz] - _mixture.neutral_molar_fraction()[s][iz] * _mixture.total_density()[iz]; //ntot - ns
         for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
         {
           if(i == s)continue;
-          meanM += _mixture.neutral_composition().M(i) * _mixture.neutral_molar_fraction()[i][iz] * _mixture.total_density()[iz];
+          meanM += _mixture.neutral_composition().M(i) * 
+                   _mixture.neutral_molar_fraction()[i][iz] * _mixture.total_density()[iz] / ntot_s; //x_i without s: ni/(ntot - ns)
         }
         meanM /= CoeffType(_mixture.neutral_composition().n_species() - 1);
 //Ds
