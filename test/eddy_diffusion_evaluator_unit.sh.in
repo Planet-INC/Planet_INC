@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROG="@top_builddir@/test/eddy_diffusion_evaluator_unit"
+
+INPUT="@top_srcdir@/test/input/temperature.dat"
+
+$PROG $INPUT
+

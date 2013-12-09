@@ -226,7 +226,8 @@ void calculate_tau(MatrixScalar &opacity, const Planet::Chapman<Scalar> &chapman
 
 
 template <typename Scalar>
-int tester()
+int tester(const std::string &input_T, const std::string &input_hv, 
+           const std::string &input_N2, const std::string &input_CH4)
 {
 //description
   std::vector<std::string> neutrals;
@@ -259,20 +260,20 @@ int tester()
 
 //photon flux
   std::vector<Scalar> lambda_hv,phy1AU;
-  read_hv_flux<Scalar>(lambda_hv,phy1AU,"./input/hv_SSI.dat");
+  read_hv_flux<Scalar>(lambda_hv,phy1AU,input_hv);
 
 ////cross-section
   std::vector<Scalar> lambda_N2,sigma_N2;
   std::vector<Scalar> lambda_CH4, sigma_CH4;
-  read_crossSection<Scalar>("./input/N2_hv_cross-sections.dat",3,lambda_N2,sigma_N2);
-  read_crossSection<Scalar>("./input/CH4_hv_cross-sections.dat",9,lambda_CH4,sigma_CH4);
+  read_crossSection<Scalar>(input_N2,3,lambda_N2,sigma_N2);
+  read_crossSection<Scalar>(input_CH4,9,lambda_CH4,sigma_CH4);
 
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
 //temperature
   std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
+  read_temperature<Scalar>(T0,Tz,input_T);
   std::vector<Scalar> neutral_temperature;
 
 /************************
@@ -404,10 +405,17 @@ int tester()
   return return_flag;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  // Check command line count.
+  if( argc < 5 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify reaction set XML input file." << std::endl;
+      antioch_error();
+    }
 
-  return (tester<float>()  ||
-          tester<double>() ||
-          tester<long double>());
+  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4])) ||
+          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4])) ||
+          tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4])));
 }

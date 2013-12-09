@@ -48,14 +48,14 @@ diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
 TESTS = 
 TESTS += binary_diffusion_unit 
 TESTS += altitude_unit
-TESTS  += chapman_unit
-TESTS  += temperature_unit
-TESTS  += photon_opacity_unit
-TESTS  += atmospheric_mixture_unit
-TESTS  += photon_evaluator_unit
-TESTS  += eddy_diffusion_evaluator_unit
-TESTS  += molecular_diffusion_evaluator_unit
-TESTS  += diffusion_evaluator_unit
+TESTS += chapman_unit
+TESTS += temperature_unit.sh
+TESTS += photon_opacity_unit.sh
+TESTS += atmospheric_mixture_unit.sh
+TESTS += photon_evaluator_unit.sh
+TESTS += eddy_diffusion_evaluator_unit.sh
+TESTS += molecular_diffusion_evaluator_unit.sh
+TESTS += diffusion_evaluator_unit.sh
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

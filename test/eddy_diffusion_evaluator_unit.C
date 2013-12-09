@@ -117,7 +117,7 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
 }
 
 template <typename Scalar>
-int tester()
+int tester(const std::string &input_T)
 {
 //description
   std::vector<std::string> neutrals;
@@ -185,7 +185,7 @@ int tester()
 
 //temperature
   std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
+  read_temperature<Scalar>(T0,Tz,input_T);
   std::vector<Scalar> neutral_temperature;
   linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
@@ -248,10 +248,17 @@ int tester()
   return return_flag;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  // Check command line count.
+  if( argc < 2 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify reaction set XML input file." << std::endl;
+      antioch_error();
+    }
 
-  return (tester<float>()  ||
-          tester<double>() ||
-          tester<long double>());
+  return (tester<float>(std::string(argv[1])) ||
+          tester<double>(std::string(argv[1])) ||
+          tester<long double>(std::string(argv[1])));
 }

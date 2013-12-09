@@ -153,7 +153,13 @@ AC_CONFIG_FILES(doxygen/txt_common/about_vpath.page)
 dnl-----------------------------------------------
 dnl Generate files for unit and regression testing
 dnl-----------------------------------------------
-dnl AC_CONFIG_FILES(test/kinetics_unit_air_5sp.sh,           [chmod +x test/kinetics_unit_air_5sp.sh])
+AC_CONFIG_FILES(test/temperature_unit.sh,                     [chmod +x test/temperature_unit.sh])
+AC_CONFIG_FILES(test/photon_opacity_unit.sh,                  [chmod +x test/photon_opacity_unit.sh])
+AC_CONFIG_FILES(test/atmospheric_mixture_unit.sh,             [chmod +x test/atmospheric_mixture_unit.sh])
+AC_CONFIG_FILES(test/photon_evaluator_unit.sh,                [chmod +x test/photon_evaluator_unit.sh])
+AC_CONFIG_FILES(test/eddy_diffusion_evaluator_unit.sh,        [chmod +x test/eddy_diffusion_evaluator_unit.sh])
+AC_CONFIG_FILES(test/molecular_diffusion_evaluator_unit.sh,   [chmod +x test/molecular_diffusion_evaluator_unit.sh])
+AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/diffusion_evaluator_unit.sh])
 
 dnl-----------------------------------------------
 dnl Generate header files

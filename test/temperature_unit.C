@@ -122,12 +122,12 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
 }
 
 template<typename Scalar>
-int tester()
+int tester(const std::string & input_file)
 {
   Planet::Altitude<Scalar,std::vector<Scalar>> altitude(600,1400,10);
 //temperature
   std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"./input/temperature.dat");
+  read_temperature<Scalar>(T0,Tz,input_file);
   std::vector<Scalar> neutral_temperature;
   linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
   Planet::AtmosphericTemperature<Scalar,std::vector<Scalar> > temperature(neutral_temperature,neutral_temperature,altitude);
@@ -149,9 +149,17 @@ int tester()
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
-  return (tester<float>() &&
-          tester<double>() &&
-          tester<long double>());
+  // Check command line count.
+  if( argc < 2 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify reaction set XML input file." << std::endl;
+      antioch_error();
+    }
+
+  return (tester<float>(std::string(argv[1])) ||
+          tester<double>(std::string(argv[1])) ||
+          tester<long double>(std::string(argv[1])));
 }

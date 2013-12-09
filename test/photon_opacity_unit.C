@@ -77,7 +77,7 @@ void read_crossSection(const VectorScalar & lambda, const std::string &file, uns
 }
 
 template<typename Scalar>
-int tester()
+int tester(const std::string &input_N2, const std::string &input_CH4)
 {
   Planet::Altitude<Scalar,std::vector<Scalar> > altitude(600,1400,10);
   Scalar chi(120);
@@ -91,9 +91,9 @@ int tester()
   }
   std::vector<std::vector<Scalar> > sigma;
   std::vector<Scalar> sigma_tmp;
-  read_crossSection<Scalar>(lambda,"./input/N2_hv_cross-sections.dat",3,sigma_tmp);
+  read_crossSection<Scalar>(lambda,input_N2,3,sigma_tmp);
   sigma.push_back(sigma_tmp);
-  read_crossSection<Scalar>(lambda,"./input/CH4_hv_cross-sections.dat",9,sigma_tmp);
+  read_crossSection<Scalar>(lambda,input_CH4,9,sigma_tmp);
   sigma.push_back(sigma_tmp);
   std::vector<Scalar> a;
   a.resize(altitude.altitudes().size(),45.);
@@ -133,9 +133,16 @@ int tester()
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
-  return (tester<float>()  ||
-          tester<double>() ||
-          tester<long double>());
+  // Check command line count.
+  if( argc < 3 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify reaction set XML input file." << std::endl;
+      antioch_error();
+    }
+  return (tester<float>(std::string(argv[1]), std::string(argv[2])) ||
+          tester<double>(std::string(argv[1]), std::string(argv[2])) ||
+          tester<long double>(std::string(argv[1]), std::string(argv[2])));
 }

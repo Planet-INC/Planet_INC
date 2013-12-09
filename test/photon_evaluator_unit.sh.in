@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROG="@top_builddir@/test/photon_evaluator_unit"
+
+INPUT="@top_srcdir@/test/input/temperature.dat @top_srcdir@/test/input/hv_SSI.dat @top_srcdir@/test/input/N2_hv_cross-sections.dat @top_srcdir@/test/input/CH4_hv_cross-sections.dat"
+
+$PROG $INPUT
+
