@@ -155,7 +155,7 @@ int main(int argc, char** argv)
   if( argc < 2 )
     {
       // TODO: Need more consistent error handling.
-      std::cerr << "Error: Must specify reaction set XML input file." << std::endl;
+      std::cerr << "Error: Must specify input file." << std::endl;
       antioch_error();
     }
 

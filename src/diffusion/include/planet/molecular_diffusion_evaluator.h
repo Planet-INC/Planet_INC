@@ -137,7 +137,6 @@ namespace Planet
           meanM += _mixture.neutral_composition().M(i) * 
                    _mixture.neutral_molar_fraction()[i][iz] * _mixture.total_density()[iz] / ntot_s; //x_i without s: ni/(ntot - ns)
         }
-        meanM /= CoeffType(_mixture.neutral_composition().n_species() - 1);
 //Ds
         CoeffType n_D;
         Antioch::set_zero(n_D);

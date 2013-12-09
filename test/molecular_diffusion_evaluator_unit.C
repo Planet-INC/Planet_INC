@@ -163,7 +163,7 @@ Scalar pressure(const Scalar &n, const Scalar &T)
 }
 
 template <typename Scalar>
-int tester()
+int tester(const std::string &input_T)
 {
 //description
   std::vector<std::string> neutrals;
@@ -253,7 +253,7 @@ int tester()
 
 //temperature
   std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
+  read_temperature<Scalar>(T0,Tz,input_T);
   std::vector<Scalar> neutral_temperature;
   linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
@@ -320,49 +320,61 @@ int tester()
       Scalar P = pressure(composition.total_density()[iz],temperature.neutral_temperature()[iz]);
       Scalar T = temperature.neutral_temperature()[iz];
       Dij[0][0] = binary_coefficient(T,P,bNN1,bNN2); //N2 N2
+      Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
+      Dij[0][2] = binary_coefficient(Dij[0][0],Mm[0],Mm[2]); //N2 C2H
+      Dij[1][0] = Dij[0][1]; //CH4 N2
       Dij[1][1] = binary_coefficient(T,P,bCC1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCC2 + Scalar(1.L)) 
                                               * Planet::Constants::Universal::kb<Scalar>()
                                               / Planet::Constants::Convention::P_normal<Scalar>(),bCC2 + Scalar(1.L)); //CH4 CH4
-      Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
-      Dij[0][2] = binary_coefficient(Dij[0][0],Mm[0],Mm[2]); //N2 C2H
       Dij[1][2] = binary_coefficient(Dij[1][1],Mm[1],Mm[2]); //CH4 C2H
-      Dij[1][0] = Dij[0][1]; //CH4 N2
-      for(unsigned int s = 0; s < molar_frac.size(); s++)
-      {
-        Scalar tmp(0.L);
-        Scalar M_diff(0.L);
-        for(unsigned int medium = 0; medium < 2; medium++)
-        {
-           if(s == medium)continue;
-           tmp += densities[medium][iz]/Dij[medium][s];
-        }
-        Scalar Ds = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) - densities[s][iz]) / tmp;
-        for(unsigned int j = 0; j < molar_frac.size(); j++)
-        {
-           if(s == j)continue;
-           M_diff += composition.total_density()[iz] * composition.neutral_molar_fraction()[j][iz] * composition.neutral_composition().M(j);
-        }
-        M_diff /= Scalar(molar_frac.size() - 1);
-        Scalar Dtilde = Ds / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
 
-        return_flag = return_flag ||
-                      check_test(Dtilde,molecular_diffusion.Dtilde()[s][iz],"D tilde of species at altitude");
-
-      }
       return_flag = return_flag ||
                     check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude") || 
                     check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude") || 
                     check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 C2H at altitude") || 
                     check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude") || 
                     check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 C2H at altitude");
+
+      for(unsigned int s = 0; s < molar_frac.size(); s++)
+      {
+        Scalar tmp(0.L);
+        for(unsigned int medium = 0; medium < 2; medium++)
+        {
+           if(s == medium)continue;
+           tmp += densities[medium][iz]/Dij[medium][s];
+        }
+        Scalar Ds = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) - densities[s][iz]) / tmp;
+
+        Scalar M_diff(0.L);
+        Scalar totdens_diff(0.L);
+        for(unsigned int j = 0; j < molar_frac.size(); j++)
+        {
+           if(s == j)continue;
+           M_diff += densities[j][iz] * Mm[j];
+           totdens_diff += densities[j][iz];
+        }
+        M_diff /= totdens_diff;
+        Scalar Dtilde = Ds / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
+        return_flag = return_flag ||
+                      check_test(Dtilde,molecular_diffusion.Dtilde()[s][iz],"Dtilde of species at altitude");
+
+      }
   }
 
   return return_flag;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-  return (tester<float>()  ||
-          tester<double>());/* ||
-          tester<long double>());*/
+  // Check command line count.
+  if( argc < 2 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify input file." << std::endl;
+      antioch_error();
+    }
+
+  return (tester<float>(std::string(argv[1])) ||
+          tester<double>(std::string(argv[1])));//||
+          //tester<long double>(std::string(argv[1])));
 }

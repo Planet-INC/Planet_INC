@@ -43,7 +43,7 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 6000.;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 6000.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
@@ -172,7 +172,7 @@ Scalar scale_height(const Scalar &T, const Scalar &z, const Scalar &Mm)
 
 
 template <typename Scalar>
-int tester()
+int tester(const std::string &input_T)
 {
 //description
   std::vector<std::string> neutrals;
@@ -266,7 +266,7 @@ int tester()
 
 //temperature
   std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"input/temperature.dat");
+  read_temperature<Scalar>(T0,Tz,input_T);
   std::vector<Scalar> neutral_temperature;
   linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
@@ -384,12 +384,14 @@ int tester()
        Scalar Ds = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],mean_M,dens_tot) - densities[s][iz]) / tmp;
 
        Scalar M_diff(0.L);
+       Scalar totdens_diff(0.L);
        for(unsigned int j = 0; j < molar_frac.size(); j++)
        {
           if(s == j)continue;
           M_diff += densities[j][iz] * composition.neutral_composition().M(j);
+          totdens_diff += densities[j][iz];
        }
-       M_diff /= Scalar(molar_frac.size() - 1);
+       M_diff /= totdens_diff;
 
        Scalar Dtilde = Ds / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * 
                             (Scalar(1.L) - composition.neutral_composition().M(s) / M_diff)
@@ -404,12 +406,12 @@ int tester()
        return_flag = return_flag ||
                         check_test(Hs,composition.scale_height()[s][iz],"scale height of species at altitude");
 
-       Scalar omega_theo = - Dtilde * ( Scalar(1.L)/densities[s][iz] * dns_dz 
+       Scalar omega_theo = - Dtilde * ( dns_dz /densities[s][iz]
                                       + Scalar(1.L)/Hs 
-                                      + Scalar(1.L)/neutral_temperature[iz] * dT_dz * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s]))
-                           - K      * ( Scalar(1.L)/densities[s][iz] * dns_dz 
+                                      + dT_dz /neutral_temperature[iz] * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s]))
+                           - K      * ( dns_dz /densities[s][iz]
                                       + Scalar(1.L)/Ha
-                                      + Scalar(1.L)/neutral_temperature[iz] * dT_dz);
+                                      + dT_dz/neutral_temperature[iz]);
 
        return_flag = return_flag ||
                         check_test(omega_theo,diffusion.diffusion()[s][iz],"omega of species at altitude");
@@ -419,10 +421,17 @@ int tester()
   return return_flag;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  // Check command line count.
+  if( argc < 2 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify input file." << std::endl;
+      antioch_error();
+    }
 
-  return (tester<float>()  ||
-          tester<double>());/* ||
-          tester<long double>());*/
+  return (tester<float>(std::string(argv[1])) ||
+          tester<double>(std::string(argv[1])));//||
+          //tester<long double>(std::string(argv[1])));
 }

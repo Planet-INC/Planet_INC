@@ -143,16 +143,16 @@ namespace Planet{
         {
             _omega[s][iz] =  - _molecular_diffusion.Dtilde()[s][iz] * // - Dtilde * (
             (
-              CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * this->dn_dz(iz,s) // 1/ns * dns_dz
-            + CoeffType(1.)/_mixture.scale_height()[s][iz]  // + 1/Hs
-            + CoeffType(1.)/_temperature.neutral_temperature()[iz] * this->dT_dz(iz) // + 1/T * dT_dz * (
-                * (CoeffType(1.) + (CoeffType(1.) - _mixture.neutral_molar_fraction()[s][iz]) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) )
+              this->dn_dz(iz,s)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz])// 1/ns * dns_dz
+            + CoeffType(1.L)/_mixture.scale_height()[s][iz]  // + 1/Hs
+            + this->dT_dz(iz)/_temperature.neutral_temperature()[iz] // + 1/T * dT_dz * (
+                * (CoeffType(1.L) + (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz]) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) )
             )
              - _eddy_diffusion.K()[iz] * // - K * (
             ( 
-              CoeffType(1.)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) * this->dn_dz(iz,s) // 1/ns * dns_dz
-            + CoeffType(1.)/_mixture.atmosphere_scale_height()[iz]  // + 1/Ha
-            + CoeffType(1.)/_temperature.neutral_temperature()[iz] * this->dT_dz(iz) //+1/T * dT_dz )
+              this->dn_dz(iz,s)/(_mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[s][iz]) // 1/ns * dns_dz
+            + CoeffType(1.L)/_mixture.atmosphere_scale_height()[iz]  // + 1/Ha
+            + this->dT_dz(iz)/_temperature.neutral_temperature()[iz]//+1/T * dT_dz )
             );
         }
      }
@@ -165,9 +165,9 @@ namespace Planet{
      antioch_assert_greater(iz,0);
      antioch_assert_less(iz,_altitude.altitudes().size()-1);
      antioch_assert_less(s,_mixture.neutral_composition().n_species());
-     return  (_mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - 
+     return  ((_mixture.total_density()[iz+1] * _mixture.neutral_molar_fraction()[s][iz+1] - 
                                         _mixture.total_density()[iz-1] * _mixture.neutral_molar_fraction()[s][iz-1])  / 
-                        (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]);
+                        (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]));
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -176,8 +176,8 @@ namespace Planet{
   {
      antioch_assert_greater(iz,0);
      antioch_assert_less(iz,_altitude.altitudes().size()-1);
-     return  (_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  
-                                / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]);
+     return  ((_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  
+                                / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]));
   }
 
 
