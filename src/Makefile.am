@@ -8,6 +8,8 @@ bin_PROGRAMS    = planet_version
 
 lib_LTLIBRARIES = libplanet.la
 
+libplanet_la_LIBADD = $(GRINS_PREFIX)/lib/libgrins.la $(LIBMESH_LIBDIR)/libmesh_$(LIBMESH_METHOD).la
+
 #----------------------------------------------
 # List of source files to build dynamic library
 #----------------------------------------------
@@ -88,6 +90,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 AM_CPPFLAGS +=  $(planet_optional_INCLUDES)
+AM_CPPFLAGS += $(GRINS_CPPFLAGS)
 
 CLEANFILES =
 
