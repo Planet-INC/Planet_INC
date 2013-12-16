@@ -121,6 +121,8 @@ elif (test x$enablecxx11 = xoptional); then
   AX_CXX_AUTO_THIS(optional)
 fi
 
+AX_PATH_GRINS(0.4.0,yes)
+
 dnl--------------------------
 dnl Checks for code coverage
 dnl--------------------------
