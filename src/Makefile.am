@@ -107,7 +107,7 @@ endif
 STAMPED_FILES = $(libplanet_la_SOURCES) $(include_HEADERS) $(planet_version_SOURCES)
 
 .license.stamp: $(top_srcdir)/LICENSE
-	$(top_srcdir)/src/common/lic_utils/update_license.pl -S=$(top_srcdir)/src $(top_srcdir)/LICENSE $(STAMPED_FILES) 
+	$(top_srcdir)/src/common/lic_utils/update_license.pl $(top_srcdir)/LICENSE $(STAMPED_FILES) 
 	echo 'updated source license headers' >$@
 
 CLEANFILES += .license.stamp
