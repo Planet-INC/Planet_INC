@@ -8,6 +8,8 @@ bin_PROGRAMS    = planet_version
 
 lib_LTLIBRARIES = libplanet.la
 
+libplanet_la_LIBADD = $(GRINS_PREFIX)/lib/libgrins.la $(LIBMESH_LIBDIR)/libmesh_$(LIBMESH_METHOD).la
+
 #----------------------------------------------
 # List of source files to build dynamic library
 #----------------------------------------------
@@ -24,6 +26,10 @@ libplanet_la_SOURCES +=
 
 # utilities
 libplanet_la_SOURCES += utilities/src/planet_version.C
+
+# grins_interface
+libplanet_la_SOURCES += grins_interface/src/planet_physics.C
+libplanet_la_SOURCES += grins_interface/src/planet_physics_helper.C
 
 #----------------------------
 # INCLUDES we want distributed
@@ -46,6 +52,10 @@ include_HEADERS += absorption/include/planet/cross_section.h
 
 # kinetics
 include_HEADERS += kinetics/include/planet/atmospheric_kinetics.h
+
+# grins_interface
+include_HEADERS += grins_interface/include/planet/planet_physics.h
+include_HEADERS += grins_interface/include/planet/planet_physics_helper.h
 
 # temperature
 include_HEADERS += temperature/include/planet/atmospheric_temperature.h
@@ -80,6 +90,7 @@ AM_CPPFLAGS  =
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/atmosphere/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/grins_interface/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/kinetics/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
@@ -88,6 +99,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 AM_CPPFLAGS +=  $(planet_optional_INCLUDES)
+AM_CPPFLAGS += $(GRINS_CPPFLAGS)
 
 CLEANFILES =
 
@@ -104,7 +116,7 @@ endif
 STAMPED_FILES = $(libplanet_la_SOURCES) $(include_HEADERS) $(planet_version_SOURCES)
 
 .license.stamp: $(top_srcdir)/LICENSE
-	$(top_srcdir)/src/common/lic_utils/update_license.pl -S=$(top_srcdir)/src $(top_srcdir)/LICENSE $(STAMPED_FILES) 
+	$(top_srcdir)/src/common/lic_utils/update_license.pl $(top_srcdir)/LICENSE $(STAMPED_FILES) 
 	echo 'updated source license headers' >$@
 
 CLEANFILES += .license.stamp
