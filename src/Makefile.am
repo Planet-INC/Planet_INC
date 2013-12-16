@@ -27,6 +27,10 @@ libplanet_la_SOURCES +=
 # utilities
 libplanet_la_SOURCES += utilities/src/planet_version.C
 
+# grins_interface
+libplanet_la_SOURCES += grins_interface/src/planet_physics.C
+libplanet_la_SOURCES += grins_interface/src/planet_physics_helper.C
+
 #----------------------------
 # INCLUDES we want distributed
 #----------------------------
@@ -48,6 +52,10 @@ include_HEADERS += absorption/include/planet/cross_section.h
 
 # kinetics
 include_HEADERS += kinetics/include/planet/atmospheric_kinetics.h
+
+# grins_interface
+include_HEADERS += grins_interface/include/planet/planet_physics.h
+include_HEADERS += grins_interface/include/planet/planet_physics_helper.h
 
 # temperature
 include_HEADERS += temperature/include/planet/atmospheric_temperature.h
@@ -82,6 +90,7 @@ AM_CPPFLAGS  =
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/atmosphere/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/grins_interface/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/kinetics/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
