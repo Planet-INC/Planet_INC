@@ -24,6 +24,10 @@
 #ifndef PLANET_PLANET_PHYSICS_HELPER_H
 #define PLANET_PLANET_PHYSICS_HELPER_H
 
+//Planet
+#include "planet/diffusion_evaluator.h"
+#include "planet/atmospheric_kinetics.h"
+
 // libMesh
 #include "libmesh/libmesh_common.h"
 
@@ -34,15 +38,34 @@ namespace Planet
   {
   public:
 
-    PlanetPhysicsHelper();
+    PlanetPhysicsHelper(AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *kinetics = NULL,
+                        DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *diffusion = NULL);
 
     ~PlanetPhysicsHelper();
 
-    libMesh::Real compute_omega() const;
+    void set_kinetics(AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *kinetics);
 
-    libMesh::Real compute_omega_dot() const;
+    void set_diffusion(DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *diffusion);
+
+    libMesh::Real compute_omega(unsigned int s, double z, const std::vector<double> & molar_concentrations,
+                                                          const std::vector<double> & dmolar_concentrations_dz);
+
+    libMesh::Real compute_omega_dot(unsigned int s, double z, const std::vector<double> & molar_concentrations,
+                                                              const std::vector<double> & dmolar_concentrations_dz);
 
   private:
+
+    void compute(const std::vector<double> & molar_concentrations,
+                 const std::vector<double> & dmolar_concentrations_dz,
+                 double z);
+
+    AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *_kinetics;
+    DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *_diffusion;
+
+    std::vector<double> _omegas;
+    std::vector<double> _omegas_dots;
+    double _current_z;
+    const double _eps;
 
   };
 

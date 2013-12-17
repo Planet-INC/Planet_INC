@@ -82,6 +82,12 @@ namespace Planet{
        //!
        const MatrixCoeffType &diffusion() const;
 
+       //!
+       template<typename StateType, typename VectorStateType>
+       void diffusion(const VectorStateType &molar_concentrations,
+                      const VectorStateType &dmolar_concentrations_dz,
+                      const StateType &z, VectorStateType &omegas) const;
+
   };
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -178,6 +184,55 @@ namespace Planet{
      antioch_assert_less(iz,_altitude.altitudes().size()-1);
      return  ((_temperature.neutral_temperature()[iz+1] - _temperature.neutral_temperature()[iz-1])  
                                 / (_altitude.altitudes()[iz+1] - _altitude.altitudes()[iz-1]));
+  }
+
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void DiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::diffusion(const VectorStateType &molar_concentrations,
+                                                                                  const VectorStateType &dmolar_concentrations_dz,
+                                                                                  const StateType &z, VectorStateType &omegas) const
+  {
+     omegas.resize(_mixture.neutral_composition().n_species(),0.L);
+// temp
+// Dtilde
+     VectorCoeffType molecular;
+     _molecular_diffusion.Dtilde(molar_concentrations,z,molecular);// Dtilde
+// nTot
+     CoeffType nTot(0.L);
+     for(unsigned int s = 0; s < molar_concentrations.size(); s++)
+     {
+        nTot += molar_concentrations[s];
+     }
+// scale heights
+     VectorCoeffType Hs;
+     Hs.resize(_mixture.neutral_composition().n_species());
+     _mixture.scale_heights(z,Hs);
+     //mean
+     CoeffType Ha = _mixture.atmospheric_scale_height(molar_concentrations,z);
+// temperature
+     CoeffType T = _temperature.neutral_temperature(z);
+     CoeffType dT_dz = _temperature.dneutral_temperature_dz(z);
+
+
+     for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
+     {
+            omegas[s] =  //omega = Dtilde * [
+            - molecular[s] * 
+            (
+                dmolar_concentrations_dz[s]/molar_concentrations[s] // 1/ns * dns_dz
+              + CoeffType(1.L)/Hs[s]  // + 1/Hs
+              + dT_dz/T // + 1/T * dT_dz * (
+                * (CoeffType(1.L) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) ]
+            )
+             - _eddy_diffusion.K(nTot) * // - K * (
+            ( 
+                dmolar_concentrations_dz[s]/molar_concentrations[s] // 1/ns * dns_dz
+              + CoeffType(1.L)/Ha // + 1/Ha
+              + dT_dz/T //+1/T * dT_dz )
+            );
+     }
+     return;
   }
 
 

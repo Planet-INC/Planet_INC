@@ -90,6 +90,11 @@ namespace Planet
 
         //!\return chemical net rate
         const MatrixCoeffType &chemical_net_rate() const;
+
+        //! compute chemical net rate and provide them in kin_rates
+        template<typename StateType, typename VectorStateType>
+        void chemical_rate(const VectorStateType &molar_concentrations, const StateType &z,
+                           VectorStateType &kin_rates) const;
   };
 
 
@@ -214,6 +219,21 @@ namespace Planet
   Antioch::KineticsEvaluator<CoeffType> &AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::ionic_kinetics()
   {
      return _ionic_reactions;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, const StateType &z,
+                                                                                     VectorStateType &kin_rates) const
+  {
+     kin_rates.resize(_composition.neutral_composition().n_species(),0.L);
+     VectorCoeffType dummy;
+     dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
+     _photon.set_photon_flux(z);
+     _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
+                                             molar_concentrations,dummy,kin_rates);
+     return;
   }
 }
 

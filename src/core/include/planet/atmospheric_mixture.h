@@ -185,6 +185,14 @@ namespace Planet
         //!
         void initialize();
 
+        //!
+        template<typename StateType, typename VectorStateType>
+        void scale_heights(const StateType &z, VectorStateType &Hs) const;
+
+        //!
+        template<typename StateType, typename VectorStateType>
+        const CoeffType atmospheric_scale_height(const VectorStateType &molar_densities,const StateType &z) const;
+
 
    };
 
@@ -543,6 +551,42 @@ namespace Planet
                 _mean_exobase = _altitude.altitudes().size() / 10;
      _exobase.resize(_neutral_composition.n_species(),_mean_exobase);
      return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::scale_heights(const StateType &z, VectorStateType &Hs) const
+  {
+      antioch_assert_equal_to(Hs.size(),_neutral_composition().n_species());
+      CoeffType T = _temperature.neutral_temperature(z);
+      for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+      {
+         Hs[s] = this->H(_neutral_composition.M(s),T,z);
+      }
+      return;
+  }
+
+  
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::atmospheric_scale_height(const VectorStateType &molar_densities, 
+                                                                                                          const StateType &z) const
+  {
+    antioch_assert_equal_to(molar_densities.size(),_neutral_composition.n_species());
+
+    CoeffType Mm;
+    Antioch::set_zero(Mm);
+    CoeffType nTot(0.L);
+    for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+    {
+      Mm   += molar_densities[s] * _neutral_composition.M(s);
+      nTot += molar_densities[s];
+    }
+    Mm /= nTot;
+
+    return (this->H(Mm,_temperature.neutral_temperature(z),z));
   }
 
 }

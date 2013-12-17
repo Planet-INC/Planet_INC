@@ -34,6 +34,9 @@
 #include "libmesh/fem_system.h"
 #include "libmesh/quadrature.h"
 
+//Planet
+#include "planet/planet_constants.h"
+
 namespace Planet
 {
   PlanetPhysics::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
@@ -123,6 +126,14 @@ namespace Planet
         
         libMesh::Real jac = r*r*JxW[qp];
 
+        std::vector<libMesh::Number> molar_concentrations(this->_n_species, 0);
+        std::vector<libMesh::Number> dmolar_concentrations_dz(this->_n_species, 0);
+        for(unsigned int s=0; s < this->_n_species; s++ )
+          {
+            molar_concentrations[s] = context.interior_value(this->_species_vars[s],qp);
+            dmolar_concentrations_dz[s] = context.interior_gradient(this->_species_vars[s],qp)(0);
+          }
+
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
             const libMesh::Real n_s = context.interior_value(this->_species_vars[s],qp);
@@ -130,9 +141,9 @@ namespace Planet
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            libMesh::Real omega = _helper.compute_omega();
+            libMesh::Real omega = _helper.compute_omega(s, r - Constants::Titan::radius<double>() ,molar_concentrations,dmolar_concentrations_dz) ;
 
-            libMesh::Real omega_dot = _helper.compute_omega_dot();
+            libMesh::Real omega_dot = _helper.compute_omega_dot(s, r - Constants::Titan::radius<double>(),molar_concentrations,dmolar_concentrations_dz) ;
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {

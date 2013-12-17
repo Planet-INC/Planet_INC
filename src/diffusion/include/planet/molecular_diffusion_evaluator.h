@@ -96,6 +96,11 @@ namespace Planet
         const MatrixCoeffType Dtilde() const;
 
         //!
+        template<typename StateType, typename VectorStateType>
+        void Dtilde(const VectorStateType &molar_concentrations, const StateType &z,
+                    VectorStateType &Dtilde) const;// Dtilde
+
+        //!
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         binary_coefficient(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
@@ -199,6 +204,50 @@ namespace Planet
      antioch_assert_less(i,_n_medium);
      antioch_assert_less(j,_mixture.neutral_composition().n_species());
       _diffusion[i][j] = bin_coef;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::Dtilde(const VectorStateType &molar_concentrations, 
+                                                                                        const StateType &z,VectorStateType &Dtilde) const
+  {
+     antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
+     Dtilde.resize(molar_concentrations.size(),0.L);
+     CoeffType nTot(0.L);
+     for(unsigned int s = 0; s < molar_concentrations.size(); s++)
+     {
+        nTot += molar_concentrations[s];
+     }
+     CoeffType T = _temperature.neutral_temperature(z);
+     CoeffType p = nTot * 1e6 //cm-3 -> m-3
+                   * Constants::Universal::kb<CoeffType>() * T;
+     for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
+     {
+//M_{/=}
+        CoeffType meanM;
+        Antioch::set_zero(meanM);
+        CoeffType ntot_s = nTot - molar_concentrations[s]; //ntot - ns
+        for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
+        {
+          if(i == s)continue;
+          meanM += _mixture.neutral_composition().M(i) * molar_concentrations[i] / ntot_s; //x_i without s: ni/(ntot - ns)
+        }
+//Ds
+        CoeffType n_D;
+        Antioch::set_zero(n_D);
+        for(unsigned int i = 0; i < _n_medium; i++)
+        {
+          if(_i_medium[i] == s)continue;
+          n_D += molar_concentrations[_i_medium[i]] / this->binary_coefficient(_i_medium[i],s,T,p);
+        }
+//Dtilde = Ds / ...
+        Dtilde[s] = (nTot - molar_concentrations[s])
+                            / ( n_D * (CoeffType(1.L) - molar_concentrations[s]/nTot * 
+                                      (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM))
+                              );
+       }
+       return;
   }
 
 }

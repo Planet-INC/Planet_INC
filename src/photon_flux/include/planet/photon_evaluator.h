@@ -66,6 +66,10 @@ namespace Planet
         template<typename VectorStateType>
         void update_cross_section(const VectorStateType &custom_grid);
 
+       //!
+       template <typename StateType>
+       unsigned int find_altitude_index(const StateType &z) const;
+
      public:
         PhotonEvaluator(Altitude<CoeffType,VectorCoeffType> &alt,
                         PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
@@ -85,6 +89,10 @@ namespace Planet
 
         //!sets the pointer to the right flux
         void set_photon_flux(unsigned int iz);
+
+        //!sets the pointer to the right flux
+        template<typename StateType>
+        void set_photon_flux(const StateType &z);
 
         //!calculate photon flux
         void update_photon_flux();
@@ -291,6 +299,23 @@ namespace Planet
   void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux(unsigned int iz)
   {
      _phy_ptr = &_phy[iz];
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType>
+  inline
+  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux(const StateType &z)
+  {
+     this->set_photon_flux(this->find_altitude_index(z));
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType>
+  inline
+  unsigned int PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::find_altitude_index(const StateType &z) const
+  {
+     unsigned int iz = Functions::find_floor_index(_altitude,z);
+     return (iz + 1);
   }
 
 }
