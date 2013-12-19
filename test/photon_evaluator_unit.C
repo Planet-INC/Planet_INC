@@ -43,9 +43,10 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e3:100.;
+  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() < 1e-12)?1e5:1e3;
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
-  if(std::abs((theory-cal)/theory) < tol)return 0;
+  Scalar criteria = (theory < tol)?std::abs(theory-cal):std::abs((theory-cal)/theory);
+  if(criteria < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
             << "theory: " << theory
@@ -154,72 +155,59 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
                               );
 }
 
-template<typename Scalar, typename VectorScalar, typename MatrixScalar>
-void calculate_densities(MatrixScalar &densities, const Scalar &tot_dens, const VectorScalar &molar_frac, 
-                        const Scalar &zmin,const Scalar &zmax,const Scalar &zstep, 
-                        const VectorScalar &T, const VectorScalar &mm)
+template<typename Scalar, typename VectorScalar>
+void calculate_densities(VectorScalar &densities, VectorScalar &sum_dens, 
+                        const Scalar &tot_dens, const VectorScalar &molar_frac, const Scalar &Mmean, 
+                        const Scalar &zmin,const Scalar &zmax,const Scalar &z, 
+                        const Planet::AtmosphericTemperature<Scalar,VectorScalar> &T)
 {
-   unsigned int iz(0);
-   Scalar Mm;
-   Antioch::set_zero(Mm);
+
+   densities.clear();
+   densities.resize(molar_frac.size(),0.L);
+   Scalar nTot = barometry(zmin,z,T.neutral_temperature(z),Mmean,tot_dens);
+   sum_dens.clear();
+   sum_dens.resize(molar_frac.size(),0.L);
+   Scalar zstep(1.L);
    for(unsigned int s = 0; s < molar_frac.size(); s++)
    {
-      Mm += molar_frac[s] * mm[s];
-   }
-   Mm *= 1e-3;//to kg
-   densities.clear();
-   densities.resize(molar_frac.size());
-   for(Scalar z = zmin; z <= zmax; z += zstep)
-   {
-      for(unsigned int s = 0; s < molar_frac.size(); s++)
-      {
-        densities[s].push_back(molar_frac[s] * barometry(zmin,z,T[iz],Mm,tot_dens));
-      }
-      iz++;
+     densities[s] = molar_frac[s] * nTot;
+     for(Scalar ztmp = zmax; ztmp >  z; ztmp -= zstep)
+     {
+        Scalar nTottmp = barometry(zmin,ztmp,T.neutral_temperature(ztmp),Mmean,tot_dens);
+        sum_dens[s] += molar_frac[s] * nTottmp * zstep;
+     }
    }
 
    return;
 }
 
-template<typename Scalar, typename VectorScalar, typename MatrixScalar>
-void calculate_tau(MatrixScalar &opacity, const Planet::Chapman<Scalar> &chapman, 
-                   const std::vector<VectorScalar*> &cs, const VectorScalar &lambda_ref,
-                   const MatrixScalar &sum_dens, const VectorScalar &molar_frac,
-                   const VectorScalar &mm, const VectorScalar &T,
-                   const Scalar &zmin, const Scalar &zmax, const Scalar &zstep)
+template<typename Scalar>
+Scalar a(const Scalar &T, const Scalar &Mmean, const Scalar &z)
 {
-  Scalar Mm;
-  Antioch::set_zero(Mm);
-  for(unsigned int s = 0; s < molar_frac.size(); s++)
-  {
-     Mm += molar_frac[s] * mm[s];
-  }
-  Mm *= 1e-3; //to kg
-  opacity.resize(T.size());
+  return Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) * Mmean * 
+            (Planet::Constants::Titan::radius<Scalar>() + z) * Scalar(1e3) / (Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T);
+}
+
+template<typename Scalar, typename VectorScalar>
+void calculate_tau(VectorScalar &opacity, const Planet::Chapman<Scalar> &chapman, 
+                   const std::vector<VectorScalar*> &cs, const VectorScalar &lambda_ref,
+                   const VectorScalar &sum_dens, const Scalar &z, const Scalar &a)
+{
+  opacity.resize(lambda_ref.size());
   Antioch::SigmaBinConverter<VectorScalar> bin_converter;
 
-  unsigned int iz(0);
-  for(Scalar z = zmin; z <= zmax; z += zstep)
+  for(unsigned int s = 0; s < sum_dens.size(); s++)
   {
-    Scalar g = Planet::Constants::g(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>());
-    Scalar H = Planet::Constants::Universal::kb<Scalar>() * T[iz] / (g * Mm ) * Antioch::Constants::Avogadro<Scalar>(); //to m-3
-    Scalar a = (Planet::Constants::Titan::radius<Scalar>() + z) / H; //to m
-
-    opacity[iz].resize(lambda_ref.size(),0.L);
-    for(unsigned int s = 0; s < sum_dens.size(); s++)
-    {
       VectorScalar sigma_process;
       bin_converter.y_on_custom_grid(*(cs[2*s]),*(cs[2*s+1]),lambda_ref,sigma_process);
       for(unsigned int il = 0; il < lambda_ref.size(); il++)
       {
-        opacity[iz][il] += sigma_process[il] * sum_dens[s][iz];
+        opacity[il] += sigma_process[il] * sum_dens[s];
       }
-    }
-    for(unsigned int il = 0; il < lambda_ref.size(); il++)
-    {
-      opacity[iz][il] *= chapman(a) * zstep * 1e5;
-    }
-    iz++;
+  }
+  for(unsigned int il = 0; il < lambda_ref.size(); il++)
+  {
+      opacity[il] *= chapman(a) * 1e3; //to m
   }
 
 }
@@ -248,12 +236,13 @@ int tester(const std::string &input_T, const std::string &input_hv,
   molar_frac.push_back(0.96L);
   molar_frac.push_back(0.04L);
   molar_frac.push_back(0.L);
-  Scalar dens_tot(1e12L);
-
-//hard sphere radius
-  std::vector<Scalar> hard_sphere_radius;
-  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
-  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
+  const Scalar dens_tot(1e12L);
+  Scalar Mmean(0.L);
+  for(unsigned int s = 0; s < Mm.size(); s++)
+  {
+     Mmean += Mm[s] * molar_frac[s];
+  }
+  Mmean *= 1e-3; //to kg
 
 //zenith angle
   Scalar chi(120);
@@ -271,17 +260,9 @@ int tester(const std::string &input_T, const std::string &input_hv,
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
-//temperature
-  std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,input_T);
-  std::vector<Scalar> neutral_temperature;
-
 /************************
  * first level
  ************************/
-
-//altitude
-  Planet::Altitude<Scalar,std::vector<Scalar> > altitude(zmin,zmax,zstep);
 
 //neutrals
   Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
@@ -300,11 +281,15 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //temperature
-  linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
+  std::vector<Scalar> T0,Tz;
+  read_temperature<Scalar>(T0,Tz,input_T);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz);
 
 //photon opacity
-  Planet::PhotonOpacity<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > tau(altitude,chapman);
+  Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
+  tau.add_cross_section(lambda_N2,  sigma_N2,  Antioch::Species::N2, neutral_species.active_species_name_map().at("N2"));
+  tau.add_cross_section(lambda_CH4, sigma_CH4, Antioch::Species::CH4, neutral_species.active_species_name_map().at("CH4"));
+  tau.update_cross_section(lambda_hv);
 
 //reaction sets
 //not needed
@@ -314,10 +299,8 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, altitude, temperature);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot);
-  composition.set_hard_sphere_radius(hard_sphere_radius);
-  composition.initialize();
 
 //kinetics evaluators
 //not needed
@@ -327,11 +310,9 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //photon evaluator
-  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(altitude,tau,composition);
-  photon.add_cross_section(lambda_N2,  sigma_N2,  Antioch::Species::N2);
-  photon.add_cross_section(lambda_CH4, sigma_CH4, Antioch::Species::CH4);
+  Planet::PhotonEvaluator<Scalar,std::vector<Scalar> > photon(tau,composition);
   photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
-  photon.update_photon_flux();
+//here, don't you forget to set the photon flux pointers to the reaction set
 
 //molecular diffusion
 //not needed
@@ -345,60 +326,37 @@ int tester(const std::string &input_T, const std::string &input_hv,
 
   molar_frac.pop_back();//get the ion outta here
 
-  std::vector<std::vector<Scalar> > densities;
-  std::vector<Scalar> mm;
-  mm.push_back(MN2);
-  mm.push_back(MCH4);
-  calculate_densities(densities,dens_tot,molar_frac,zmin,zmax,zstep,neutral_temperature,mm);
-
-  for(Scalar z = zmax-zstep; z >= zmin; z -= zstep)
-  {
-     unsigned int iz = altitude.altitudes_map().at(z);
-     unsigned int jz = altitude.altitudes_map().at(z+zstep);
-     for(unsigned int s = 0; s < densities.size(); s++)
-     {
-        densities[s][iz] += densities[s][jz];
-     }
-  }
-
-  std::vector<std::vector<Scalar> > opacity;
   std::vector<std::vector<Scalar>*> cs;
   cs.push_back(&lambda_N2);
   cs.push_back(&sigma_N2);
   cs.push_back(&lambda_CH4);
   cs.push_back(&sigma_CH4);
-  calculate_tau(opacity,chapman,cs,lambda_hv,
-                densities,molar_frac,mm,
-                neutral_temperature,
-                zmin,zmax,zstep);
-
-
-  std::vector<std::vector<Scalar> > phy_theo;
-  phy_theo.resize(altitude.altitudes().size());
-  for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
-  {
-    phy_theo[iz].resize(lambda_hv.size());
-    for(unsigned int il = 0; il < lambda_hv.size(); il++)  
-    {
-      phy_theo[iz][il] = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>()) 
-                        * Antioch::ant_exp(-opacity[iz][il]);
-    }
-  }
-
 
   int return_flag(0);
 
-  for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
+  for(Scalar z = zmin; z <= zmax; z += zstep)
   {
-    for(unsigned int il = 0; il < lambda_hv.size(); il++)
+    std::vector<Scalar> densities, sum_dens;
+
+    calculate_densities(densities, sum_dens, dens_tot, molar_frac, Mmean, zmin, zmax, z, temperature);
+
+    Scalar T = temperature.neutral_temperature(z);
+    Scalar x = a(T,Mmean,z);
+    std::vector<Scalar> opacity;
+    calculate_tau(opacity,chapman,cs,lambda_hv,sum_dens,z,x);
+
+
+    photon.update_photon_flux(densities,sum_dens,z);
+    
+
+    for(unsigned int il = 0; il < lambda_hv.size(); il++)  
     {
-        return_flag = return_flag ||
-                      check_test(phy_theo[iz][il], photon.photon_flux()[iz].flux()[il], "phy at altitude and wavelength");
-        if(return_flag)
-        {
-          std::cout << altitude.altitudes()[iz] << " " << lambda_hv[il] << std::endl;
-          return return_flag;
-        }
+        Scalar phy_top  = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>());
+        Scalar phy_theo = phy_top * Antioch::ant_exp(-opacity[il]);
+   
+        int flag_phy_top = check_test(phy_top, photon.photon_flux_at_top().flux()[il], "phy at top at altitude and wavelength");
+        int flag_phy     =  check_test(phy_theo, photon.photon_flux().flux()[il], "phy at altitude and wavelength");
+        return_flag = flag_phy_top || flag_phy  || return_flag;
     }
   }
 

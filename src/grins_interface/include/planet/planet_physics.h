@@ -47,6 +47,7 @@ namespace libMesh
 namespace Planet
 {
 
+  template <typename CoeffType, typename VectorCoeffType>
   class PlanetPhysics : public GRINS::Physics
   {
   public:
@@ -89,7 +90,7 @@ namespace Planet
     //! Element orders, read from input
     libMeshEnums::Order _species_order;
 
-    PlanetPhysicsHelper _helper;
+    PlanetPhysicsHelper<CoeffType,VectorCoeffType> _helper;
 
   private:
 

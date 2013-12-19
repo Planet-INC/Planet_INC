@@ -39,7 +39,6 @@ include_HEADERS =
 
 # core
 include_HEADERS += core/include/planet/diffusion_enum.h
-include_HEADERS += core/include/planet/altitude.h
 include_HEADERS += core/include/planet/atmospheric_mixture.h
 
 # photon_flux

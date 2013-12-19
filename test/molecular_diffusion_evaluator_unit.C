@@ -54,39 +54,6 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   return 1;
 }
 
-template<typename VectorScalar>
-void linear_interpolation(const VectorScalar &temp0, const VectorScalar &alt0,
-                          const VectorScalar &alt1, VectorScalar &temp1)
-{
-  unsigned int j(0);
-  typename Antioch::value_type<VectorScalar>::type a;
-  typename Antioch::value_type<VectorScalar>::type b;
-  temp1.resize(alt1.size());
-  for(unsigned int iz = 0; iz < alt1.size(); iz++)
-  {
-     while(alt0[j] < alt1[iz])
-     {
-        j++;
-        if(!(j < alt0.size()))break;
-     }
-     if(j == 0)
-     {
-        Antioch::set_zero(a);
-        b = temp0[j];
-     }else if(j < alt0.size() - 1)
-     {
-        a = (temp0[j] - temp0[j-1])/(alt0[j] - alt0[j-1]);
-        b = temp0[j] - a * alt0[j];
-     }else
-     {
-        Antioch::set_zero(a);
-        b = temp0.back();
-     }
-     temp1[iz] = a * alt1[iz] + b;
-  }
-}
-
-
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
 void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &file)
 {
@@ -115,12 +82,11 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
                               );
 }
 
-template<typename Scalar, typename VectorScalar, typename MatrixScalar>
-void calculate_densities(MatrixScalar &densities, const Scalar &tot_dens, const VectorScalar &molar_frac, 
-                        const Scalar &zmin,const Scalar &zmax,const Scalar &zstep, 
-                        const VectorScalar &T, const VectorScalar &mm)
+template<typename Scalar, typename VectorScalar>
+void calculate_densities(VectorScalar &densities, const Scalar &tot_dens, const VectorScalar &molar_frac, 
+                        const Scalar &zmin,const Scalar &z,
+                        const Scalar &T, const VectorScalar &mm)
 {
-   unsigned int iz(0);
    Scalar Mm;
    Antioch::set_zero(Mm);
    for(unsigned int s = 0; s < molar_frac.size(); s++)
@@ -130,13 +96,9 @@ void calculate_densities(MatrixScalar &densities, const Scalar &tot_dens, const 
    Mm *= 1e-3;//to kg
    densities.clear();
    densities.resize(molar_frac.size());
-   for(Scalar z = zmin; z <= zmax; z += zstep)
+   for(unsigned int s = 0; s < molar_frac.size(); s++)
    {
-      for(unsigned int s = 0; s < molar_frac.size(); s++)
-      {
-        densities[s].push_back(molar_frac[s] * barometry(zmin,z,T[iz],Mm,tot_dens));
-      }
-      iz++;
+     densities[s] = molar_frac[s] * barometry(zmin,z,T,Mm,tot_dens);
    }
 
    return;
@@ -180,6 +142,9 @@ int tester(const std::string &input_T)
   Mm.push_back(MN2);
   Mm.push_back(MCH4);
   Mm.push_back(MC2H);
+  std::vector<std::string> medium;
+  medium.push_back("N2");
+  medium.push_back("CH4");
 
 //densities
   std::vector<Scalar> molar_frac;
@@ -188,12 +153,6 @@ int tester(const std::string &input_T)
   molar_frac.push_back(0.00001L);
   molar_frac.push_back(0.L);
   Scalar dens_tot(1e12L);
-
-//hard sphere radius
-  std::vector<Scalar> hard_sphere_radius;
-  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
-  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
-  hard_sphere_radius.push_back(0.L); //C2H
 
 //zenith angle
 //not necessary
@@ -218,9 +177,6 @@ int tester(const std::string &input_T)
 /************************
  * first level
  ************************/
-
-//altitude
-  Planet::Altitude<Scalar,std::vector<Scalar> > altitude(zmin,zmax,zstep);
 
 //neutrals
   Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
@@ -254,9 +210,7 @@ int tester(const std::string &input_T)
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  std::vector<Scalar> neutral_temperature;
-  linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz);
 
 //photon opacity
 //not needed
@@ -269,10 +223,8 @@ int tester(const std::string &input_T)
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, altitude, temperature);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot);
-  composition.set_hard_sphere_radius(hard_sphere_radius);
-  composition.initialize();
 
 //kinetics evaluators
 //not needed
@@ -285,11 +237,8 @@ int tester(const std::string &input_T)
 //not needed
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,
-                                                                                                                          composition,
-                                                                                                                          altitude,
-                                                                                                                          temperature);
-  molecular_diffusion.make_molecular_diffusion();
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar> > molecular_diffusion(bin_diff_coeff,composition,temperature);
+  molecular_diffusion.set_medium_species(medium);
 
 //eddy diffusion
 //not needed
@@ -306,8 +255,6 @@ int tester(const std::string &input_T)
   }
   Matm *= 1e-3L; //to kg
 
-  std::vector<std::vector<Scalar> > densities;
-  calculate_densities(densities, dens_tot, molar_frac, zmin,zmax,zstep, temperature.neutral_temperature(), Mm);
 //N2, CH4, C2H
   std::vector<std::vector<Scalar> > Dij;
   Dij.resize(2);
@@ -315,10 +262,19 @@ int tester(const std::string &input_T)
   Dij[1].resize(3,0.L);
 
   int return_flag(0);
-  for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
+  for(Scalar z = zmin; z <= zmax; z += zstep)
   {
-      Scalar P = pressure(composition.total_density()[iz],temperature.neutral_temperature()[iz]);
-      Scalar T = temperature.neutral_temperature()[iz];
+      Scalar T    = temperature.neutral_temperature(z);
+      Scalar nTot = barometry(zmin,z,T,Matm,dens_tot);
+      Scalar P    = pressure(nTot,T);
+
+      std::vector<Scalar> densities;
+      calculate_densities(densities, dens_tot, molar_frac, zmin, z, T, Mm);
+
+      std::vector<Scalar> molecular_diffusion_Dtilde;
+      molecular_diffusion.Dtilde(densities,z,molecular_diffusion_Dtilde);
+
+        std::cout << z << ": " << T << ", " << P << ", " << bNN1 << ", " << bNN2 << std::endl;
       Dij[0][0] = binary_coefficient(T,P,bNN1,bNN2); //N2 N2
       Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
       Dij[0][2] = binary_coefficient(Dij[0][0],Mm[0],Mm[2]); //N2 C2H
@@ -338,25 +294,25 @@ int tester(const std::string &input_T)
       for(unsigned int s = 0; s < molar_frac.size(); s++)
       {
         Scalar tmp(0.L);
-        for(unsigned int medium = 0; medium < 2; medium++)
+        for(unsigned int imedium = 0; imedium < medium.size(); imedium++)
         {
-           if(s == medium)continue;
-           tmp += densities[medium][iz]/Dij[medium][s];
+           if(s == imedium)continue;
+           tmp += densities[imedium]/Dij[imedium][s];
         }
-        Scalar Ds = (barometry(zmin,altitude.altitudes()[iz],neutral_temperature[iz],Matm,dens_tot) - densities[s][iz]) / tmp;
+        Scalar Ds = (nTot - densities[s]) / tmp;
 
         Scalar M_diff(0.L);
         Scalar totdens_diff(0.L);
         for(unsigned int j = 0; j < molar_frac.size(); j++)
         {
            if(s == j)continue;
-           M_diff += densities[j][iz] * Mm[j];
-           totdens_diff += densities[j][iz];
+           M_diff += densities[j] * Mm[j];
+           totdens_diff += densities[j];
         }
         M_diff /= totdens_diff;
-        Scalar Dtilde = Ds / (Scalar(1.L) - composition.neutral_molar_fraction()[s][iz] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
+        Scalar Dtilde = Ds / (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
         return_flag = return_flag ||
-                      check_test(Dtilde,molecular_diffusion.Dtilde()[s][iz],"Dtilde of species at altitude");
+                      check_test(Dtilde,molecular_diffusion_Dtilde[s],"Dtilde of species at altitude");
 
       }
   }

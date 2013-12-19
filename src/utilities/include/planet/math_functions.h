@@ -33,12 +33,12 @@ namespace Planet
       */
     template<typename CoeffType, typename VectorCoeffType>
     inline
-    unsigned int find_floor_index(const Altitude<CoeffType,VectorCoeffType> &alt, const CoeffType &value)
+    unsigned int find_floor_index(const VectorCoeffType &alt, const CoeffType &value)
     {
       unsigned int iz;
-      for(iz = 0; iz < alt.altitudes().size() - 1; iz++)
+      for(iz = 0; iz < alt.size() - 1; iz++)
       {
-         if(alt.altitudes()[iz] <= value && alt.altitudes()[iz + 1] > value)break;
+         if(alt[iz] <= value && alt[iz + 1] > value)break;
       }
       return iz;
     }
@@ -48,12 +48,24 @@ namespace Planet
      */
     template<typename CoeffType, typename VectorCoeffType>
     inline
-    CoeffType linear_evaluation(const Altitude<CoeffType,VectorCoeffType> &alt, const VectorCoeffType &data, const CoeffType &value)
+    CoeffType linear_evaluation(const VectorCoeffType &alt, const VectorCoeffType &data, const CoeffType &value)
     {
-      unsigned int iz = find_floor_index(alt,value);
-      CoeffType a = (data[iz + 1] - data[iz]) / (alt.altitudes()[iz] - alt.altitudes()[iz + 1]);
-      CoeffType b = a * alt.altitudes()[iz] - data[iz];
-      return (a * value + b);
+      CoeffType interpolation;
+      if(value <= alt[0])
+      {
+        interpolation = alt[0];
+      }else if(value >= alt.back())
+      {
+        interpolation = alt.back();
+      }else
+      {
+        unsigned int iz = find_floor_index(alt,value);
+        CoeffType a = (data[iz + 1] - data[iz]) / (alt[iz] - alt[iz + 1]);
+        CoeffType b = data[iz] - a * alt[iz];
+        interpolation = a * value + b;
+      }
+
+      return interpolation;
     }
 
     /*!
@@ -61,10 +73,10 @@ namespace Planet
      */
     template<typename CoeffType, typename VectorCoeffType>
     inline
-    CoeffType linear_evaluation_dz(const Altitude<CoeffType,VectorCoeffType> &alt, const VectorCoeffType &data, const CoeffType &value)
+    CoeffType linear_evaluation_dz(const VectorCoeffType &alt, const VectorCoeffType &data, const CoeffType &value)
     {
       unsigned int iz = find_floor_index(alt,value);
-      return (data[iz + 1] - data[iz]) / (alt.altitudes()[iz] - alt.altitudes()[iz + 1]);
+      return (data[iz + 1] - data[iz]) / (alt[iz] - alt[iz + 1]);
     }
 
   } // end namespace Functions

@@ -42,16 +42,13 @@ namespace Planet
         //!no default constructor
         AtmosphericTemperature(){antioch_error();return;}
 
+        VectorCoeffType _altitude;
         VectorCoeffType _neutral_temperature;
         VectorCoeffType _ionic_temperature;
         VectorCoeffType _electronic_temperature;
 
-
-///dependencie
-        Altitude<CoeffType,VectorCoeffType> &_altitude;
-
       public:
-        AtmosphericTemperature(const VectorCoeffType &neu, const VectorCoeffType &ion, Altitude<CoeffType,VectorCoeffType> &alt);
+        AtmosphericTemperature(const VectorCoeffType &neu, const VectorCoeffType &ion, const VectorCoeffType &alt);
         ~AtmosphericTemperature();
 
         //!\return neutral temperature
@@ -69,11 +66,11 @@ namespace Planet
 
         //!\return ionic temperature at custom altitude
         template <typename StateType>
-        const VectorCoeffType &ionic_temperature(const StateType &z)   const;
+        const CoeffType ionic_temperature(const StateType &z)   const;
 
         //!\return electronic temperature at custom altitude
         template <typename StateType>
-        const VectorCoeffType &electronic_temperature(const StateType &z)   const;
+        const CoeffType electronic_temperature(const StateType &z)   const;
 
         //!
         template<typename VectorStateType>
@@ -114,23 +111,23 @@ namespace Planet
   inline
   AtmosphericTemperature<CoeffType,VectorCoeffType>::AtmosphericTemperature(const VectorCoeffType &neu, 
                                                                             const VectorCoeffType &ion, 
-                                                                            Altitude<CoeffType,VectorCoeffType> &alt):
+                                                                            const VectorCoeffType &alt):
+      _altitude(alt),
       _neutral_temperature(neu),
-      _ionic_temperature(ion),
-      _altitude(alt)
+      _ionic_temperature(ion)
   {
-    _electronic_temperature.resize(_altitude.altitudes().size());
-    for(unsigned int iz = 0; iz < _altitude.altitudes().size(); iz++)
+    _electronic_temperature.resize(_altitude.size());
+    for(unsigned int iz = 0; iz < _altitude.size(); iz++)
     {
-      if(_altitude.altitudes()[iz] < 900.)
+      if(_altitude[iz] < 900.)
       {
          _electronic_temperature[iz] = 180.L;
-      }else if(_altitude.altitudes()[iz] < 1400.)
+      }else if(_altitude[iz] < 1400.)
       {
-         _electronic_temperature[iz] = CoeffType(180.L) + (_altitude.altitudes()[iz] - CoeffType(900.L))/CoeffType(500.L) * CoeffType(1150.L - 180.L) ;
+         _electronic_temperature[iz] = CoeffType(180.L) + (_altitude[iz] - CoeffType(900.L))/CoeffType(500.L) * CoeffType(1150.L - 180.L) ;
       }else
       {
-         _electronic_temperature[iz] = CoeffType(1150.L) + CoeffType(0.1L) * (_altitude.altitudes()[iz] - CoeffType(1400.L));
+         _electronic_temperature[iz] = CoeffType(1150.L) + CoeffType(0.1L) * (_altitude[iz] - CoeffType(1400.L));
       }
     }
     return;
@@ -167,7 +164,7 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType>
   template<typename StateType>
   inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_temperature(const StateType &z) const
+  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_temperature(const StateType &z) const
   {
     return Functions::linear_evaluation(_altitude,_ionic_temperature,z);
   }
@@ -183,7 +180,7 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType>
   template<typename StateType>
   inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_temperature(const StateType &z) const
+  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_temperature(const StateType &z) const
   {
     return Functions::linear_evaluation(_altitude,_electronic_temperature,z);
   }

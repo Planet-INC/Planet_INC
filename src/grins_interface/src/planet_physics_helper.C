@@ -35,8 +35,9 @@
 namespace Planet
 {
 
-  PlanetPhysicsHelper::PlanetPhysicsHelper(AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *kinetics,
-                                           DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *diffusion):
+  template<typename CoeffType, typename VectorCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType>::PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType > *kinetics,
+                                                                      DiffusionEvaluator <CoeffType,VectorCoeffType > *diffusion):
         _kinetics(kinetics),
         _diffusion(diffusion),
         _current_z(-1.),
@@ -47,46 +48,61 @@ namespace Planet
     return;
   }
 
-  PlanetPhysicsHelper::~PlanetPhysicsHelper()
+  template<typename CoeffType, typename VectorCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType>::~PlanetPhysicsHelper()
   {
     return;
   }
 
-  libMesh::Real PlanetPhysicsHelper::compute_omega(unsigned int s, double z,
-                                                   const std::vector<double> & molar_concentrations,
-                                                   const std::vector<double> & dmolar_concentrations_dz)
+  template<typename CoeffType, typename VectorCoeffType>
+  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType>::diffusion_term(unsigned int s)
   {
-    this->compute(molar_concentrations,dmolar_concentrations_dz,z);
     return _omegas[s];
   }
 
-  libMesh::Real PlanetPhysicsHelper::compute_omega_dot(unsigned int s, double z,
-                                                       const std::vector<double> & molar_concentrations,
-                                                       const std::vector<double> & dmolar_concentrations_dz)
+  template<typename CoeffType, typename VectorCoeffType>
+  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType>::chemical_term(unsigned int s)
   {
-    this->compute(molar_concentrations,dmolar_concentrations_dz,z);
     return _omegas_dots[s];
   }
 
-  void PlanetPhysicsHelper::compute(const std::vector<double> & molar_concentrations,
-                                    const std::vector<double> & dmolar_concentrations_dz,
-                                    double z)
+  template<typename CoeffType, typename VectorCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::compute(const VectorStateType & molar_concentrations,
+                                                               const VectorStateType & dmolar_concentrations_dz,
+                                                               const VectorStateType & other_altitudes,
+                                                               const MatrixStateType & other_concentrations,
+                                                               const StateType & z)
   {
     if((z - _current_z) > _eps)
     {
+//// if other_altitudes from top to bottom, end at z
+     std::vector<double> sum_concentration;
+     sum_concentration.resize(molar_concentrations.size(),0.L);
+     for(unsigned int iz = 0; iz < other_altitudes.size() - 1; iz++)
+     {
+        for(unsigned int s = 0; s < sum_concentration.size(); s++)
+        {
+          sum_concentration[s] += other_concentrations[s][iz] * (other_altitudes[iz] - other_altitudes[iz +1]);
+        }
+     }
      _diffusion->diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
-     _kinetics->chemical_rate(molar_concentrations,z,_omegas_dots);
+     _kinetics->chemical_rate(molar_concentrations,sum_concentration,z,_omegas_dots);
      _current_z = z;
     }
     return;
   }
 
-  void PlanetPhysicsHelper::set_kinetics(AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *kinetics)
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename StateType, typename VectorStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::set_kinetics(AtmosphericKinetics<StateType,VectorStateType> *kinetics)
   {
      _kinetics = kinetics;
   }
 
-  void PlanetPhysicsHelper::set_diffusion(DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *diffusion)
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename StateType, typename VectorStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::set_diffusion(DiffusionEvaluator <StateType,VectorStateType> *diffusion)
   {
      _diffusion = diffusion;
   }

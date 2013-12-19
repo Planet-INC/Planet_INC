@@ -34,38 +34,42 @@
 namespace Planet
 {
 
+  template<typename CoeffType, typename VectorCoeffType>
   class PlanetPhysicsHelper
   {
   public:
 
-    PlanetPhysicsHelper(AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *kinetics = NULL,
-                        DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *diffusion = NULL);
+    PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType > *kinetics = NULL,
+                        DiffusionEvaluator <CoeffType,VectorCoeffType > *diffusion = NULL);
 
     ~PlanetPhysicsHelper();
 
-    void set_kinetics(AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *kinetics);
+    template <typename StateType, typename VectorStateType>
+    void set_kinetics(AtmosphericKinetics<StateType,VectorStateType> *kinetics);
 
-    void set_diffusion(DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *diffusion);
+    template <typename StateType, typename VectorStateType>
+    void set_diffusion(DiffusionEvaluator<StateType,VectorStateType> *diffusion);
 
-    libMesh::Real compute_omega(unsigned int s, double z, const std::vector<double> & molar_concentrations,
-                                                          const std::vector<double> & dmolar_concentrations_dz);
+    libMesh::Real diffusion_term(unsigned int s);
 
-    libMesh::Real compute_omega_dot(unsigned int s, double z, const std::vector<double> & molar_concentrations,
-                                                              const std::vector<double> & dmolar_concentrations_dz);
+    libMesh::Real chemical_term(unsigned int s);
+
+    template<typename StateType, typename VectorStateType, typename MatrixStateType>
+    void compute(const VectorStateType & molar_concentrations,
+                 const VectorStateType & dmolar_concentrations_dz,
+                 const VectorStateType & other_altitudes,
+                 const MatrixStateType & other_concentrations,
+                 const StateType & z);
 
   private:
 
-    void compute(const std::vector<double> & molar_concentrations,
-                 const std::vector<double> & dmolar_concentrations_dz,
-                 double z);
+    AtmosphericKinetics<CoeffType,VectorCoeffType> *_kinetics;
+    DiffusionEvaluator <CoeffType,VectorCoeffType> *_diffusion;
 
-    AtmosphericKinetics<double,std::vector<double>,std::vector<std::vector<double> > > *_kinetics;
-    DiffusionEvaluator <double,std::vector<double>,std::vector<std::vector<double> > > *_diffusion;
-
-    std::vector<double> _omegas;
-    std::vector<double> _omegas_dots;
-    double _current_z;
-    const double _eps;
+    VectorCoeffType _omegas;
+    VectorCoeffType _omegas_dots;
+    CoeffType _current_z;
+    const CoeffType _eps;
 
   };
 

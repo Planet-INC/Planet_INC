@@ -31,7 +31,6 @@
 //Planet
 #include "planet/binary_diffusion.h"
 #include "planet/atmospheric_mixture.h"
-#include "planet/altitude.h"
 #include "planet/atmospheric_temperature.h"
 
 //C++
@@ -39,22 +38,20 @@
 
 namespace Planet
 {
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename CoeffType, typename VectorCoeffType>
   class MolecularDiffusionEvaluator
   {
      private:
         //!
         MolecularDiffusionEvaluator() {antioch_error();return;}
 
-        MatrixCoeffType _Dtilde;
-        std::vector<std::vector<BinaryDiffusion<CoeffType> > > _diffusion;
-        const unsigned int _n_medium;
+        unsigned int _n_medium;
         std::vector<unsigned int> _i_medium;
 
+        std::vector<std::vector<BinaryDiffusion<CoeffType> > > _diffusion;
 //dependencies
-        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
-        Altitude<CoeffType,VectorCoeffType> &_altitude;
-        AtmosphericTemperature<CoeffType,VectorCoeffType> &_temperature;
+        AtmosphericMixture<CoeffType, VectorCoeffType>     &_mixture;
+        AtmosphericTemperature<CoeffType, VectorCoeffType> &_temperature;
 
         //! The coefficients are known
         template<typename StateType>
@@ -79,8 +76,7 @@ namespace Planet
      public:
         //!
         MolecularDiffusionEvaluator(const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
-                                    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                                    Altitude<CoeffType,VectorCoeffType> &alt,
+                                    AtmosphericMixture<CoeffType,VectorCoeffType> &comp,
                                     AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
         //!
         ~MolecularDiffusionEvaluator();
@@ -88,12 +84,6 @@ namespace Planet
         //!
         template<typename StateType>
         void set_binary_coefficient(unsigned int i, unsigned int j, const BinaryDiffusion<StateType> &bin_coef);
-
-        //! update Dtilde
-        void make_molecular_diffusion();
-
-        //! returns the Dtilde matrix (species,altitudes) bottom to top
-        const MatrixCoeffType Dtilde() const;
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -110,109 +100,66 @@ namespace Planet
                                                         this->binary_coefficient_unknown_ji(i,j,T,P):
                                                         this->binary_coefficient_unknown_ij(i,j,T,P))
 
+        void set_medium_species(const std::vector<std::string> &medium_species);
+
   };
 
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType>
   inline
-  const MatrixCoeffType MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::Dtilde() const
-  {
-      return _Dtilde;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::make_molecular_diffusion()
-  {
-
-    for(unsigned int iz = 0; iz < _altitude.altitudes().size(); iz++)
-    {
-//pressure
-      CoeffType p = _mixture.total_density()[iz] * 1e6 //cm-3 -> m-3
-                    * Constants::Universal::kb<CoeffType>() * _temperature.neutral_temperature()[iz];
-      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
-      {
-//M_{/=}
-        CoeffType meanM;
-        Antioch::set_zero(meanM);
-        CoeffType ntot_s = _mixture.total_density()[iz] - _mixture.neutral_molar_fraction()[s][iz] * _mixture.total_density()[iz]; //ntot - ns
-        for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
-        {
-          if(i == s)continue;
-          meanM += _mixture.neutral_composition().M(i) * 
-                   _mixture.neutral_molar_fraction()[i][iz] * _mixture.total_density()[iz] / ntot_s; //x_i without s: ni/(ntot - ns)
-        }
-//Ds
-        CoeffType n_D;
-        Antioch::set_zero(n_D);
-        for(unsigned int i = 0; i < _n_medium; i++)
-        {
-          if(_i_medium[i] == s)continue;
-          n_D += _mixture.total_density()[iz] * _mixture.neutral_molar_fraction()[_i_medium[i]][iz] / 
-                                        this->binary_coefficient(_i_medium[i],s,_temperature.neutral_temperature()[iz],p);
-        }
-//Dtilde = Ds / ...
-        _Dtilde[s][iz] = _mixture.total_density()[iz] * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz])
-                            / ( n_D * (CoeffType(1.L) - _mixture.neutral_molar_fraction()[s][iz] * 
-                                      (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM))
-                              );
-       }
-    }
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::~MolecularDiffusionEvaluator()
+  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType>::~MolecularDiffusionEvaluator()
   {
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType>
   inline
-  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::MolecularDiffusionEvaluator
+  MolecularDiffusionEvaluator<CoeffType, VectorCoeffType>::MolecularDiffusionEvaluator
                        (const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
-                        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                        Altitude<CoeffType,VectorCoeffType> &alt,
+                        AtmosphericMixture<CoeffType,VectorCoeffType> &comp,
                         AtmosphericTemperature<CoeffType,VectorCoeffType> &temp
                        ):
+       _n_medium(diff.size()),
        _diffusion(diff),
-       _n_medium(2),
        _mixture(comp),
-       _altitude(alt),
        _temperature(temp)
   {
-    _Dtilde.resize(_mixture.neutral_composition().n_species());
-     for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
-     {
-       _Dtilde[s].resize(_altitude.altitudes().size(),0.L);
-     }
-//// hard-coded, N2 then CH4
-    _i_medium.resize(_n_medium);
-    _i_medium[0] = _mixture.neutral_composition().species_list_map().at(Antioch::Species::N2);
-    _i_medium[0] = _mixture.neutral_composition().species_list_map().at(Antioch::Species::CH4);
-  
-     return; 
+     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType>
+  inline
+  void MolecularDiffusionEvaluator<CoeffType,VectorCoeffType>::set_medium_species(const std::vector<std::string> &medium_species)
+  {
+    antioch_assert_equal_to(_n_medium,medium_species.size());
+    _i_medium.resize(_n_medium);
+    for(unsigned int i = 0; i < _n_medium; i++)
+    {
+      _i_medium[i] = _mixture.neutral_composition().active_species_name_map().at(medium_species[i]);
+    }
+  
+    return; 
+   }
+
+  template<typename CoeffType, typename VectorCoeffType>
   template<typename StateType>
   inline
-  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::set_binary_coefficient(unsigned int i, 
-                                                                                                        unsigned int j, 
-                                                                                                        const BinaryDiffusion<StateType> &bin_coef)
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType>::set_binary_coefficient(unsigned int i, 
+                                                                                       unsigned int j, 
+                                                                                       const BinaryDiffusion<StateType> &bin_coef)
   {
      antioch_assert_less(i,_n_medium);
      antioch_assert_less(j,_mixture.neutral_composition().n_species());
       _diffusion[i][j] = bin_coef;
   }
 
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename CoeffType, typename VectorCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType, MatrixCoeffType>::Dtilde(const VectorStateType &molar_concentrations, 
-                                                                                        const StateType &z,VectorStateType &Dtilde) const
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType>::Dtilde(const VectorStateType &molar_concentrations, 
+                                                                       const StateType &z,VectorStateType &Dtilde) const
   {
      antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
+
      Dtilde.resize(molar_concentrations.size(),0.L);
      CoeffType nTot(0.L);
      for(unsigned int s = 0; s < molar_concentrations.size(); s++)
@@ -233,7 +180,7 @@ namespace Planet
           if(i == s)continue;
           meanM += _mixture.neutral_composition().M(i) * molar_concentrations[i] / ntot_s; //x_i without s: ni/(ntot - ns)
         }
-//Ds
+//Ds denominator : sum_{j_m} n_{j_m}/D_{s,j_m}
         CoeffType n_D;
         Antioch::set_zero(n_D);
         for(unsigned int i = 0; i < _n_medium; i++)
@@ -241,7 +188,7 @@ namespace Planet
           if(_i_medium[i] == s)continue;
           n_D += molar_concentrations[_i_medium[i]] / this->binary_coefficient(_i_medium[i],s,T,p);
         }
-//Dtilde = Ds / ...
+//Dtilde = Ds numerator (ntot - n_s) / Ds denom ...
         Dtilde[s] = (nTot - molar_concentrations[s])
                             / ( n_D * (CoeffType(1.L) - molar_concentrations[s]/nTot * 
                                       (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM))

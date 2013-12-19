@@ -39,7 +39,8 @@
 
 namespace Planet
 {
-  PlanetPhysics::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
+  template <typename CoeffType, typename VectorCoeffType>
+  PlanetPhysics<CoeffType,VectorCoeffType>::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
     : GRINS::Physics(physics_name,input), 
       _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
       _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
@@ -56,12 +57,14 @@ namespace Planet
     return;
   }
 
-  PlanetPhysics::~PlanetPhysics()
+  template <typename CoeffType, typename VectorCoeffType>
+  PlanetPhysics<CoeffType,VectorCoeffType>::~PlanetPhysics()
   {
     return;
   }
 
-  void PlanetPhysics::init_variables( libMesh::FEMSystem* system )
+  template <typename CoeffType, typename VectorCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType>::init_variables( libMesh::FEMSystem* system )
   {
     _species_vars.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
@@ -73,7 +76,8 @@ namespace Planet
     return;
   }
 
-  void PlanetPhysics::set_time_evolving_vars( libMesh::FEMSystem* system )
+  template <typename CoeffType, typename VectorCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
@@ -83,7 +87,8 @@ namespace Planet
     return;
   }
 
-  void PlanetPhysics::init_context( GRINS::AssemblyContext& context )
+  template <typename CoeffType, typename VectorCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType>::init_context( GRINS::AssemblyContext& context )
   {
     context.get_element_fe(_species_vars[0])->get_JxW();
     context.get_element_fe(_species_vars[0])->get_phi();
@@ -93,7 +98,8 @@ namespace Planet
     return;
   }
 
-  void PlanetPhysics::element_time_derivative( bool compute_jacobian,
+  template <typename CoeffType, typename VectorCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType>::element_time_derivative( bool compute_jacobian,
                                                GRINS::AssemblyContext& context,
                                                GRINS::CachedValues& cache )
   {
@@ -119,7 +125,9 @@ namespace Planet
       context.get_element_fe(var)->get_xyz();
 
     
-
+////here the vectors I need
+    std::vector<libMesh::Number> other_altitudes;
+    std::vector<std::vector<libMesh::Number> > other_concentrations;
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
@@ -141,9 +149,13 @@ namespace Planet
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            libMesh::Real omega = _helper.compute_omega(s, r - Constants::Titan::radius<double>() ,molar_concentrations,dmolar_concentrations_dz) ;
+            _helper.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
+                            other_altitudes, other_concentrations,  // {n}_s other z, other z
+                            r - Constants::Titan::radius<double>() ) ; // z
 
-            libMesh::Real omega_dot = _helper.compute_omega_dot(s, r - Constants::Titan::radius<double>(),molar_concentrations,dmolar_concentrations_dz) ;
+            libMesh::Real omega = _helper.diffusion_term(s);
+
+            libMesh::Real omega_dot = _helper.chemical_term(s);
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
@@ -163,7 +175,8 @@ namespace Planet
     return;
   }
 
-  void PlanetPhysics::mass_residual( bool compute_jacobian,
+  template <typename CoeffType, typename VectorCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType>::mass_residual( bool compute_jacobian,
                                      GRINS::AssemblyContext& context,
                                      GRINS::CachedValues& cache )
   {

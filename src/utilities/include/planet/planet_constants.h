@@ -68,7 +68,7 @@ namespace Planet
     inline
     CoeffType g(const CoeffType &radius, const CoeffType &alt, const CoeffType &mass)
     {
-       return Constants::Universal::G<CoeffType>() * mass / (CoeffType(1e6L) * (radius + alt) * (radius + alt));
+       return Universal::G<CoeffType>() * mass / (CoeffType(1e6L) * (radius + alt) * (radius + alt));
     }
 
     /*!

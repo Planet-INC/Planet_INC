@@ -55,39 +55,6 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   return 1;
 }
 
-template<typename VectorScalar>
-void linear_interpolation(const VectorScalar &temp0, const VectorScalar &alt0,
-                          const VectorScalar &alt1, VectorScalar &temp1)
-{
-  unsigned int j(0);
-  typename Antioch::value_type<VectorScalar>::type a;
-  typename Antioch::value_type<VectorScalar>::type b;
-  temp1.resize(alt1.size());
-  for(unsigned int iz = 0; iz < alt1.size(); iz++)
-  {
-     while(alt0[j] < alt1[iz])
-     {
-        j++;
-        if(!(j < alt0.size()))break;
-     }
-     if(j == 0)
-     {
-        Antioch::set_zero(a);
-        b = temp0[j];
-     }else if(j < alt0.size() - 1)
-     {
-        a = (temp0[j] - temp0[j-1])/(alt0[j] - alt0[j-1]);
-        b = temp0[j] - a * alt0[j];
-     }else
-     {
-        Antioch::set_zero(a);
-        b = temp0.back();
-     }
-     temp1[iz] = a * alt1[iz] + b;
-  }
-}
-
-
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
 void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &file)
 {
@@ -164,9 +131,6 @@ int tester(const std::string &input_T)
  * first level
  ************************/
 
-//altitude
-  Planet::Altitude<Scalar,std::vector<Scalar> > altitude(zmin,zmax,zstep);
-
 //neutrals
   Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
 
@@ -186,9 +150,7 @@ int tester(const std::string &input_T)
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  std::vector<Scalar> neutral_temperature;
-  linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(neutral_temperature, neutral_temperature, altitude);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz);
 
 //photon opacity
 //not needed
@@ -201,10 +163,8 @@ int tester(const std::string &input_T)
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, altitude, temperature);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot);
-  composition.set_hard_sphere_radius(hard_sphere_radius);
-  composition.initialize();
 
 //kinetics evaluators
 //not needed
@@ -220,8 +180,7 @@ int tester(const std::string &input_T)
 //not needed
 
 //eddy diffusion
-  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diff(composition,altitude);
-  eddy_diff.set_K0(K0);
+  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar> > eddy_diff(composition,K0);
 
 /************************
  * checks
@@ -238,11 +197,12 @@ int tester(const std::string &input_T)
 
   int return_flag(0);
 
-  for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
+  for(Scalar z = zmin; z <= zmax; z += zstep)
   {
-     Scalar K = K0 * Antioch::ant_sqrt(dens_tot/barometry(zmin,altitude.altitudes()[iz],temperature.neutral_temperature()[iz],mean_M,dens_tot));
+     Scalar nTot = barometry(zmin,z,temperature.neutral_temperature(z),mean_M,dens_tot);
+     Scalar K = K0 * Antioch::ant_sqrt(dens_tot/nTot);
      return_flag = return_flag ||
-                   check_test(K, eddy_diff.K()[iz], "eddy diffusion at altitude");
+                   check_test(K, eddy_diff.K(nTot), "eddy diffusion at altitude");
   }
 
   return return_flag;
