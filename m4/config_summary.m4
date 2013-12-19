@@ -30,11 +30,14 @@ echo Configure date................ : $BUILD_DATE
 echo Build architecture............ : $BUILD_ARCH
 echo revision number............... : $BUILD_VERSION
 echo Antioch location.............. : $ANTIOCH_PREFIX
+echo GRINS location................ : $GRINS_PREFIX
+echo Libmesh location.............. : $LIBMESH_PREFIX
 echo
 echo '-------------------------------------------------------------------------------'
 
 echo
 echo Configure complete, now type \'make\' and then \'make install\'.
+echo You may want to type \'make check\' to be run a serie of tests.
 echo
 
 ])
