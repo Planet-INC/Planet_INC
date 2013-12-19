@@ -4,7 +4,6 @@ EXTRA_DIST = input_files
 
 check_PROGRAMS  = 
 check_PROGRAMS += binary_diffusion_unit
-check_PROGRAMS += altitude_unit
 check_PROGRAMS += chapman_unit
 check_PROGRAMS += temperature_unit
 check_PROGRAMS += photon_opacity_unit
@@ -13,6 +12,7 @@ check_PROGRAMS += photon_evaluator_unit
 check_PROGRAMS += eddy_diffusion_evaluator_unit
 check_PROGRAMS += molecular_diffusion_evaluator_unit
 check_PROGRAMS += diffusion_evaluator_unit
+check_PROGRAMS += physics_helper_unit
 
 AM_CPPFLAGS  = 
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
@@ -24,6 +24,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/grins_interface/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 AM_CPPFLAGS +=  $(planet_optional_test_INCLUDES)
 
@@ -34,7 +35,6 @@ LDADD = $(top_builddir)/src/libplanet.la
 
 # Sources for these tests
 binary_diffusion_unit_SOURCES = binary_diffusion_unit.C
-altitude_unit_SOURCES = altitude_unit.C
 chapman_unit_SOURCES = chapman_unit.C
 temperature_unit_SOURCES = temperature_unit.C
 photon_opacity_unit_SOURCES = photon_opacity_unit.C
@@ -43,11 +43,11 @@ photon_evaluator_unit_SOURCES = photon_evaluator_unit.C
 eddy_diffusion_evaluator_unit_SOURCES = eddy_diffusion_evaluator_unit.C
 molecular_diffusion_evaluator_unit_SOURCES = molecular_diffusion_evaluator_unit.C
 diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
+physics_helper_unit_SOURCES = physics_helper_unit.C
 
 #Define tests to actually be run
 TESTS = 
 TESTS += binary_diffusion_unit 
-TESTS += altitude_unit
 TESTS += chapman_unit
 TESTS += temperature_unit.sh
 TESTS += photon_opacity_unit.sh
@@ -56,6 +56,7 @@ TESTS += photon_evaluator_unit.sh
 TESTS += eddy_diffusion_evaluator_unit.sh
 TESTS += molecular_diffusion_evaluator_unit.sh
 TESTS += diffusion_evaluator_unit.sh
+TESTS += physics_helper_unit.sh
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

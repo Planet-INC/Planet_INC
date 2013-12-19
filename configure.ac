@@ -162,6 +162,7 @@ AC_CONFIG_FILES(test/photon_evaluator_unit.sh,                [chmod +x test/pho
 AC_CONFIG_FILES(test/eddy_diffusion_evaluator_unit.sh,        [chmod +x test/eddy_diffusion_evaluator_unit.sh])
 AC_CONFIG_FILES(test/molecular_diffusion_evaluator_unit.sh,   [chmod +x test/molecular_diffusion_evaluator_unit.sh])
 AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/diffusion_evaluator_unit.sh])
+AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/physics_helper_unit.sh])
 
 dnl-----------------------------------------------
 dnl Generate header files
