@@ -2,7 +2,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([Planet], [0.0.0], [splessis@ices.utexas.edu], [Planet])
+AC_INIT([planet], [0.0.0], [splessis@ices.utexas.edu], [planet])
 PACKAGE_DESCRIPTION="A planet's atmospheric code using Antioch, adapted to Titan"
 AC_SUBST([PACKAGE_DESCRIPTION])
 PACKAGE_URL=""
@@ -80,23 +80,9 @@ AC_DEFINE_UNQUOTED(N_RUNS, $n_runs, [number of runs done in each vector test])
 dnl------------------------
 dnl Checks dependencies
 dnl--------------------------
-planet_optional_INCLUDES=""
-planet_optional_test_INCLUDES=""
-planet_optional_test_LDFLAGS=""
-planet_optional_test_LIBS=""
 
 # Check for Antioch
 AX_PATH_ANTIOCH(0.0.0,yes)
-
-planet_optional_INCLUDES="$ANTIOCH_CPPFLAGS $planet_optional_test_INCLUDES"
-planet_optional_test_INCLUDES="$ANTIOCH_CPPFLAGS $planet_optional_test_INCLUDES"
-planet_optional_test_LDFLAGS="$ANTIOCH_LDFLAGS $planet_optional_test_LDFLAGS"
-planet_optional_test_LIBS="$ANTIOCH_LIBS $planet_optional_test_LIBS"
-
-AC_SUBST(planet_optional_INCLUDES)
-AC_SUBST(planet_optional_test_INCLUDES)
-AC_SUBST(planet_optional_test_LDFLAGS)
-AC_SUBST(planet_optional_test_LIBS)
 
 dnl--------------------------
 dnl Even if no dependency needed it,

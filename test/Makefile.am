@@ -26,12 +26,21 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/grins_interface/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
-AM_CPPFLAGS +=  $(planet_optional_test_INCLUDES)
 
-AM_LDFLAGS = $(planet_optional_test_LDFLAGS)
-LIBS = $(planet_optional_test_LIBS)
+AM_LDFLAGS = 
 
-LDADD = $(top_builddir)/src/libplanet.la
+LIBS = 
+
+#Planet
+LIBS += $(LIBPLANET_LIBS)
+
+#Antioch
+AM_CPPFLAGS += $(ANTIOCH_CPPFLAGS)
+
+#GRINS
+AM_CPPFLAGS += $(GRINS_CPPFLAGS)
+AM_LDFLAGS += $(GRINS_LDFLAGS)
+LIBS += $(LIBGRINS_LIBS)
 
 # Sources for these tests
 binary_diffusion_unit_SOURCES = binary_diffusion_unit.C

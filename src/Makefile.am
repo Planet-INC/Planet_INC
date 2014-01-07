@@ -98,7 +98,8 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
-AM_CPPFLAGS +=  $(planet_optional_INCLUDES)
+
+AM_CPPFLAGS += $(ANTIOCH_CPPFLAGS)
 AM_CPPFLAGS += $(GRINS_CPPFLAGS)
 
 CLEANFILES =
