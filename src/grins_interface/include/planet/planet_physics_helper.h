@@ -50,9 +50,9 @@ namespace Planet
     template <typename StateType, typename VectorStateType>
     void set_diffusion(DiffusionEvaluator<StateType,VectorStateType> *diffusion);
 
-    libMesh::Real diffusion_term(unsigned int s);
+    libMesh::Real diffusion_term(unsigned int s) const;
 
-    libMesh::Real chemical_term(unsigned int s);
+    libMesh::Real chemical_term(unsigned int s)  const;
 
     template<typename StateType, typename VectorStateType, typename MatrixStateType>
     void compute(const VectorStateType & molar_concentrations,
@@ -68,10 +68,78 @@ namespace Planet
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
-    CoeffType _current_z;
-    const CoeffType _eps;
 
   };
+
+  template<typename CoeffType, typename VectorCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::compute(const VectorStateType & molar_concentrations,
+                                                               const VectorStateType & dmolar_concentrations_dz,
+                                                               const VectorStateType & other_altitudes,
+                                                               const MatrixStateType & other_concentrations,
+                                                               const StateType & z)
+  {
+   VectorStateType sum_concentration;
+   sum_concentration.resize(molar_concentrations.size(),0.L);
+   for(unsigned int iz = 0; iz < other_concentrations.size(); iz++)
+   {
+      for(unsigned int s = 0; s < sum_concentration.size(); s++)
+      {
+        sum_concentration[s] += other_concentrations[iz][s] * (other_altitudes[iz] - other_altitudes[iz + 1]);
+      }
+   }
+   _diffusion->diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
+   _kinetics->chemical_rate(molar_concentrations,sum_concentration,z,_omegas_dots);
+
+    return;
+  }
+
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename StateType, typename VectorStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::set_kinetics(AtmosphericKinetics<StateType,VectorStateType> *kinetics)
+  {
+     _kinetics = kinetics;
+  }
+
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename StateType, typename VectorStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::set_diffusion(DiffusionEvaluator <StateType,VectorStateType> *diffusion)
+  {
+     _diffusion = diffusion;
+  }
+
+/*
+
+  template<typename CoeffType, typename VectorCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType>::PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType > *kinetics,
+                                                                      DiffusionEvaluator <CoeffType,VectorCoeffType > *diffusion):
+        _kinetics(kinetics),
+        _diffusion(diffusion)
+  {
+    _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+    _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType>::~PlanetPhysicsHelper()
+  {
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
+  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType>::diffusion_term(unsigned int s) const
+  {
+    return _omegas[s];
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
+  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType>::chemical_term(unsigned int s) const
+  {
+    return _omegas_dots[s];
+  }
+
+*/
 
 } // end namespace Planet
 

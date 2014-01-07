@@ -73,10 +73,6 @@ namespace Planet
   };
 
 
-  //!please be aware that here, the convention is [iz][s]
-  //for chemical production and loss, for portability to
-  //lower level calculations, the total rate is with the
-  //normal convention [s][iz]
   template<typename CoeffType, typename VectorCoeffType>
   inline
   AtmosphericKinetics<CoeffType,VectorCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>             &neu,

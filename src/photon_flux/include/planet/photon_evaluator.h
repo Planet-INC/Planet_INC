@@ -46,8 +46,8 @@ namespace Planet
         PhotonEvaluator(){antioch_error();return;}
 
 //parameters & output
-        Antioch::ParticleFlux<VectorCoeffType> _phy_at_top;
-        Antioch::ParticleFlux<VectorCoeffType> _phy;
+        Antioch::ParticleFlux<VectorCoeffType>   _phy_at_top;
+        Antioch::ParticleFlux<VectorCoeffType> * _phy;
 
 //dependencies
         PhotonOpacity<CoeffType,VectorCoeffType>      &_hv_tau;
@@ -81,6 +81,7 @@ namespace Planet
   inline
   PhotonEvaluator<CoeffType,VectorCoeffType>::PhotonEvaluator(PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
                                                               AtmosphericMixture<CoeffType,VectorCoeffType> &mix):
+  _phy(NULL),
   _hv_tau(hv_tau),
   _mixture(mix)
   {
@@ -91,6 +92,7 @@ namespace Planet
   inline
   PhotonEvaluator<CoeffType,VectorCoeffType>::~PhotonEvaluator()
   {
+     delete _phy;
      return;
   }
 
@@ -128,14 +130,14 @@ namespace Planet
   inline
   const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType>::photon_flux() const
   {
-     return _phy;
+     return *_phy;
   }
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
   Antioch::ParticleFlux<VectorCoeffType>  *PhotonEvaluator<CoeffType,VectorCoeffType>::photon_flux_ptr()
   {
-     return &_phy;
+     return _phy;
   }
 
   template<typename CoeffType, typename VectorCoeffType>
@@ -149,6 +151,12 @@ namespace Planet
      antioch_assert(!_phy_at_top.abscissa().empty());
      antioch_assert(!_phy_at_top.flux().empty());
 
+     if(!_phy)
+     {
+       _phy = new Antioch::ParticleFlux<VectorCoeffType>;
+       _phy->set_abscissa(_phy_at_top.abscissa());
+     }
+
      VectorCoeffType tau;
      _hv_tau.compute_tau(_mixture.a(molar_densities,z),sum_dens,tau);
 
@@ -161,7 +169,7 @@ namespace Planet
        flux[ilambda] = _phy_at_top.flux()[ilambda] * Antioch::ant_exp(- tau[ilambda]);
      }
 
-     _phy.set_flux(flux);
+     _phy->set_flux(flux);
 
      return; 
   }
