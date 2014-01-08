@@ -690,14 +690,14 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 //chapman
   Planet::Chapman<Scalar> chapman(chi);
 
-/************************
- * second level
- ************************/
-
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz);
+
+/************************
+ * second level
+ ************************/
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
@@ -714,25 +714,20 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   fill_neutral_reactions<Scalar,std::vector<Scalar> >
                 (input_reactions,input_N2,input_CH4,neutral_reaction_set,neut_reac_theo); //here only simple ones
 
-/************************
- * third level
- ************************/
-
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot);
   composition.set_thermal_coefficient(tc);
+
+/************************
+ * third level
+ ************************/
 
 //kinetics evaluators
   Antioch::KineticsEvaluator<Scalar> neutral_kinetics( neutral_reaction_set, 0 );
   Antioch::KineticsEvaluator<Scalar> ionic_kinetics( ionic_reaction_set, 0 );
 //theo, we have confidence in Antioch
   Antioch::KineticsEvaluator<Scalar> neutral_theo( neut_reac_theo, 0 );
-
-
-/************************
- * fourth level
- ************************/
 
 //photon evaluator
   Planet::PhotonEvaluator<Scalar,std::vector<Scalar> > photon(tau,composition);
@@ -748,9 +743,9 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 //eddy diffusion
   Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar> > eddy_diffusion(composition,K0);
 
-/**************************
- * fifth level
- **************************/
+/************************
+ * fourth level
+ ************************/
 
 //full diffusion
   Planet::DiffusionEvaluator<Scalar,std::vector<Scalar> > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
@@ -759,7 +754,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   Planet::AtmosphericKinetics<Scalar,std::vector<Scalar> > kinetics(neutral_kinetics, ionic_kinetics, temperature, photon, composition);
 
 /**************************
- * sixth level
+ * fifth level
  **************************/
 
   Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar> > helper(&kinetics,&diffusion);
