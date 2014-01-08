@@ -108,8 +108,6 @@ namespace Planet
      _diffusion = diffusion;
   }
 
-/*
-
   template<typename CoeffType, typename VectorCoeffType>
   PlanetPhysicsHelper<CoeffType,VectorCoeffType>::PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType > *kinetics,
                                                                       DiffusionEvaluator <CoeffType,VectorCoeffType > *diffusion):
@@ -139,7 +137,7 @@ namespace Planet
     return _omegas_dots[s];
   }
 
-*/
+
 
 } // end namespace Planet
 
