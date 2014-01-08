@@ -616,7 +616,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   bin_diff_data[1][0].push_back(1.76);             // N2, s
   bin_diff_data[1][1].push_back(5.73e16 * 1e-4);   // CH4, A
   bin_diff_data[1][1].push_back(0.5);              // CH4, s
-  bin_diff_data[1][2].push_back(1.6706e17 * 1e-4); // N, A
+  bin_diff_data[1][2].push_back(5.9311e16 * 1e-4); // N, A
   bin_diff_data[1][2].push_back(0.5);              // N, s
   bin_diff_data[1][3].push_back(5.8247e16 * 1e-4); // CH3, A
   bin_diff_data[1][3].push_back(0.5);              // CH3, s
