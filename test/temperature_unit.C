@@ -105,7 +105,7 @@ int tester(const std::string & input_file)
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_file);
-  Planet::AtmosphericTemperature<Scalar,std::vector<Scalar> > temperature(T0,T0,Tz); //neutral, ionic, altitude
+  Planet::AtmosphericTemperature<Scalar,std::vector<Scalar> > temperature(T0,T0,Tz,Tz); //neutral, ionic, altitude
 
   int return_flag(0);
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;

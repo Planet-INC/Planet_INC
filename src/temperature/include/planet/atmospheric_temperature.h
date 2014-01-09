@@ -41,23 +41,34 @@ namespace Planet
         //!no default constructor
         AtmosphericTemperature(){antioch_error();return;}
 
-        VectorCoeffType _altitude;
+        VectorCoeffType _neutral_altitude;
         VectorCoeffType _neutral_temperature;
+        VectorCoeffType _ionic_altitude;
         VectorCoeffType _ionic_temperature;
+        VectorCoeffType _electronic_altitude;
         VectorCoeffType _electronic_temperature;
 
       public:
-        AtmosphericTemperature(const VectorCoeffType &neu, const VectorCoeffType &ion, const VectorCoeffType &alt);
+        AtmosphericTemperature(const VectorCoeffType &neu, const VectorCoeffType &ion, const VectorCoeffType &alt_neu, const VectorCoeffType &alt_ion);
         ~AtmosphericTemperature();
 
         //!\return neutral temperature
         const VectorCoeffType &neutral_temperature() const;
 
+        //!\return neutral temperature altitude
+        const VectorCoeffType &neutral_altitude() const;
+
         //!\return ionic temperature
         const VectorCoeffType &ionic_temperature()   const;
 
+        //!\return ionic temperature altitude
+        const VectorCoeffType &ionic_altitude()   const;
+
         //!\return electronic temperature
         const VectorCoeffType &electronic_temperature()   const;
+
+        //!\return electronic temperature altitude
+        const VectorCoeffType &electronic_altitude()   const;
 
         //!\return neutral temperature at custom altitude
         template <typename StateType>
@@ -110,23 +121,26 @@ namespace Planet
   inline
   AtmosphericTemperature<CoeffType,VectorCoeffType>::AtmosphericTemperature(const VectorCoeffType &neu, 
                                                                             const VectorCoeffType &ion, 
-                                                                            const VectorCoeffType &alt):
-      _altitude(alt),
+                                                                            const VectorCoeffType &alt_neu,
+                                                                            const VectorCoeffType &alt_ion):
+      _neutral_altitude(alt_neu),
       _neutral_temperature(neu),
+      _ionic_altitude(alt_ion),
       _ionic_temperature(ion)
   {
-    _electronic_temperature.resize(_altitude.size());
-    for(unsigned int iz = 0; iz < _altitude.size(); iz++)
+    _electronic_altitude = _neutral_altitude;
+    _electronic_temperature.resize(_electronic_altitude.size());
+    for(unsigned int iz = 0; iz < _electronic_altitude.size(); iz++)
     {
-      if(_altitude[iz] < 900.)
+      if(_electronic_altitude[iz] < 900.)
       {
          _electronic_temperature[iz] = 180.L;
-      }else if(_altitude[iz] < 1400.)
+      }else if(_electronic_altitude[iz] < 1400.)
       {
-         _electronic_temperature[iz] = CoeffType(180.L) + (_altitude[iz] - CoeffType(900.L))/CoeffType(500.L) * CoeffType(1150.L - 180.L) ;
+         _electronic_temperature[iz] = CoeffType(180.L) + (_electronic_altitude[iz] - CoeffType(900.L))/CoeffType(500.L) * CoeffType(1150.L - 180.L) ;
       }else
       {
-         _electronic_temperature[iz] = CoeffType(1150.L) + CoeffType(0.1L) * (_altitude[iz] - CoeffType(1400.L));
+         _electronic_temperature[iz] = CoeffType(1150.L) + CoeffType(0.1L) * (_electronic_altitude[iz] - CoeffType(1400.L));
       }
     }
     return;
@@ -148,9 +162,23 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
+  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_altitude() const
+  {
+    return _ionic_altitude;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
+  inline
   const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::neutral_temperature() const
   {
     return _neutral_temperature;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
+  inline
+  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::neutral_altitude() const
+  {
+    return _neutral_altitude;
   }
 
   template<typename CoeffType, typename VectorCoeffType>
@@ -161,11 +189,18 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType>
+  inline
+  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_altitude() const
+  {
+    return _electronic_altitude;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
   template<typename StateType>
   inline
   const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_temperature(const StateType &z) const
   {
-    return Functions::linear_evaluation(_altitude,_ionic_temperature,z);
+    return Functions::linear_evaluation(_ionic_altitude,_ionic_temperature,z);
   }
 
   template<typename CoeffType, typename VectorCoeffType>
@@ -173,7 +208,7 @@ namespace Planet
   inline
   const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::neutral_temperature(const StateType &z) const
   {
-    return Functions::linear_evaluation(_altitude,_neutral_temperature,z);
+    return Functions::linear_evaluation(_neutral_altitude,_neutral_temperature,z);
   }
 
   template<typename CoeffType, typename VectorCoeffType>
@@ -181,7 +216,7 @@ namespace Planet
   inline
   const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_temperature(const StateType &z) const
   {
-    return Functions::linear_evaluation(_altitude,_electronic_temperature,z);
+    return Functions::linear_evaluation(_electronic_altitude,_electronic_temperature,z);
   }
 
 
@@ -214,7 +249,7 @@ namespace Planet
   inline
   const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::dneutral_temperature_dz(const StateType &z) const
   {
-     return Functions::linear_evaluation_dz(_altitude,_neutral_temperature,z);
+     return Functions::linear_evaluation_dz(_neutral_altitude,_neutral_temperature,z);
   }
 
   template<typename CoeffType, typename VectorCoeffType>
@@ -222,7 +257,7 @@ namespace Planet
   inline
   const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::dionic_temperature_dz(const StateType &z) const
   {
-     return Functions::linear_evaluation_dz(_altitude,_ionic_temperature,z);
+     return Functions::linear_evaluation_dz(_ionic_altitude,_ionic_temperature,z);
   }
 
   template<typename CoeffType, typename VectorCoeffType>
@@ -230,7 +265,7 @@ namespace Planet
   inline
   const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::delectronic_temperature_dz(const StateType &z) const
   {
-     return Functions::linear_evaluation_dz(_altitude,_electronic_temperature,z);
+     return Functions::linear_evaluation_dz(_electronic_altitude,_electronic_temperature,z);
   }
 
 }
