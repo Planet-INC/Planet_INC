@@ -38,7 +38,8 @@ namespace Planet
       unsigned int iz;
       for(iz = 0; iz < alt.size() - 1; iz++)
       {
-         if(alt[iz] <= value && alt[iz + 1] > value)break;
+         if((alt[iz] <= value && alt[iz + 1] >  value) ||
+            (alt[iz] >  value && alt[iz + 1] <= value))break;
       }
       return iz;
     }
@@ -53,14 +54,14 @@ namespace Planet
       CoeffType interpolation;
       if(value <= alt[0])
       {
-        interpolation = alt[0];
+        interpolation = data[0];
       }else if(value >= alt.back())
       {
-        interpolation = alt.back();
+        interpolation = data.back();
       }else
       {
         unsigned int iz = find_floor_index(alt,value);
-        CoeffType a = (data[iz + 1] - data[iz]) / (alt[iz] - alt[iz + 1]);
+        CoeffType a = (data[iz + 1] - data[iz]) / (alt[iz + 1] - alt[iz]);
         CoeffType b = data[iz] - a * alt[iz];
         interpolation = a * value + b;
       }
