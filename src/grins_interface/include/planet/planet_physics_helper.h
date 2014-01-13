@@ -81,13 +81,18 @@ namespace Planet
   {
    VectorStateType sum_concentration;
    sum_concentration.resize(molar_concentrations.size(),0.L);
-   for(unsigned int iz = 0; iz < other_concentrations.size(); iz++)
+   for(unsigned int s = 0; s < sum_concentration.size(); s++)
+   {
+     sum_concentration[s] += molar_concentrations[s] * (other_altitudes[0] - z);
+   }
+   for(unsigned int iz = 1; iz < other_concentrations.size(); iz++)
    {
       for(unsigned int s = 0; s < sum_concentration.size(); s++)
       {
-        sum_concentration[s] += other_concentrations[iz][s] * (other_altitudes[iz] - other_altitudes[iz + 1]);
+        sum_concentration[s] += other_concentrations[iz][s] * (other_altitudes[iz-1] - other_altitudes[iz + 1]);
       }
    }
+
    _diffusion->diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
    _kinetics->chemical_rate(molar_concentrations,sum_concentration,z,_omegas_dots);
 
