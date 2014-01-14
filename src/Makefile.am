@@ -27,8 +27,9 @@ libplanet_la_SOURCES +=
 # utilities
 libplanet_la_SOURCES += utilities/src/planet_version.C
 
-# grins_interface
-libplanet_la_SOURCES += grins_interface/src/planet_physics.C
+# grins_interface, all templated
+libplanet_la_SOURCES += #grins_interface/src/planet_physics.C
+libplanet_la_SOURCES += #grins_interface/src/planet_physics_helper.C
 
 #----------------------------
 # INCLUDES we want distributed
