@@ -38,7 +38,7 @@
 
 namespace Planet
 {
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class PhotonEvaluator
   {
      private:
@@ -51,11 +51,11 @@ namespace Planet
 
 //dependencies
         PhotonOpacity<CoeffType,VectorCoeffType>      &_hv_tau;
-        AtmosphericMixture<CoeffType,VectorCoeffType> &_mixture;
+        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
 
      public:
         PhotonEvaluator(PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
-                        AtmosphericMixture<CoeffType,VectorCoeffType> &mix);
+                        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix);
         ~PhotonEvaluator();
 
         //!\return const ref photon flux
@@ -77,10 +77,10 @@ namespace Planet
 
   };
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  PhotonEvaluator<CoeffType,VectorCoeffType>::PhotonEvaluator(PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
-                                                              AtmosphericMixture<CoeffType,VectorCoeffType> &mix):
+  PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonEvaluator(PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
+                                                              AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix):
   _phy(NULL),
   _hv_tau(hv_tau),
   _mixture(mix)
@@ -88,18 +88,18 @@ namespace Planet
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  PhotonEvaluator<CoeffType,VectorCoeffType>::~PhotonEvaluator()
+  PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::~PhotonEvaluator()
   {
-     delete _phy;
+     if(_phy)delete _phy;
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType>::set_photon_flux_at_top(const VectorStateType &lambda, const VectorStateType &hv, const StateType &d)
+  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux_at_top(const VectorStateType &lambda, const VectorStateType &hv, const StateType &d)
   {
      antioch_assert_equal_to(lambda.size(),hv.size());
 
@@ -119,31 +119,31 @@ namespace Planet
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType>::photon_flux_at_top() const
+  const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_at_top() const
   {
     return _phy_at_top;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType>::photon_flux() const
+  const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux() const
   {
      return *_phy;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  Antioch::ParticleFlux<VectorCoeffType>  *PhotonEvaluator<CoeffType,VectorCoeffType>::photon_flux_ptr()
+  Antioch::ParticleFlux<VectorCoeffType>  *PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_ptr()
   {
      return _phy;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType>::update_photon_flux(const VectorStateType &molar_densities, 
+  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::update_photon_flux(const VectorStateType &molar_densities, 
                                                                       const VectorStateType &sum_dens, const StateType &z)
   {
      antioch_assert_equal_to(molar_densities.size(), _mixture.neutral_composition().n_species());

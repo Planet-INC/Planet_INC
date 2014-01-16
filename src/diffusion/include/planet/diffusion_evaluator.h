@@ -41,24 +41,24 @@ namespace Planet{
  * Stores all kind of diffusions
  *
  */
-  template <typename CoeffType, typename VectorCoeffType>
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class DiffusionEvaluator
   {
       private:
        DiffusionEvaluator() {antioch_error();return;}
 
 //dependencies
-       MolecularDiffusionEvaluator<CoeffType,VectorCoeffType> &_molecular_diffusion;
-       EddyDiffusionEvaluator<CoeffType,VectorCoeffType>      &_eddy_diffusion;
-       AtmosphericMixture<CoeffType,VectorCoeffType>          &_mixture;
-       AtmosphericTemperature<CoeffType,VectorCoeffType>      &_temperature;
+       MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_molecular_diffusion;
+       EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &_eddy_diffusion;
+       AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &_mixture;
+       AtmosphericTemperature<CoeffType,VectorCoeffType>                      &_temperature;
 
       public:
        //!
-       DiffusionEvaluator(MolecularDiffusionEvaluator<CoeffType,VectorCoeffType> &mol_diff,
-                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType>      &eddy_diff,
-                          AtmosphericMixture<CoeffType,VectorCoeffType>          &mix,
-                          AtmosphericTemperature<CoeffType,VectorCoeffType>      &temp);
+       DiffusionEvaluator(MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
+                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
+                          AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
+                          AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp);
 
         //!
        ~DiffusionEvaluator();
@@ -71,13 +71,13 @@ namespace Planet{
 
   };
 
-  template <typename CoeffType, typename VectorCoeffType>
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType>::DiffusionEvaluator(
-                          MolecularDiffusionEvaluator<CoeffType,VectorCoeffType> &mol_diff,
-                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType>      &eddy_diff,
-                          AtmosphericMixture<CoeffType,VectorCoeffType>          &mix,
-                          AtmosphericTemperature<CoeffType,VectorCoeffType>      &temp):
+  DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::DiffusionEvaluator(
+                          MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
+                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
+                          AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
+                          AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp):
     _molecular_diffusion(mol_diff),
     _eddy_diffusion(eddy_diff),
     _mixture(mix),
@@ -86,17 +86,17 @@ namespace Planet{
      return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  DiffusionEvaluator<CoeffType, VectorCoeffType>::~DiffusionEvaluator()
+  DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::~DiffusionEvaluator()
   {
      return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void DiffusionEvaluator<CoeffType, VectorCoeffType>::diffusion(const VectorStateType &molar_concentrations,
+  void DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::diffusion(const VectorStateType &molar_concentrations,
                                                                  const VectorStateType &dmolar_concentrations_dz,
                                                                  const StateType &z, VectorStateType &omegas) const
   {

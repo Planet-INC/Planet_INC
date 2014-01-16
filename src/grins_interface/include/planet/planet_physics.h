@@ -23,8 +23,6 @@
 
 #ifndef PLANET_PLANET_PHYSICS_H
 #define PLANET_PLANET_PHYSICS_H
-<sylvain.plessis@gmail.com 
-> <mailto:sylvain.plessis@gmail.com>> 
 // GRINS
 #include "grins/physics.h"
 #include "grins/var_typedefs.h"
@@ -48,7 +46,7 @@ namespace libMesh
 namespace Planet
 {
 
-  template <typename CoeffType, typename VectorCoeffType>
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class PlanetPhysics : public GRINS::Physics
   {
   public:
@@ -95,7 +93,7 @@ namespace Planet
     //! Element orders, read from input
     libMeshEnums::Order _species_order;
 
-    PlanetPhysicsHelper<CoeffType,VectorCoeffType> _helper;
+    PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType> _helper;
 
   private:
 
@@ -104,8 +102,8 @@ namespace Planet
 
   };
 
-  template <typename CoeffType, typename VectorCoeffType>
-  PlanetPhysics<CoeffType,VectorCoeffType>::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
     : GRINS::Physics(physics_name,input), 
       _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
       _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
@@ -122,14 +120,14 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  PlanetPhysics<CoeffType,VectorCoeffType>::~PlanetPhysics()
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::~PlanetPhysics()
   {
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  void PlanetPhysics<CoeffType,VectorCoeffType>::init_variables( libMesh::FEMSystem* system )
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::init_variables( libMesh::FEMSystem* system )
   {
     _species_vars.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
@@ -141,8 +139,8 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  void PlanetPhysics<CoeffType,VectorCoeffType>::set_time_evolving_vars( libMesh::FEMSystem* system )
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::set_time_evolving_vars( libMesh::FEMSystem* system )
   {
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
@@ -152,8 +150,8 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  void PlanetPhysics<CoeffType,VectorCoeffType>::init_context( GRINS::AssemblyContext& context )
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::init_context( GRINS::AssemblyContext& context )
   {
     context.get_element_fe(_species_vars[0])->get_JxW();
     context.get_element_fe(_species_vars[0])->get_phi();
@@ -163,8 +161,8 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  void PlanetPhysics<CoeffType,VectorCoeffType>::element_time_derivative( bool compute_jacobian,
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::element_time_derivative( bool compute_jacobian,
                                                GRINS::AssemblyContext& context,
                                                GRINS::CachedValues& cache )
   {
@@ -241,8 +239,8 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  void PlanetPhysics<CoeffType,VectorCoeffType>::mass_residual( bool compute_jacobian,
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::mass_residual( bool compute_jacobian,
                                      GRINS::AssemblyContext& context,
                                      GRINS::CachedValues& cache )
   {
@@ -293,8 +291,8 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  void PlanetPhysics<CoeffType,VectorCoeffType>::side_time_derivative( bool compute_jacobian,
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::side_time_derivative( bool compute_jacobian,
                                                                        GRINS::AssemblyContext& context,
                                                                        GRINS::CachedValues& cache )
   {

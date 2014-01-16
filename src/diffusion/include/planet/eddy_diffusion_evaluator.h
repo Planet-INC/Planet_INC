@@ -35,14 +35,14 @@
 
 namespace Planet{
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class EddyDiffusionEvaluator
   {
         private:
          CoeffType _K0;
 
 //dependencies
-         AtmosphericMixture<CoeffType,VectorCoeffType> &_mixture;
+         AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
 
          EddyDiffusionEvaluator() {antioch_error();return;}
 
@@ -62,16 +62,16 @@ namespace Planet{
          ANTIOCH_AUTOFUNC(StateType,_K0 * Antioch::ant_sqrt(_mixture.total_bottom_density()/ntot))
 
          //!
-         EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType> &mix, 
+         EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                 const CoeffType &K0 = -1.);
 
          //!
          ~EddyDiffusionEvaluator();
   };
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType> &mix, 
+EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                                                           const CoeffType &K0):
   _K0(K0),
   _mixture(mix)
@@ -79,25 +79,25 @@ EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::EddyDiffusionEvaluator(Atmosp
   return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::~EddyDiffusionEvaluator()
+EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::~EddyDiffusionEvaluator()
 {
   return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 template<typename StateType>
 inline
-void EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::set_K0(const StateType &K0)
+void EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_K0(const StateType &K0)
 {
    _K0 = K0;
    return;
 }
 
-template<typename CoeffType, typename VectorCoeffType>
+template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-const CoeffType EddyDiffusionEvaluator<CoeffType,VectorCoeffType>::K0() const
+const CoeffType EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::K0() const
 {
   return _K0;
 }

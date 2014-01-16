@@ -34,21 +34,21 @@
 namespace Planet
 {
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class PlanetPhysicsHelper
   {
   public:
 
-    PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType > *kinetics = NULL,
-                        DiffusionEvaluator <CoeffType,VectorCoeffType > *diffusion = NULL);
+    PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics = NULL,
+                        DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion = NULL);
 
     ~PlanetPhysicsHelper();
 
-    template <typename StateType, typename VectorStateType>
-    void set_kinetics(AtmosphericKinetics<StateType,VectorStateType> *kinetics);
+    template <typename StateType, typename VectorStateType, typename MatrixStateType>
+    void set_kinetics(AtmosphericKinetics<StateType,VectorStateType,MatrixStateType> *kinetics);
 
-    template <typename StateType, typename VectorStateType>
-    void set_diffusion(DiffusionEvaluator<StateType,VectorStateType> *diffusion);
+    template <typename StateType, typename VectorStateType, typename MatrixStateType>
+    void set_diffusion(DiffusionEvaluator<StateType,VectorStateType,MatrixStateType> *diffusion);
 
     libMesh::Real diffusion_term(unsigned int s) const;
 
@@ -63,17 +63,17 @@ namespace Planet
 
   private:
 
-    AtmosphericKinetics<CoeffType,VectorCoeffType> *_kinetics;
-    DiffusionEvaluator <CoeffType,VectorCoeffType> *_diffusion;
+    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> *_kinetics;
+    DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType> *_diffusion;
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
 
   };
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType, typename MatrixStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::compute(const VectorStateType & molar_concentrations,
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::compute(const VectorStateType & molar_concentrations,
                                                                const VectorStateType & dmolar_concentrations_dz,
                                                                const VectorStateType & other_altitudes,
                                                                const MatrixStateType & other_concentrations,
@@ -109,23 +109,23 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  template <typename StateType, typename VectorStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::set_kinetics(AtmosphericKinetics<StateType,VectorStateType> *kinetics)
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType, typename VectorStateType, typename MatrixStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::set_kinetics(AtmosphericKinetics<StateType,VectorStateType,MatrixStateType> *kinetics)
   {
      _kinetics = kinetics;
   }
 
-  template <typename CoeffType, typename VectorCoeffType>
-  template <typename StateType, typename VectorStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType>::set_diffusion(DiffusionEvaluator <StateType,VectorStateType> *diffusion)
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType, typename VectorStateType, typename MatrixStateType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::set_diffusion(DiffusionEvaluator <StateType,VectorStateType,MatrixStateType> *diffusion)
   {
      _diffusion = diffusion;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  PlanetPhysicsHelper<CoeffType,VectorCoeffType>::PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType > *kinetics,
-                                                                      DiffusionEvaluator <CoeffType,VectorCoeffType > *diffusion):
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper(AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics,
+                                                                      DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion):
         _kinetics(kinetics),
         _diffusion(diffusion)
   {
@@ -134,20 +134,20 @@ namespace Planet
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  PlanetPhysicsHelper<CoeffType,VectorCoeffType>::~PlanetPhysicsHelper()
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::~PlanetPhysicsHelper()
   {
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType>::diffusion_term(unsigned int s) const
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_term(unsigned int s) const
   {
     return _omegas[s];
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType>::chemical_term(unsigned int s) const
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
   {
     return _omegas_dots[s];
   }

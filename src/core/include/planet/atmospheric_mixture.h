@@ -38,7 +38,7 @@
 
 namespace Planet
 {
-   template<typename CoeffType, typename VectorCoeffType>
+   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
    class AtmosphericMixture
    {
       private:
@@ -55,9 +55,14 @@ namespace Planet
         VectorCoeffType _thermal_coefficient;
         VectorCoeffType _hard_sphere_radius;
 
+// neutral only, precomputations
+        MatrixCoeffType _mean_free_path_precompute;
+
 ////dependencies
         AtmosphericTemperature<CoeffType,VectorCoeffType> &_temperature;
 
+
+        void precompute_mean_free_path();
 
         //! \return scale height of species s at altitude z, H = kb*T/(g*Ms)
         template<typename StateType>
@@ -68,11 +73,6 @@ namespace Planet
                                      * Constants::g(Constants::Titan::radius<StateType>(), alt, Constants::Titan::mass<StateType>()))
                                         
                         )
-
-        //!collision cross-section
-        ANTIOCH_AUTO(StateType)
-        collision_sigma(const StateType &r1, const StateType &r2)
-        ANTIOCH_AUTOFUNC(StateType, Constants::pi<StateType>() * (r1 + r2) * (r1 + r2))
 
       public:
         AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral, Antioch::ChemicalMixture<CoeffType> &ion,
@@ -106,8 +106,8 @@ namespace Planet
         const Antioch::ChemicalMixture<CoeffType> &ionic_composition() const;
 
         //!\return the mean free path
-        template <typename StateType, typename VectorStateType>
-        const CoeffType mean_free_path(const StateType &dens, const VectorStateType &densities, const VectorStateType &sigmas) const;
+        template <typename VectorStateType>
+        void mean_free_path(const VectorStateType &densities, VectorStateType &mean_free_path) const;
 
         //! \return Jeans' escape flux (*density*.m.s-1)
         //
@@ -146,9 +146,9 @@ namespace Planet
    };
 
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  AtmosphericMixture<CoeffType,VectorCoeffType>::AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral,
+  AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral,
                                                                     Antioch::ChemicalMixture<CoeffType> &ion,
                                                                     AtmosphericTemperature<CoeffType,VectorCoeffType> &temp):
   _neutral_composition(neutral),
@@ -158,65 +158,66 @@ namespace Planet
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  AtmosphericMixture<CoeffType,VectorCoeffType>::~AtmosphericMixture()
+  AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::~AtmosphericMixture()
   {
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const Antioch::ChemicalMixture<CoeffType> &AtmosphericMixture<CoeffType,VectorCoeffType>::neutral_composition() const
+  const Antioch::ChemicalMixture<CoeffType> &AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_composition() const
   {
      return _neutral_composition;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const Antioch::ChemicalMixture<CoeffType> &AtmosphericMixture<CoeffType,VectorCoeffType>::ionic_composition() const
+  const Antioch::ChemicalMixture<CoeffType> &AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::ionic_composition() const
   {
      return _ionic_composition;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template <typename VectorStateType>
   inline
-  void AtmosphericMixture<CoeffType,VectorCoeffType>::set_hard_sphere_radius(const VectorStateType &hsr)
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::set_hard_sphere_radius(const VectorStateType &hsr)
   {
       antioch_assert_equal_to(hsr.size(), _neutral_composition.n_species());
       _hard_sphere_radius = hsr;
+      this->precompute_mean_free_path();
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template <typename VectorStateType>
   inline
-  void AtmosphericMixture<CoeffType,VectorCoeffType>::set_thermal_coefficient(const VectorStateType &tc)
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::set_thermal_coefficient(const VectorStateType &tc)
   {
       antioch_assert_equal_to(tc.size(), _neutral_composition.n_species());
       _thermal_coefficient = tc;
      return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const VectorCoeffType &AtmosphericMixture<CoeffType,VectorCoeffType>::thermal_coefficient() const
+  const VectorCoeffType &AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::thermal_coefficient() const
   {
      return _thermal_coefficient;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const VectorCoeffType &AtmosphericMixture<CoeffType,VectorCoeffType>::hard_sphere_radius() const
+  const VectorCoeffType &AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::hard_sphere_radius() const
   {
      return _hard_sphere_radius;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void AtmosphericMixture<CoeffType,VectorCoeffType>::init_composition(const VectorStateType &bot_compo,
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::init_composition(const VectorStateType &bot_compo,
                                                                        const StateType &dens_tot_bot)
   {
     _total_bottom_density = dens_tot_bot;
@@ -224,10 +225,10 @@ namespace Planet
 
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void AtmosphericMixture<CoeffType,VectorCoeffType>::scale_heights(const StateType &z, VectorStateType &Hs) const
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::scale_heights(const StateType &z, VectorStateType &Hs) const
   {
       Hs.resize(_neutral_composition.n_species(),0.L);
       CoeffType T = _temperature.neutral_temperature(z);
@@ -239,10 +240,10 @@ namespace Planet
   }
 
   
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType>::atmospheric_scale_height(const VectorStateType &molar_densities, 
+  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::atmospheric_scale_height(const VectorStateType &molar_densities, 
                                                                                           const StateType &z) const
   {
     antioch_assert_equal_to(molar_densities.size(),_neutral_composition.n_species());
@@ -261,34 +262,59 @@ namespace Planet
     return (this->H(Mm,_temperature.neutral_temperature(z),z));
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType>::total_bottom_density() const
+  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::total_bottom_density() const
   {
      return _total_bottom_density;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType,typename VectorStateType>
   inline
-  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType>::a(const VectorStateType &molar_densities,const StateType &z) const
+  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::a(const VectorStateType &molar_densities,const StateType &z) const
   {
      return (Constants::Titan::radius<CoeffType>() + z) / this->atmospheric_scale_height(molar_densities,z) * CoeffType(1e3); // to m
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template <typename StateType, typename VectorStateType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename VectorStateType>
   inline
-  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType>::mean_free_path(const StateType &dens, const VectorStateType &densities, const VectorStateType &sigmas) const
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::mean_free_path(const VectorStateType &densities, VectorStateType &mean_free_path) const
   {
-     antioch_assert_equal_to(densities.size(),sigmas.size());
      antioch_assert_equal_to(densities.size(),_neutral_composition.n_species());
+     mean_free_path.resize(densities.size(),0.L);
      CoeffType out(0.L);
      for(unsigned int s = 0; s < densities.size(); s++)
      {
-        out += densities[s] * sigmas[s] * Antioch::ant_sqrt(CoeffType(1.L) + );
+       for(unsigned int n = 0; n < densities.size(); n++)
+       {
+          out += densities[n] * _mean_free_path_precompute[s][n];
+       }
+       mean_free_path[s] = CoeffType(1.L) / out;
      }
   }
+
+  
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::precompute_mean_free_path()
+  {
+     antioch_assert(!_hard_sphere_radius.empty());
+     _mean_free_path_precompute.resize(_hard_sphere_radius.size());
+
+     for(unsigned int s = 0; s < _hard_sphere_radius.size(); s++)
+     {
+        _mean_free_path_precompute[s].resize(_hard_sphere_radius.size());
+        for(unsigned int n = 0; n < _hard_sphere_radius.size(); n++)
+        {
+            _mean_free_path_precompute[s][n] = Constants::pi<CoeffType>() * (_hard_sphere_radius[s] + _hard_sphere_radius[n]) 
+                                                                          * (_hard_sphere_radius[s] + _hard_sphere_radius[n])
+                                               * Antioch::ant_sqrt(CoeffType(1.L) + _neutral_composition.M(s)/_neutral_composition.M(n));
+        }
+     }
+  }
+
 
 }
 

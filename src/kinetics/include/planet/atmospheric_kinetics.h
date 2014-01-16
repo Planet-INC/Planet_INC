@@ -36,7 +36,7 @@
 
 namespace Planet
 {
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class AtmosphericKinetics
   {
       private:
@@ -47,16 +47,16 @@ namespace Planet
         Antioch::KineticsEvaluator<CoeffType> &_ionic_reactions;
 
 //
-        AtmosphericTemperature<CoeffType,VectorCoeffType> &_temperature;
-        PhotonEvaluator<CoeffType,VectorCoeffType>        &_photon;
-        AtmosphericMixture<CoeffType,VectorCoeffType>     &_composition;
+        AtmosphericTemperature<CoeffType,VectorCoeffType>             &_temperature;
+        PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &_photon;
+        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
       public:
         //!
-        AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>             &neu,
-                            Antioch::KineticsEvaluator<CoeffType>             &ion,
-                            AtmosphericTemperature<CoeffType,VectorCoeffType> &temperature,
-                            PhotonEvaluator<CoeffType,VectorCoeffType>        &photon,
-                            AtmosphericMixture<CoeffType,VectorCoeffType>     &composition);
+        AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                         &neu,
+                            Antioch::KineticsEvaluator<CoeffType>                         &ion,
+                            AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
+                            PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
+                            AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition);
         //!
         ~AtmosphericKinetics();
 
@@ -73,13 +73,13 @@ namespace Planet
   };
 
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  AtmosphericKinetics<CoeffType,VectorCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>             &neu,
-                                                                      Antioch::KineticsEvaluator<CoeffType>             &ion,
-                                                                      AtmosphericTemperature<CoeffType,VectorCoeffType> &temperature,
-                                                                      PhotonEvaluator<CoeffType,VectorCoeffType>        &photon,
-                                                                      AtmosphericMixture<CoeffType,VectorCoeffType>     &composition):
+  AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>         &neu,
+                                                                      Antioch::KineticsEvaluator<CoeffType>                         &ion,
+                                                                      AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
+                                                                      PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
+                                                                      AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition):
    _neutral_reactions(neu),
    _ionic_reactions(ion),
    _temperature(temperature),
@@ -89,31 +89,31 @@ namespace Planet
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  AtmosphericKinetics<CoeffType,VectorCoeffType>::~AtmosphericKinetics()
+  AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::~AtmosphericKinetics()
   {
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  Antioch::KineticsEvaluator<CoeffType> &AtmosphericKinetics<CoeffType,VectorCoeffType>::neutral_kinetics()
+  Antioch::KineticsEvaluator<CoeffType> &AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_kinetics()
   {
      return _neutral_reactions;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  Antioch::KineticsEvaluator<CoeffType> &AtmosphericKinetics<CoeffType,VectorCoeffType>::ionic_kinetics()
+  Antioch::KineticsEvaluator<CoeffType> &AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::ionic_kinetics()
   {
      return _ionic_reactions;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void AtmosphericKinetics<CoeffType,VectorCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, 
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, 
                                                                      const VectorStateType &sum_concentrations, 
                                                                      const StateType &z,
                                                                      VectorStateType &kin_rates) const

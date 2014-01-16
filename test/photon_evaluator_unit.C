@@ -299,7 +299,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot);
 
 //kinetics evaluators
@@ -310,7 +310,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //photon evaluator
-  Planet::PhotonEvaluator<Scalar,std::vector<Scalar> > photon(tau,composition);
+  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
   photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
 //here, don't you forget to set the photon flux pointers to the reaction set
 

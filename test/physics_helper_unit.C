@@ -715,7 +715,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
                 (input_reactions,input_N2,input_CH4,neutral_reaction_set,neut_reac_theo); //here only simple ones
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot);
   composition.set_thermal_coefficient(tc);
 
@@ -730,34 +730,34 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   Antioch::KineticsEvaluator<Scalar> neutral_theo( neut_reac_theo, 0 );
 
 //photon evaluator
-  Planet::PhotonEvaluator<Scalar,std::vector<Scalar> > photon(tau,composition);
+  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
   photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
   
   neutral_reaction_set.set_particle_flux(photon.photon_flux_ptr());
   neut_reac_theo.set_particle_flux(photon.photon_flux_ptr());
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar> > molecular_diffusion(bin_diff_coeff,composition,temperature);
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
   molecular_diffusion.set_medium_species(medium);
 
 //eddy diffusion
-  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar> > eddy_diffusion(composition,K0);
+  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diffusion(composition,K0);
 
 /************************
  * fourth level
  ************************/
 
 //full diffusion
-  Planet::DiffusionEvaluator<Scalar,std::vector<Scalar> > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
+  Planet::DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
 
 //full chemistry
-  Planet::AtmosphericKinetics<Scalar,std::vector<Scalar> > kinetics(neutral_kinetics, ionic_kinetics, temperature, photon, composition);
+  Planet::AtmosphericKinetics<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > kinetics(neutral_kinetics, ionic_kinetics, temperature, photon, composition);
 
 /**************************
  * fifth level
  **************************/
 
-  Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar> > helper(&kinetics,&diffusion);
+  Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > helper(&kinetics,&diffusion);
 
 /************************
  * checks
