@@ -69,6 +69,11 @@ namespace Planet
                                         
                         )
 
+        //!collision cross-section
+        ANTIOCH_AUTO(StateType)
+        collision_sigma(const StateType &r1, const StateType &r2)
+        ANTIOCH_AUTOFUNC(StateType, Constants::pi<StateType>() * (r1 + r2) * (r1 + r2))
+
       public:
         AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral, Antioch::ChemicalMixture<CoeffType> &ion,
                            AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
@@ -100,7 +105,11 @@ namespace Planet
         //!\return const reference to ionic composition
         const Antioch::ChemicalMixture<CoeffType> &ionic_composition() const;
 
-        //! \return Jeans' escape flux
+        //!\return the mean free path
+        template <typename StateType, typename VectorStateType>
+        const CoeffType mean_free_path(const StateType &dens, const VectorStateType &densities, const VectorStateType &sigmas) const;
+
+        //! \return Jeans' escape flux (*density*.m.s-1)
         //
         // \param ms: mass of molecule (kg)
         // \param ns: molecular density (any density unit, reported in the flux)
@@ -265,6 +274,20 @@ namespace Planet
   const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType>::a(const VectorStateType &molar_densities,const StateType &z) const
   {
      return (Constants::Titan::radius<CoeffType>() + z) / this->atmospheric_scale_height(molar_densities,z) * CoeffType(1e3); // to m
+  }
+
+  template<typename CoeffType, typename VectorCoeffType>
+  template <typename StateType, typename VectorStateType>
+  inline
+  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType>::mean_free_path(const StateType &dens, const VectorStateType &densities, const VectorStateType &sigmas) const
+  {
+     antioch_assert_equal_to(densities.size(),sigmas.size());
+     antioch_assert_equal_to(densities.size(),_neutral_composition.n_species());
+     CoeffType out(0.L);
+     for(unsigned int s = 0; s < densities.size(); s++)
+     {
+        out += densities[s] * sigmas[s] * Antioch::ant_sqrt(CoeffType(1.L) + );
+     }
   }
 
 }

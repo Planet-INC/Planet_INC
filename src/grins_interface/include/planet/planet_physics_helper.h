@@ -79,6 +79,9 @@ namespace Planet
                                                                const MatrixStateType & other_concentrations,
                                                                const StateType & z)
   {
+// here we supposed altitudes from bottom to top, approximation is
+// that concentration is constant between altitudes, bottom-up,
+// thus concentrations at top are useless here
    VectorStateType sum_concentration;
    sum_concentration.resize(molar_concentrations.size(),0.L);
    for(unsigned int s = 0; s < sum_concentration.size(); s++)
@@ -89,9 +92,16 @@ namespace Planet
    {
       for(unsigned int s = 0; s < sum_concentration.size(); s++)
       {
-        sum_concentration[s] += other_concentrations[iz][s] * (other_altitudes[iz-1] - other_altitudes[iz + 1]);
+        sum_concentration[s] += other_concentrations[iz][s] * (other_altitudes[iz-1] - other_altitudes[iz]);
       }
    }
+// is r_max always there?
+/*
+   for(unsigned int s = 0; s < sum_concentration.size(); s++)
+   {
+     sum_concentration[s] += other_concentrations.back()[s] * (r_max - other_altitudes.back());
+   }
+*/
 
    _diffusion->diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
    _kinetics->chemical_rate(molar_concentrations,sum_concentration,z,_omegas_dots);
