@@ -716,7 +716,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
-  composition.init_composition(molar_frac,dens_tot);
+  composition.init_composition(molar_frac,dens_tot,zmin,zmax);
   composition.set_thermal_coefficient(tc);
 
 /************************
@@ -757,7 +757,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
  * fifth level
  **************************/
 
-  Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > helper(&kinetics,&diffusion);
+  Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > helper(composition,&kinetics,&diffusion);
 
 /************************
  * checks
@@ -773,11 +773,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   mean_M *= 1e-3;//to kg
 
 
-  std::vector<Scalar> other_z;
-  std::vector<std::vector<Scalar> > other_n;
-
   int return_flag(0);
-  other_z.push_back(zmax);
   for(Scalar z = zmax; z >= zmin; z -= zstep)
   {
 
@@ -809,7 +805,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
      dummy.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
 
-     helper.compute(densities, dns_dz, other_z, other_n, z); //update phy for everyone
+     helper.compute(densities, dns_dz, z); //update phy for everyone
 
      compute_diffusion(K0 * Antioch::ant_sqrt(dens_tot/nTot), densities,
                        dns_dz, nTot, molar_frac, Mm, T, dT_dz, P, z, 
@@ -826,9 +822,6 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
                         check_test(omega_theo[s],   diff,"diffusion term of species at altitude") ||
                         check_test(chemical_theo[s],chem,"chemical term of species at altitude");
      }
-
-     other_z.push_back(z);
-     other_n.push_back(densities);
 
   }
 

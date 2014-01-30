@@ -44,6 +44,9 @@ namespace Planet
       private:
         //!no default constructor
         AtmosphericMixture(){antioch_error();return;}
+//boundaries
+        CoeffType _zmin;
+        CoeffType _zmax;
 
         Antioch::ChemicalMixture<CoeffType> &_neutral_composition;
         Antioch::ChemicalMixture<CoeffType> &_ionic_composition;
@@ -74,6 +77,16 @@ namespace Planet
                                         
                         )
 
+        template<typename StateType>
+        ANTIOCH_AUTO(StateType)
+        barometry_density(const StateType &z, const StateType &zmin, const StateType &zmin_dens, const StateType &T, const StateType &Mm) const
+        ANTIOCH_AUTOFUNC(StateType, zmin_dens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<StateType>() + z) * (Planet::Constants::Titan::radius<StateType>() + zmin) * 1e3 *
+                                             Antioch::Constants::Avogadro<StateType>() * Planet::Constants::Universal::kb<StateType>() * T / 
+                                                        (Planet::Constants::Universal::G<StateType>() * Planet::Constants::Titan::mass<StateType>() * Mm))
+                                                               )
+                        )
+
+
       public:
         AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral, Antioch::ChemicalMixture<CoeffType> &ion,
                            AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
@@ -81,7 +94,8 @@ namespace Planet
 
         //!
         template<typename StateType, typename VectorStateType>
-        void init_composition(const VectorStateType &bot_compo,const StateType &dens_tot_bot);
+        void init_composition(const VectorStateType &bot_compo,const StateType &dens_tot_bot,
+                              const StateType &zmin, const StateType &zmax);
 
         //!sets the hard sphere radius
         template <typename VectorStateType>
@@ -127,6 +141,21 @@ namespace Planet
                                                 / (StateType(1e3L) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T))
                                          ))
 
+        //!use isobaric equation and molar fractions at bottom
+        template <typename StateType, typename VectorStateType>
+        void first_guess_densities(const StateType &z, VectorStateType &densities) const;
+
+        //!use isobaric equation, molar fractions at bottom and zstep = 10
+        template <typename StateType, typename VectorStateType>
+        void first_guess_densities_sum(const StateType &z, VectorStateType &sum_densities) const;
+
+        //!lower boundary concentrations
+        template <typename VectorStateType>
+        void lower_boundary_concentrations(VectorStateType &low_densities) const;
+
+        //!lower boundary concentrations
+        template <typename VectorStateType>
+        void upper_boundary_fluxes(VectorStateType &upper_fluxes) const;
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -143,6 +172,9 @@ namespace Planet
         //!
         const CoeffType total_bottom_density() const;
 
+        //!
+        const VectorCoeffType neutral_molar_fraction_bottom() const;
+
    };
 
 
@@ -151,6 +183,8 @@ namespace Planet
   AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral,
                                                                     Antioch::ChemicalMixture<CoeffType> &ion,
                                                                     AtmosphericTemperature<CoeffType,VectorCoeffType> &temp):
+  _zmin(0.L),
+  _zmax(0.L),
   _neutral_composition(neutral),
   _ionic_composition(ion),
   _temperature(temp)
@@ -218,10 +252,13 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   inline
   void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::init_composition(const VectorStateType &bot_compo,
-                                                                       const StateType &dens_tot_bot)
+                                                                       const StateType &dens_tot_bot,
+                                                                       const StateType &zmin, const StateType &zmax)
   {
     _total_bottom_density = dens_tot_bot;
     _neutral_molar_fraction_bottom = bot_compo;
+    _zmin = zmin;
+    _zmax = zmax;   
 
   }
 
@@ -270,6 +307,13 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  const VectorCoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_molar_fraction_bottom() const
+  {
+     return _neutral_molar_fraction_bottom;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType,typename VectorStateType>
   inline
   const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::a(const VectorStateType &molar_densities,const StateType &z) const
@@ -283,6 +327,8 @@ namespace Planet
   void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::mean_free_path(const VectorStateType &densities, VectorStateType &mean_free_path) const
   {
      antioch_assert_equal_to(densities.size(),_neutral_composition.n_species());
+     antioch_assert(!_mean_free_path_precompute.empty());
+
      mean_free_path.resize(densities.size(),0.L);
      CoeffType out(0.L);
      for(unsigned int s = 0; s < densities.size(); s++)
@@ -313,6 +359,76 @@ namespace Planet
                                                * Antioch::ant_sqrt(CoeffType(1.L) + _neutral_composition.M(s)/_neutral_composition.M(n));
         }
      }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess_densities(const StateType &z, VectorStateType &densities) const
+  {
+      antioch_assert_equal_to(densities.size(),_neutral_composition.n_species());
+      antioch_assert(!_neutral_molar_fraction_bottom.empty());
+
+      CoeffType Mm(0.L);
+      for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+      {
+         Mm += _neutral_molar_fraction_bottom[s] * _neutral_composition.M(s);
+      }
+
+      Mm *= 1e-3L; //to kg
+
+      CoeffType nTot = this->barometry_density(z, _zmin, _total_bottom_density, _temperature.neutral_temperature(z), Mm);
+
+      for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+      {
+         densities[s] = _neutral_molar_fraction_bottom[s] * nTot;
+      }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess_densities_sum(const StateType &z, VectorStateType &sum_densities) const
+  {
+      antioch_assert_equal_to(sum_densities.size(),_neutral_composition.n_species());
+      antioch_assert(!_neutral_molar_fraction_bottom.empty());
+
+      CoeffType z_tmp_step(10.L);
+      Antioch::set_zero(sum_densities);
+      VectorCoeffType densities_z = Antioch::zero_clone(sum_densities);
+
+      for(CoeffType z_tmp = z; z_tmp <= _zmax - z_tmp_step; z_tmp += z_tmp_step) //integration is ns_{i} = n_{i} * (z_{i+1} - z_{i}), i from bottom to top
+      {
+         this->first_guess_densities(z_tmp,densities_z);
+         for(unsigned int s = 0; s < sum_densities.size(); s++)
+         {
+            sum_densities[s] += densities_z[s]* z_tmp_step;;
+         }
+      }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename VectorStateType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::lower_boundary_concentrations(VectorStateType &low_densities) const
+  {
+      antioch_assedrt_equal_to(low_densities.size(),_neutral_composition.n_species());
+      for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+      {
+          low_densities[s] = _neutral_molar_fraction_bottom[s] * _total_bottom_density;
+      }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename VectorStateType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_fluxes(VectorStateType &upper_fluxes) const
+  {
+      antioch_assedrt_equal_to(upper_fluxes.size(),_neutral_composition.n_species());
+      for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+      {
+          upper_fluxes[s] = 0.L;
+      }
   }
 
 

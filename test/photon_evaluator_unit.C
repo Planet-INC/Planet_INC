@@ -300,7 +300,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
 
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
-  composition.init_composition(molar_frac,dens_tot);
+  composition.init_composition(molar_frac,dens_tot,zmin,zmax);
 
 //kinetics evaluators
 //not needed

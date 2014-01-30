@@ -187,10 +187,6 @@ namespace Planet
     const std::vector<libMesh::Point>& s_qpoint = 
       context.get_element_fe(var)->get_xyz();
 
-    
-////here the vectors I need
-    std::vector<libMesh::Number> other_altitudes;
-    std::vector<std::vector<libMesh::Number> > other_concentrations;
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
@@ -213,7 +209,6 @@ namespace Planet
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
             _helper.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
-                            other_altitudes, other_concentrations,  // {n}_s other z, other z
                             r - Constants::Titan::radius<double>() ) ; // z
 
             libMesh::Real omega = _helper.diffusion_term(s);

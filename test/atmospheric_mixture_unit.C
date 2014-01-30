@@ -121,6 +121,11 @@ int tester(const std::string & input_T)
   neutral_molar_concentration.push_back(9.6e11);
   neutral_molar_concentration.push_back(4e10);
 
+//
+  Scalar zmin = 600.L;
+  Scalar zmax = 1400.L;
+  Scalar dz   = 10.L;
+
 /*******************************
  * first level
  *******************************/
@@ -144,17 +149,13 @@ int tester(const std::string & input_T)
 
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
-  composition.init_composition(molar_frac,dens_tot);
+  composition.init_composition(molar_frac,dens_tot,zmin,zmax);
 
 /********************
  * checks
  ********************/
 
   int return_flag(0);
-
-  Scalar zmin = 600.L;
-  Scalar zmax = 1400.L;
-  Scalar dz   = 10.L;
   for(Scalar z = zmin; z < zmax; z += dz)
   {
     Scalar T = temperature.neutral_temperature(z);
