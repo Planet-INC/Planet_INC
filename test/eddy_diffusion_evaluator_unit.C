@@ -163,8 +163,8 @@ int tester(const std::string &input_T)
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
-  composition.init_composition(molar_frac,dens_tot);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
+  composition.init_composition(molar_frac,dens_tot,zmin,zmax);
 
 //kinetics evaluators
 //not needed
@@ -180,7 +180,7 @@ int tester(const std::string &input_T)
 //not needed
 
 //eddy diffusion
-  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar> > eddy_diff(composition,K0);
+  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diff(composition,K0);
 
 /************************
  * checks

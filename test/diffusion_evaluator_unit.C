@@ -271,8 +271,8 @@ int tester(const std::string &input_T)
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
-  composition.init_composition(molar_frac,dens_tot);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
+  composition.init_composition(molar_frac,dens_tot,zmin,zmax);
   composition.set_thermal_coefficient(tc);
 
 //kinetics evaluators
@@ -286,17 +286,17 @@ int tester(const std::string &input_T)
 //not needed
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar> > molecular_diffusion(bin_diff_coeff,composition,temperature);
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
   molecular_diffusion.set_medium_species(medium);
 
 //eddy diffusion
-  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar> > eddy_diffusion(composition,K0);
+  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diffusion(composition,K0);
 
 /**************************
  * fifth level
  **************************/
 
-  Planet::DiffusionEvaluator<Scalar,std::vector<Scalar> > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
+  Planet::DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
 
 /************************
  * checks

@@ -28,7 +28,7 @@
 #include "antioch/vector_utils.h"
 
 //Planet
-#include "planet/diffusion_evaluator.h"
+#include "planet/molecular_diffusion_evaluator.h"
 #include "planet/planet_constants.h"
 
 //C++
@@ -223,8 +223,8 @@ int tester(const std::string &input_T)
  ************************/
 
 //atmospheric mixture
-  Planet::AtmosphericMixture<Scalar,std::vector<Scalar> > composition(neutral_species, ionic_species, temperature);
-  composition.init_composition(molar_frac,dens_tot);
+  Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
+  composition.init_composition(molar_frac,dens_tot,zmin,zmax);
 
 //kinetics evaluators
 //not needed
@@ -237,7 +237,7 @@ int tester(const std::string &input_T)
 //not needed
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar> > molecular_diffusion(bin_diff_coeff,composition,temperature);
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
   molecular_diffusion.set_medium_species(medium);
 
 //eddy diffusion
