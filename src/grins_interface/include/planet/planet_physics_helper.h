@@ -74,7 +74,7 @@ namespace Planet
 
     //!fills upper boundary conditions
     template<typename VectorStateType>
-    void upper_boundary_neumann(VectorStateType & upper_boundary) const;
+    void upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const;
 
     
 
@@ -237,9 +237,9 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename VectorStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_neumann(VectorStateType & upper_boundary) const
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const
   {
-      _composition.upper_boundary_fluxes(upper_boundary);
+      _composition.upper_boundary_fluxes(upper_boundary, molar_densities);
   }
 
 

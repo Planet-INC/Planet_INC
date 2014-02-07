@@ -155,7 +155,7 @@ namespace Planet
 
         //!lower boundary concentrations
         template <typename VectorStateType>
-        void upper_boundary_fluxes(VectorStateType &upper_fluxes) const;
+        void upper_boundary_fluxes(VectorStateType &upper_fluxes, const VectorStateType &molar_concentrations) const;
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -422,12 +422,14 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template <typename VectorStateType>
   inline
-  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_fluxes(VectorStateType &upper_fluxes) const
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_fluxes(VectorStateType &upper_fluxes, const VectorStateType &molar_concentrations) const
   {
-      antioch_assedrt_equal_to(upper_fluxes.size(),_neutral_composition.n_species());
+      antioch_assert_equal_to(upper_fluxes.size(),_neutral_composition.n_species());
+      antioch_assert_equal_to(upper_fluxes.size(),molar_concentrations.size());
       for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
       {
-          upper_fluxes[s] = 0.L;
+          CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
+          upper_fluxes[s] = this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax);
       }
   }
 
