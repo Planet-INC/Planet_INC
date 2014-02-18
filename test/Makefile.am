@@ -13,6 +13,7 @@ check_PROGRAMS += eddy_diffusion_evaluator_unit
 check_PROGRAMS += molecular_diffusion_evaluator_unit
 check_PROGRAMS += diffusion_evaluator_unit
 check_PROGRAMS += physics_helper_unit
+check_PROGRAMS += solver_test
 
 AM_CPPFLAGS  = 
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
@@ -53,6 +54,7 @@ eddy_diffusion_evaluator_unit_SOURCES = eddy_diffusion_evaluator_unit.C
 molecular_diffusion_evaluator_unit_SOURCES = molecular_diffusion_evaluator_unit.C
 diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
 physics_helper_unit_SOURCES = physics_helper_unit.C
+solver_test_SOURCES = solver_test.C
 
 #Define tests to actually be run
 TESTS = 
@@ -66,6 +68,7 @@ TESTS += eddy_diffusion_evaluator_unit.sh
 TESTS += molecular_diffusion_evaluator_unit.sh
 TESTS += diffusion_evaluator_unit.sh
 TESTS += physics_helper_unit.sh
+TESTS += solver_test.sh
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

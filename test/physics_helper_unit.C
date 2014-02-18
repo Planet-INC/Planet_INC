@@ -642,7 +642,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   bin_diff_model[0].push_back(Planet::DiffusionType::Wilson);  // H2
 //CH4 with ...
   bin_diff_model[1].push_back(Planet::DiffusionType::Wakeham); // N2
-  bin_diff_model[1].push_back(Planet::DiffusionType::Wakeham); // CH4
+  bin_diff_model[1].push_back(Planet::DiffusionType::Wilson);  // CH4
   bin_diff_model[1].push_back(Planet::DiffusionType::Wilson);  // N
   bin_diff_model[1].push_back(Planet::DiffusionType::Wilson);  // CH3
   bin_diff_model[1].push_back(Planet::DiffusionType::Wilson);  // (1)CH2

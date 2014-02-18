@@ -1,0 +1,9 @@
+T40
+date: 01 Feb 2008
+zenith angle: 55.9 deg
+subsolar latitude: -8.8 deg
+lower boundary temperature: 206.9 K
+isothermal temperature: 142.8 K
+lower boundary total density: 1.7e13 molecule/cm3
+K0: 4.8e6 cm2/s
+file mix: T40_mixing.dat

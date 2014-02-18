@@ -32,6 +32,7 @@ echo revision number............... : $BUILD_VERSION
 echo Antioch location.............. : $ANTIOCH_PREFIX
 echo GRINS location................ : $GRINS_PREFIX
 echo Libmesh location.............. : $LIBMESH_PREFIX
+echo Eigen location................ : $EIGEN_INC
 echo
 echo '-------------------------------------------------------------------------------'
 

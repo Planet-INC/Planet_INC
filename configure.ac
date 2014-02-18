@@ -109,6 +109,8 @@ fi
 
 AX_PATH_GRINS(0.4.0,yes)
 
+CONFIGURE_EIGEN(2.3.0,yes)
+
 dnl--------------------------
 dnl Checks for code coverage
 dnl--------------------------
@@ -149,6 +151,7 @@ AC_CONFIG_FILES(test/eddy_diffusion_evaluator_unit.sh,        [chmod +x test/edd
 AC_CONFIG_FILES(test/molecular_diffusion_evaluator_unit.sh,   [chmod +x test/molecular_diffusion_evaluator_unit.sh])
 AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/diffusion_evaluator_unit.sh])
 AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/physics_helper_unit.sh])
+AC_CONFIG_FILES(test/solver_test.sh,                          [chmod +x test/solver_test.sh])
 
 dnl-----------------------------------------------
 dnl Generate header files
