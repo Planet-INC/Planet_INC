@@ -28,7 +28,8 @@ echo Build user.................... : $USER
 echo Build host.................... : $BUILD_HOST
 echo Configure date................ : $BUILD_DATE
 echo Build architecture............ : $BUILD_ARCH
-echo revision number............... : $BUILD_VERSION
+echo Git hash...................... : $BUILD_VERSION
+echo Git tag....................... : $GIT_TAG
 echo Antioch location.............. : $ANTIOCH_PREFIX
 echo GRINS location................ : $GRINS_PREFIX
 echo Libmesh location.............. : $LIBMESH_PREFIX
