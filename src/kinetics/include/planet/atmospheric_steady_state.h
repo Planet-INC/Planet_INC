@@ -1,0 +1,244 @@
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//-----------------------------------------------------------------------el-
+#ifndef PLANET_ATMOSPHERIC_STEADY_STATE_H
+#define PLANET_ATMOSPHERIC_STEADY_STATE_H
+
+//Antioch
+#include "antioch/antioch_asserts.h"
+#include "antioch/kinetics_evaluator.h"
+
+//Planet
+#include "planet/atmospheric_mixture.h"
+
+//eigen
+#include <Eigen/Dense>
+
+namespace Planet
+{
+  class AtmosphericSteadyState
+  {
+      private:
+      public:
+        AtmosphericSteadyState();
+        ~AtmosphericSteadyState();
+
+        //! Newton solver
+        template <typename StateType, typename VectorStateType>
+        void steady_state(Antioch::KineticsEvaluator<StateType> &reactions_system,
+                          const std::vector<Antioch::Species> & ss_species,
+                          const Antioch::ChemicalMixture<StateType> &mixture,
+                          const StateType &T,
+                          VectorStateType & molar_concentrations,
+                          VectorStateType & molar_sources) const;
+
+        //! closes the system, ionic system with electric neutrality
+        template <typename StateType, typename VectorStateType, typename VectorSolve, typename MatrixSolve>
+        void bring_me_closure(MatrixSolve &A,
+                              VectorSolve &b,
+                              const std::vector<Antioch::Species> & ss_species,
+                              const Antioch::ChemicalMixture<StateType> &mixture,
+                              const VectorStateType &molar_concentrations) const;
+
+        //! gives a first approximation if needed
+        template <typename StateType, typename VectorStateType>
+        void first_approximation(const Antioch::ReactionSet<StateType>     &reactions_set, 
+                                 const std::vector<Antioch::Species>       & ss_species, 
+                                 const Antioch::ChemicalMixture<StateType> & mixture, 
+                                 const StateType                           & T, 
+                                 VectorStateType                           & molar_concentrations) const;
+  };
+
+
+  template <typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericSteadyState::first_approximation(const Antioch::ReactionSet<StateType>     &reactions_set, 
+                                                   const std::vector<Antioch::Species>       & ss_species, 
+                                                   const Antioch::ChemicalMixture<StateType> & mixture, 
+                                                   const StateType                           & T, 
+                                                   VectorStateType                           & molar_concentrations) const
+  {
+//all ions to 0
+   for(unsigned int s = 0; s < ss_species.size(); s++)
+   {
+        Antioch::set_zero(molar_concentrations[mixture.species_list_map().at(ss_species[s])]);
+   }
+
+//setup
+    VectorStateType h_RT_minus_s_R;
+    h_RT_minus_s_R.resize(reactions_set.n_species(),0.L); //irreversible
+
+    VectorStateType net_rates;
+    VectorStateType kfwd_const;
+    VectorStateType kbkwd_const;
+    VectorStateType kfwd;
+    VectorStateType kbkwd;
+    VectorStateType fwd_conc;
+    VectorStateType bkwd_conc;
+    net_rates.resize(reactions_set.n_reactions());
+    kfwd_const.resize(reactions_set.n_reactions());
+    kbkwd_const.resize(reactions_set.n_reactions());
+    kfwd.resize(reactions_set.n_reactions());
+    kbkwd.resize(reactions_set.n_reactions());
+    fwd_conc.resize(reactions_set.n_reactions());
+    bkwd_conc.resize(reactions_set.n_reactions());
+
+    reactions_set.get_reactive_scheme(T, molar_concentrations,h_RT_minus_s_R,
+                                      net_rates, kfwd_const, kbkwd_const,
+                                      kfwd, kbkwd, fwd_conc, bkwd_conc);
+
+//first approx C_i = prod_i / (dloss_dCi) = kfwd_const * fwd_conc / (kfwd_const * conc_{no ss species})
+// not a good algorithm...
+    for(unsigned int s = 0; s < ss_species.size(); s++)
+    {
+//prod
+        StateType prod(0.L);
+        for(unsigned int rxn = 0; rxn < reactions_set.n_reactions(); rxn++)
+        {
+           const Antioch::Reaction<StateType>& reaction = reactions_set.reaction(rxn);
+           for (unsigned int p=0; p<reaction.n_products(); p++)
+           {
+              if(reaction.product_id(p) == mixture.species_list_map().at(ss_species[s])) //if s is a product
+              {
+                 prod += kfwd_const[rxn] * fwd_conc[rxn];
+                 break; 
+              }
+           }
+        }
+
+// dloss_dCi
+        StateType loss(0.L);
+        for(unsigned int rxn = 0; rxn < reactions_set.n_reactions(); rxn++)
+        {
+           const Antioch::Reaction<StateType>& reaction = reactions_set.reaction(rxn);
+           StateType conc(1.L);
+           bool add(false);
+           for (unsigned int r=0; r<reaction.n_reactants(); r++)
+           {
+              if(reaction.reactant_id(r) == mixture.species_list_map().at(ss_species[s]))//if s is a reactant
+              {
+                  add = true;
+                  continue; 
+              }
+              conc *= pow( molar_concentrations[reaction.reactant_id(r)],
+                              static_cast<int>(reaction.reactant_stoichiometric_coefficient(r)) );
+           }
+            if(add)loss += conc * kfwd_const[rxn];
+        }
+        if(loss < 1e-10)loss = 1.L;
+        molar_concentrations[mixture.species_list_map().at(ss_species[s])] = prod / loss;
+    }
+  }
+
+
+  template <typename StateType, typename VectorStateType, typename VectorSolve, typename MatrixSolve>
+  inline
+  void AtmosphericSteadyState::bring_me_closure(MatrixSolve &A,
+                                                VectorSolve &b,
+                                                const std::vector<Antioch::Species> & ss_species,
+                                                const Antioch::ChemicalMixture<StateType> &mixture,
+                                                const VectorStateType &molar_concentrations) const
+  {
+        unsigned int i_electron = mixture.species_list_map().at(Antioch::Species::e);
+        StateType sum(0.L);
+        for(unsigned int s = 0; s < ss_species.size(); s++)
+        {
+           A(i_electron,s) = -1.L;
+           sum += molar_concentrations[mixture.species_list_map().at(ss_species[s])];
+        }
+        A(i_electron,i_electron) = 1.L;
+        b(i_electron) = 2.L * molar_concentrations[i_electron] - sum;
+  }
+
+
+  template <typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericSteadyState::steady_state(Antioch::KineticsEvaluator<StateType> &reactions_system,
+                                            const std::vector<Antioch::Species> & ss_species,
+                                            const Antioch::ChemicalMixture<StateType> &mixture,
+                                            const StateType &T,
+                                            VectorStateType & molar_concentrations,
+                                            VectorStateType & molar_sources) const
+  {
+
+   if(molar_concentrations[mixture.species_list_map().at(ss_species[0])] < 0.L)
+        first_approximation(reactions_system.reaction_set(), ss_species, mixture, T, molar_concentrations);
+
+// Newton solver here
+// Ax + b = 0
+// A is jacobian, b is what goes to 0 (dc/dt here)
+    Eigen::Matrix<StateType,Eigen::Dynamic,Eigen::Dynamic> A;
+    Eigen::Matrix<StateType,Eigen::Dynamic,1> b;
+
+//setup
+    VectorStateType h_RT_minus_s_R;
+    VectorStateType dh_RT_minus_s_R_dT;
+    VectorStateType mole_sources;
+    VectorStateType dmole_dT;
+    std::vector<VectorStateType> dmole_dX_s;
+    h_RT_minus_s_R.resize(reactions_system.n_species(),0.L); //irreversible
+    dh_RT_minus_s_R_dT.resize(reactions_system.n_species());
+    molar_sources.resize(reactions_system.n_species());
+    dmole_dT.resize(reactions_system.n_species());
+    dmole_dX_s.resize(reactions_system.n_species());
+
+// shoot
+    StateType lim(1.L);
+    StateType thresh = std::numeric_limits<StateType>::epsilon();
+    if(thresh < 1e-10)thresh = 1e-10; // physically this precision is ridiculous, which is nice
+    unsigned int loop_max(50);
+    unsigned int nloop(0);
+    while(lim > thresh)
+    {
+      if(nloop > loop_max)antioch_error();
+      reactions_system.compute_mole_sources_and_derivs(T, molar_concentrations,
+                                                       h_RT_minus_s_R, dh_RT_minus_s_R_dT,
+                                                       mole_sources, dmole_dT, dmole_dX_s );
+
+      for(unsigned int i = 0; i < ss_species.size(); i++)
+      {
+        unsigned int i_ss = mixture.species_list_map().at(ss_species[i]);
+        for(unsigned int j = 0; j < ss_species.size(); j++)
+        {
+           unsigned int j_ss = mixture.species_list_map().at(ss_species[j]);
+           A(i,j) = dmole_dX_s[i_ss][j_ss];
+        }
+        b(i) = - mole_sources[i_ss];
+      }
+
+//TODO what are the different options here?
+// neutral hypothesis for the moment   
+      this->bring_me_closure(A,b,ss_species,mixture,molar_concentrations);
+ 
+      Eigen::PartialPivLU<Eigen::Matrix<StateType,Eigen::Dynamic,Eigen::Dynamic> > mypartialPivLu(A);
+      Eigen::Matrix<StateType,Eigen::Dynamic,1> x(ss_species.size());
+      x = mypartialPivLu.solve(b);
+
+      Antioch::set_zero(lim);
+      for(unsigned int s = 0; s < ss_species.size(); s++)
+      {
+        unsigned int i_ss = mixture.species_list_map().at(ss_species[s]);
+        molar_concentrations[i_ss] += x(s);
+        lim += (x(s) < 0.)?-x(s):x(s);
+      }
+
+      nloop++;
+    }
+  }
+
+  
+  inline
+  AtmosphericSteadyState::AtmosphericSteadyState()
+  {
+     return;
+  }
+
+  inline
+  AtmosphericSteadyState::~AtmosphericSteadyState()
+  {
+     return;
+  }
+
+}
+
+#endif

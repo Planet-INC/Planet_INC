@@ -49,6 +49,7 @@ include_HEADERS += absorption/include/planet/cross_section.h
 
 # kinetics
 include_HEADERS += kinetics/include/planet/atmospheric_kinetics.h
+include_HEADERS += kinetics/include/planet/atmospheric_steady_state.h
 
 # grins_interface
 include_HEADERS += grins_interface/include/planet/planet_physics.h

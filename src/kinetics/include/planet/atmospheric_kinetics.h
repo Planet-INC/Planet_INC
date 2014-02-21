@@ -31,6 +31,7 @@
 #include "planet/atmospheric_temperature.h"
 #include "planet/atmospheric_mixture.h"
 #include "planet/photon_evaluator.h"
+#include "planet/atmospheric_steady_state.h"
 
 //eigen
 #include <Eigen/Dense>
@@ -51,6 +52,7 @@ namespace Planet
 
         bool _ionic_coupling;
         std::vector<Antioch::Species> _ions_species;
+        VectorCoeffType _cache_concentrations;
         
 //
         const AtmosphericTemperature<CoeffType,VectorCoeffType>             &_temperature;
@@ -75,7 +77,7 @@ namespace Planet
         //! compute chemical net rate and provide them in kin_rates
         template<typename StateType, typename VectorStateType>
         void chemical_rate(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
-                           const StateType &z, VectorStateType &kin_rates) const;
+                           const StateType &z, VectorStateType &kin_rates);
 
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
         void chemical_rate_and_derivs(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
@@ -83,7 +85,7 @@ namespace Planet
 
         //! Newton solver for the ionic system
         template<typename StateType, typename VectorStateType>
-        void add_ionic_contribution(const VectorStateType &molar_concentrations, const StateType &z, VectorStateType &kin_rates) const;
+        void add_ionic_contribution(const VectorStateType &molar_concentrations, const StateType &z, VectorStateType &kin_rates);
   };
 
 
@@ -109,6 +111,7 @@ namespace Planet
                         _ions_species.push_back(_composition.ionic_composition().species_list()[s]); // then adds here
        }
        if(_ions_species.empty())_ionic_coupling = false;
+      _cache_concentrations.resize(_composition.ionic_composition().n_species(),-1.L);
     }
     
     return;
@@ -141,7 +144,7 @@ namespace Planet
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, 
                                                                      const VectorStateType &sum_concentrations, 
                                                                      const StateType &z,
-                                                                     VectorStateType &kin_rates) const
+                                                                     VectorStateType &kin_rates)
   {
      antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
      VectorStateType dummy;
@@ -187,84 +190,31 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   inline
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution(const VectorStateType &neutral_concentrations, const StateType &z, 
-                                                                                              VectorStateType &kin_rates) const
+                                                                                              VectorStateType &kin_rates)
   {
     if(!_ionic_coupling)return;
-    
-// Newton solver here
-// Ax + b = 0
-// A is jacobian, b is what goes to 0 (dc/dt here)
-    Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> A;
-    Eigen::Matrix<CoeffType,Eigen::Dynamic,1> b;
+    antioch_assert(!_cache_concentrations.empty());
 
 
-    VectorCoeffType molar_concentrations;
-    molar_concentrations.resize(_ionic_reactions.n_species(),0.L); //full system
-    for(unsigned int s = 0; s < neutral_concentrations.size(); s++)// full system
+ // update neutrals
+    for(unsigned int s = 0; s < neutral_concentrations.size(); s++)
     {
        unsigned int i = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
-       molar_concentrations[i] = neutral_concentrations[s]; // add it
+       _cache_concentrations[i] = neutral_concentrations[s];
     }
 
+//solve for ions
+    AtmosphericSteadyState solver; //ionospheric solver
+    VectorCoeffType source_ions;
+    source_ions.resize(_ionic_reactions.n_species(),0.L);
+    solver.steady_state(_ionic_reactions,_ions_species,_composition.ionic_composition(),_temperature.neutral_temperature(z),_cache_concentrations,source_ions);
 
-    VectorCoeffType h_RT_minus_s_R;
-    VectorCoeffType dh_RT_minus_s_R_dT;
-    VectorCoeffType mole_sources;
-    VectorCoeffType dmole_dT;
-    MatrixCoeffType dmole_dX_s;
-    h_RT_minus_s_R.resize(_ionic_reactions.n_species(),0.L); //irreversible
-    dh_RT_minus_s_R_dT.resize(_ionic_reactions.n_species());
-    mole_sources.resize(_ionic_reactions.n_species());
-    dmole_dT.resize(_ionic_reactions.n_species());
-    dmole_dX_s.resize(_ionic_reactions.n_species());
-
-    CoeffType lim(1.L);
-    CoeffType thresh = std::numeric_limits<CoeffType>::epsilon();
-    if(thresh < 1e-10)thresh = 1e-10; // physically this precision is ridiculous, which is nice
-    unsigned int loop_max(50);
-    unsigned int nloop(0);
-    while(lim > thresh)
-    {
-
-      _ionic_reactions.compute_mole_sources_and_derivs(_temperature.neutral_temperature(z), molar_concentrations,
-                                                       h_RT_minus_s_R, dh_RT_minus_s_R_dT,
-                                                       mole_sources, dmole_dT, dmole_dX_s );
-
-
-      for(unsigned int i = 0; i < _ions_species.size(); i++)
-      {
-        unsigned int i_ion = _composition.ionic_composition().species_list_map().at(_ions_species[i]);
-        for(unsigned int j = 0; j < _ions_species.size(); j++)
-        {
-           unsigned int j_ion = _composition.ionic_composition().species_list_map().at(_ions_species[j]);
-           A(i,j) = dmole_dX_s[i_ion][j_ion];
-        }
-        b(i) = - mole_sources[i_ion];
-      }
-    
-      Eigen::PartialPivLU<Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> > mypartialPivLu(A);
-      Eigen::Matrix<CoeffType,Eigen::Dynamic,1> x(_ions_species.size());
-      x = mypartialPivLu.solve(b);
-
-      Antioch::set_zero(lim);
-      for(unsigned int s = 0; s < _ions_species.size(); s++)
-      {
-        unsigned int i_ion = _composition.ionic_composition().species_list_map().at(_ions_species[s]);
-        molar_concentrations[i_ion] += x(s);
-        lim += (x(s) < 0.)?-x(s):x(s);
-      }
-
-      nloop++;
-      if(nloop > loop_max)antioch_error();
-
-    }
-
+// update sources
     for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
     {
         unsigned int i_neu = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
-        kin_rates[s] += mole_sources[i_neu];
+        kin_rates[s] += source_ions[i_neu];
     }
-      
   }
 }
 
