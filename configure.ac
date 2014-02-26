@@ -168,6 +168,7 @@ AC_CONFIG_FILES(test/molecular_diffusion_evaluator_unit.sh,   [chmod +x test/mol
 AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/diffusion_evaluator_unit.sh])
 AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/physics_helper_unit.sh])
 AC_CONFIG_FILES(test/solver_test.sh,                          [chmod +x test/solver_test.sh])
+AC_CONFIG_FILES(test/ionospheric_test.sh,                     [chmod +x test/ionospheric_test.sh])
 
 AC_CONFIG_FILES(test/input/solver_test.in)
 AC_CONFIG_FILES(test/input/grins_input_physics_helper.in)

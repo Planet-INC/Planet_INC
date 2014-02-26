@@ -14,6 +14,7 @@ check_PROGRAMS += molecular_diffusion_evaluator_unit
 check_PROGRAMS += diffusion_evaluator_unit
 check_PROGRAMS += physics_helper_unit
 check_PROGRAMS += solver_test
+check_PROGRAMS += ionospheric_test
 
 AM_CPPFLAGS  = 
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
@@ -48,6 +49,7 @@ molecular_diffusion_evaluator_unit_SOURCES = molecular_diffusion_evaluator_unit.
 diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
 physics_helper_unit_SOURCES = physics_helper_unit.C
 solver_test_SOURCES = solver_test.C
+ionospheric_test_SOURCES = ionospheric_test.C
 
 #Define tests to actually be run
 TESTS = 
@@ -62,6 +64,7 @@ TESTS += molecular_diffusion_evaluator_unit.sh
 TESTS += diffusion_evaluator_unit.sh
 TESTS += physics_helper_unit.sh
 TESTS += solver_test.sh
+TESTS += ionospheric_test.sh
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED
