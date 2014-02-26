@@ -125,6 +125,7 @@ elif (test x$enablecxx11 = xoptional); then
   AX_CXX_AUTO_THIS(optional)
 fi
 
+AX_PATH_GRINS(0.4.0,yes)
 CONFIGURE_EIGEN(2.3.0,yes)
 AX_PATH_GRINS(0.4.0,yes)
 
