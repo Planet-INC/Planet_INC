@@ -111,7 +111,6 @@ void get_the_ions(const Antioch::ChemicalMixture<Scalar> &mixture, std::vector<A
   }
 }
 
-
 void condense_molecule(std::vector<std::string> &molecule, std::vector<unsigned int> &stoi)
 {
    for(unsigned int imol = 0; imol < molecule.size(); imol++)
@@ -599,7 +598,7 @@ void prepare_the_ionosphere(const std::string &file_neu_conc, std::vector<Scalar
 template <typename Scalar>
 int tester(const std::string & file_spec, const std::string &file_reac, const std::string &file_neu_conc)
 {
-// first, the species
+ // first, the species
   std::vector<std::string> all_species;
   read_the_species(file_spec,all_species);
 
