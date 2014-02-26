@@ -126,6 +126,7 @@ elif (test x$enablecxx11 = xoptional); then
 fi
 
 CONFIGURE_EIGEN(2.3.0,yes)
+AX_PATH_GRINS(0.4.0,yes)
 
 dnl--------------------------
 dnl Checks for code coverage
