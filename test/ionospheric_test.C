@@ -635,7 +635,7 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
   solver.precompute_rates(molar_concentrations,T,T,Te);
   solver.steady_state(molar_sources);
 
-  int return_flag(0);
+  int return_flag(1);
 
   Scalar sum(0.L);
   for(unsigned int s = 0; s < ss_species.size(); s++)

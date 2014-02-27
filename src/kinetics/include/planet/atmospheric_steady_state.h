@@ -393,6 +393,7 @@ namespace Planet
 
    if(_molar_concentrations[0] < 0.L)first_approximation();
 
+
 // Newton solver here
 // Ax + b = 0
 // A is jacobian, b is molar sources
