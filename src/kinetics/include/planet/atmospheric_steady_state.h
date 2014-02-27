@@ -1,5 +1,24 @@
 //-----------------------------------------------------------------------bl-
 //--------------------------------------------------------------------------
+//
+// Planet - An atmospheric code for planetary bodies, adapted to Titan
+//
+// Copyright (C) 2013 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
 //-----------------------------------------------------------------------el-
 #ifndef PLANET_ATMOSPHERIC_STEADY_STATE_H
 #define PLANET_ATMOSPHERIC_STEADY_STATE_H
@@ -164,6 +183,7 @@ namespace Planet
    if(molar_concentrations[mixture.species_list_map().at(ss_species[0])] < 0.L)
         first_approximation(reactions_system.reaction_set(), ss_species, mixture, T, molar_concentrations);
 
+
 // Newton solver here
 // Ax + b = 0
 // A is jacobian, b is what goes to 0 (dc/dt here)
@@ -184,7 +204,7 @@ namespace Planet
 
 // shoot
     StateType lim(1.L);
-    StateType thresh = std::numeric_limits<StateType>::epsilon();
+    StateType thresh = std::numeric_limits<StateType>::epsilon() * 500.;
     if(thresh < 1e-10)thresh = 1e-10; // physically this precision is ridiculous, which is nice
     unsigned int loop_max(50);
     unsigned int nloop(0);

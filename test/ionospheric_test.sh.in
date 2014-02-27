@@ -2,7 +2,7 @@
 
 PROG="@top_builddir@/test/ionospheric_test"
 
-INPUT="@top_srcdir@/test/input/ionospheric_species.inp @top_srcdir@/test/input/ionospheric_reaction.inp @top_srcdir@/test/input/ionospheric_neutral_comp.inp"
+INPUT="@top_srcdir@/test/input/ionospheric_species.inp @top_srcdir@/test/input/ionospheric_reactions.inp @top_srcdir@/test/input/ionospheric_neutral_comp.inp"
 
 $PROG $INPUT
 
