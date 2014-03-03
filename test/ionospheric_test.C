@@ -172,7 +172,6 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
 {
    Antioch::ReactionType::ReactionType typeReaction(Antioch::ReactionType::ELEMENTARY);
    Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::CONSTANT);
-
    Planet::KineticsBranchingStructure<Scalar> prob_reac;
    prob_reac.set_n_channels(reac.channels.size());
 
@@ -528,7 +527,6 @@ void read_reactions(const std::string &file_reac, Antioch::ReactionSet<Scalar> &
         cur_reac.br_path.push_back(br);
      }else
      {
-
         sanity_check_reaction(cur_reac);
 
         treat_reaction(cur_reac,reaction_set, n_species);
