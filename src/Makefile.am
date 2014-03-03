@@ -58,6 +58,22 @@ include_HEADERS += grins_interface/include/planet/planet_physics_evaluator.h
 include_HEADERS += grins_interface/include/planet/physics_factory.h
 include_HEADERS += grins_interface/include/planet/physics_names.h
 
+# queso interface
+include_HEADERS += queso_interface/include/planet/kinetics_branching_structure.h
+include_HEADERS += queso_interface/include/planet/branching_ratio_node.h
+include_HEADERS += queso_interface/include/planet/pdf_enum.h
+include_HEADERS += queso_interface/include/planet/base_pdf.h
+include_HEADERS += queso_interface/include/planet/norm_pdf.h
+include_HEADERS += queso_interface/include/planet/nort_pdf.h
+include_HEADERS += queso_interface/include/planet/logn_pdf.h
+include_HEADERS += queso_interface/include/planet/logu_pdf.h
+include_HEADERS += queso_interface/include/planet/diri_pdf.h
+include_HEADERS += queso_interface/include/planet/dirg_pdf.h
+include_HEADERS += queso_interface/include/planet/diut_pdf.h
+include_HEADERS += queso_interface/include/planet/diun_pdf.h
+include_HEADERS += queso_interface/include/planet/dior_pdf.h
+include_HEADERS += queso_interface/include/planet/pdf_management.h
+
 # temperature
 include_HEADERS += temperature/include/planet/atmospheric_temperature.h
 
@@ -101,7 +117,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/grins_interface/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/kinetics/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
-AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/queso_interface/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h

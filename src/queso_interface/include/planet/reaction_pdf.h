@@ -5,12 +5,10 @@
 #ifndef PLANET_REACTION_PDF_H
 #define PLANET_REACTION_PDF_H
 
-//Antioch
-#include "antioch/reaction.h"
+//QUESO
 
 //Planet
 #include "planet/pdf_enum.h"
-#include "planet/kinetics_branching_structure.h"
 
 //C++
 #include <vector>
