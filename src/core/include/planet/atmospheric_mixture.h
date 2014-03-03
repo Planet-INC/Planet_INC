@@ -256,7 +256,11 @@ namespace Planet
                                                                        const StateType &zmin, const StateType &zmax)
   {
     _total_bottom_density = dens_tot_bot;
-    _neutral_molar_fraction_bottom = bot_compo;
+    _neutral_molar_fraction_bottom.resize(_neutral_composition.n_species(),0.L);
+    for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+    {
+      _neutral_molar_fraction_bottom[s] = bot_compo[s];
+    }
     _zmin = zmin;
     _zmax = zmax;   
 
