@@ -28,6 +28,8 @@
 #include "planet/pdf_enum.h"
 
 //C++
+#include <iostream>
+#include <vector>
 
 namespace Planet
 {
@@ -73,24 +75,35 @@ class DiOrPdf;
   class BasePdf
   {
       public:
-        BasePdf();
+        BasePdf(PDFName::PDFName pdf = PDFName::Norm);
         ~BasePdf();
 
       void set_pdf_type(PDFName::PDFName pdf);
+
+      PDFName::PDFName pdf() const;
 
       const CoeffType value(unsigned int ip = 0) const;
 
       template <typename StateType>
       void set_parameters(const std::vector<StateType> &pars);
 
-      private:
+      void print(std::ostream &out = std::cout) const;
+
+      friend std::ostream& operator<<(std::ostream &out, const BasePdf & bpdf)
+      {
+        bpdf.print(out);
+        return out;
+      }
+
+      protected:
       PDFName::PDFName _my_pdf;
 
   };
 
   template <typename CoeffType>
   inline
-  BasePdf<CoeffType>::BasePdf()
+  BasePdf<CoeffType>::BasePdf(PDFName::PDFName pdf):
+       _my_pdf(pdf)
   {
      return;
   }
@@ -108,6 +121,14 @@ class DiOrPdf;
   {
      _my_pdf = pdf;
   }
+
+  template <typename CoeffType>
+  inline
+  PDFName::PDFName BasePdf<CoeffType>::pdf() const
+  {
+     return _my_pdf;
+  }
+    
 
   template <typename CoeffType>
   inline
@@ -209,6 +230,58 @@ class DiOrPdf;
 
         case PDFName::DirG:
           static_cast<DirGPdf<CoeffType>* >(this)->set_parameters(pars);
+          break;
+
+        default: //WAT?
+          antioch_error();
+          break;
+       }
+  }
+
+  template <typename CoeffType>
+  inline
+  void BasePdf<CoeffType>::print(std::ostream &out) const
+  {
+       switch(_my_pdf)
+       {
+        case PDFName::Norm:
+          static_cast<const NormPdf<CoeffType>*>(this)->print(out);
+          break;
+
+        case PDFName::NorT:
+          static_cast<const NorTPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::Unif:
+          static_cast<const UnifPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::LogN:
+          static_cast<const LogNPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::LogU:
+          static_cast<const LogUPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::Diri:
+          static_cast<const DiriPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::DiUn:
+          static_cast<const DiUnPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::DiUT:
+          static_cast<const DiUTPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::DiOr:
+          static_cast<const DiOrPdf<CoeffType>* >(this)->print(out);
+          break;
+
+        case PDFName::DirG:
+          static_cast<const DirGPdf<CoeffType>* >(this)->print(out);
           break;
 
         default: //WAT?

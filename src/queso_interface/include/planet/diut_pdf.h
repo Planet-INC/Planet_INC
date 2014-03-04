@@ -28,6 +28,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 #include <vector>
@@ -60,11 +61,14 @@ namespace Planet
         const std::vector<CoeffType> max() const;
 
         const CoeffType value(unsigned int ip = 0) const;
+
+        void print(std::ostream &out = std::cout)  const;
   };
 
   template <typename CoeffType>
   inline
-  DiUTPdf<CoeffType>::DiUTPdf()
+  DiUTPdf<CoeffType>::DiUTPdf():
+      BasePdf<CoeffType>(PDFName::DiUT)
   {
      return;
   }
@@ -72,6 +76,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   DiUTPdf<CoeffType>::DiUTPdf(const std::vector<CoeffType> &min, const std::vector<CoeffType> &max):
+      BasePdf<CoeffType>(PDFName::DiUT),
       _min(min),
       _max(max)
   {
@@ -158,6 +163,26 @@ namespace Planet
        _min[i] = pars[i];
        _max[i] = pars[i + pars.size()/2];
      }
+  }
+
+  template <typename CoeffType>
+  inline
+  void DiUTPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "DiUT(" ;
+     out << _min[0];
+
+     for(unsigned int ibr = 1; ibr < _min.size(); ibr++)
+     {
+        out << "," << _min[ibr];
+     }
+     out << "; " << _max[0];
+     for(unsigned int ibr = 1; ibr < _min.size(); ibr++)
+     {
+        out << "," << _max[ibr];
+     }
+
+     out << ")";
   }
 }
 

@@ -14,6 +14,11 @@ check_PROGRAMS += molecular_diffusion_evaluator_unit
 check_PROGRAMS += diffusion_evaluator_unit
 check_PROGRAMS += physics_helper_unit
 check_PROGRAMS += solver_test
+check_PROGRAMS += pdf_norm_unit
+check_PROGRAMS += pdf_nort_unit
+check_PROGRAMS += pdf_logn_unit
+check_PROGRAMS += pdf_logu_unit
+check_PROGRAMS += pdf_unif_unit
 check_PROGRAMS += ionospheric_test
 
 AM_CPPFLAGS  = 
@@ -48,6 +53,11 @@ eddy_diffusion_evaluator_unit_SOURCES = eddy_diffusion_evaluator_unit.C
 molecular_diffusion_evaluator_unit_SOURCES = molecular_diffusion_evaluator_unit.C
 diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
 physics_helper_unit_SOURCES = physics_helper_unit.C
+pdf_norm_unit_SOURCES = pdf_norm_unit.C
+pdf_nort_unit_SOURCES = pdf_nort_unit.C
+pdf_logn_unit_SOURCES = pdf_logn_unit.C
+pdf_logu_unit_SOURCES = pdf_logu_unit.C
+pdf_unif_unit_SOURCES = pdf_unif_unit.C
 solver_test_SOURCES = solver_test.C
 ionospheric_test_SOURCES = ionospheric_test.C
 
@@ -64,7 +74,12 @@ TESTS += molecular_diffusion_evaluator_unit.sh
 TESTS += diffusion_evaluator_unit.sh
 TESTS += physics_helper_unit.sh
 TESTS += solver_test.sh
-TESTS += ionospheric_test.sh
+#TESTS += ionospheric_test.sh
+TESTS += pdf_norm_unit
+TESTS += pdf_nort_unit
+TESTS += pdf_logn_unit
+TESTS += pdf_logu_unit
+TESTS += pdf_unif_unit
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED
