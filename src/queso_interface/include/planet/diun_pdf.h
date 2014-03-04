@@ -28,6 +28,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 
@@ -52,11 +53,14 @@ namespace Planet
         unsigned int n() const;
 
         const CoeffType value(unsigned int ip = 0) const;
+
+        void print(std::ostream &out = std::cout)  const;
   };
 
   template <typename CoeffType>
   inline
   DiUnPdf<CoeffType>::DiUnPdf():
+      BasePdf<CoeffType>(PDFName::DiUn),
       _n(0)
   {
      return;
@@ -65,6 +69,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   DiUnPdf<CoeffType>::DiUnPdf(unsigned int n):
+      BasePdf<CoeffType>(PDFName::DiUn),
       _n(n)
   {
      return;
@@ -105,6 +110,15 @@ namespace Planet
   {
       antioch_assert_equal_to(pars.size(),1);
       _n = pars[0];
+  }
+
+  template <typename CoeffType>
+  inline
+  void DiUnPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "DiUn(" 
+         << _n
+         << ")";
   }
 }
 

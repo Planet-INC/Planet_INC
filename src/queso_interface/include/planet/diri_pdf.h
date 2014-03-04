@@ -28,6 +28,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 #include <vector>
@@ -60,11 +61,14 @@ namespace Planet
         const CoeffType r()   const;
 
         const CoeffType value(unsigned int ip = 0) const;
+
+        void print(std::ostream &out = std::cout)  const;
   };
 
   template <typename CoeffType>
   inline
   DiriPdf<CoeffType>::DiriPdf():
+      BasePdf<CoeffType>(PDFName::Diri),
       _r(0.L)
   {
      return;
@@ -73,6 +77,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   DiriPdf<CoeffType>::DiriPdf(const std::vector<CoeffType> &v, const CoeffType &r):
+      BasePdf<CoeffType>(PDFName::Diri),
       _v(v),
       _r(r)
   {
@@ -138,6 +143,20 @@ namespace Planet
        _v[i] = pars[i];
      }
       _r = pars.back();
+  }
+
+  template <typename CoeffType>
+  inline
+  void DiriPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "Diri(" ;
+
+     for(unsigned int ibr = 0; ibr < _v.size(); ibr++)
+     {
+        out << _v[ibr]  << ",";
+     }
+
+     out << _r << ")";
   }
 }
 

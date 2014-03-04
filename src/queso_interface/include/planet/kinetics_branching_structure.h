@@ -72,7 +72,7 @@ namespace Planet
         const std::map<std::string,PDFName::PDFName> pdf_map() const;
 
         //! pdf map
-        const std::map<std::string,unsigned int> nodes_map()    const;
+        const std::map<std::string,unsigned int> nodes_map()   const;
 
         //! adds already defined node
         template <typename StateType>
@@ -96,7 +96,11 @@ namespace Planet
         //! add a node and channel in node to a br path
         void add_to_br_path(unsigned int ibr, const std::string &name_node, unsigned int node_channel);
 
-        Antioch::KineticsType<CoeffType>* create_rate_constant(unsigned int ibr, Antioch::KineticsModel::KineticsModel kineticsModel);
+        /*! wrapper to Antioch
+         *
+         * Provides values for global rate and branching ratios
+         */
+        Antioch::KineticsType<CoeffType>* create_rate_constant(unsigned int ibr, Antioch::KineticsModel::KineticsModel kineticsModel) const;
 
   };
 
@@ -114,6 +118,7 @@ namespace Planet
      _pdf_map["DiUT"] = PDFName::DiUT;
      _pdf_map["DirG"] = PDFName::DirG;
      _pdf_map["DiOr"] = PDFName::DiOr;
+     _nodes.reserve(20);
      return;
   }
 
@@ -140,7 +145,12 @@ namespace Planet
   inline
   void KineticsBranchingStructure<CoeffType>::add_node(const BranchingRatioNode<StateType> &node)
   {
-      _nodes.push_back(node);
+std::cout << "before resizing" << std::endl;
+if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_object_ptr() << " ~ " << _nodes[0].pdf_object_ptr()->pdf() << std::endl;
+      _nodes.resize(_nodes.size() + 1);
+std::cout << "after resizing" << std::endl;
+if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_object_ptr() << " ~ " << _nodes[0].pdf_object_ptr()->pdf() << std::endl;
+      _nodes.back() = node;
       _nodes_map[node.id()] = _nodes.size() - 1;
   }
 
@@ -208,7 +218,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   Antioch::KineticsType<CoeffType>* KineticsBranchingStructure<CoeffType>::create_rate_constant(unsigned int ibr, 
-                                                                                             Antioch::KineticsModel::KineticsModel kineticsModel)
+                                                                                                Antioch::KineticsModel::KineticsModel kineticsModel) const
   {
      antioch_assert(!_pdf_k_object.empty());
 
@@ -222,14 +232,13 @@ namespace Planet
      // Cf, branching ratio calculation
      for(unsigned int inode = 0; inode < _track_br_nodes[ibr].size(); inode++)
      {
-std::cout << "node path " << inode << std::endl;
-std::cout << "node name is " << _track_br_nodes[ibr][inode] << std::endl;
-std::cout << "node index " << _nodes_map.at(_track_br_nodes[ibr][inode]) << std::endl;
-std::cout << "parameter #" <<  _track_br_in_nodes[ibr][inode] << std::endl;
        data[0] *= _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])].value(_track_br_in_nodes[ibr][inode]);
+//std::cout << "node " << _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])] << std::endl;
+//std::cout << "values " << _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])].value(_track_br_in_nodes[ibr][inode]) << " " << inode << std::endl;
      }
+
+     if(kineticsModel == Antioch::KineticsModel::HERCOURT_ESSEN)data.push_back(300.); // DR
      
-std::cout << "huh?" << std::endl;
      return Antioch::build_rate<CoeffType>(data,kineticsModel);
   }
 

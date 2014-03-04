@@ -9,6 +9,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 
@@ -40,11 +41,14 @@ namespace Planet
         const CoeffType max()   const;
 
         const CoeffType value(unsigned int ip = 0) const;
+
+        void print(std::ostream &out = std::cout)  const;
   };
 
   template <typename CoeffType>
   inline
   UnifPdf<CoeffType>::UnifPdf():
+      BasePdf<CoeffType>(PDFName::Unif),
       _min(0.L),
       _max(0.L)
   {
@@ -54,6 +58,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   UnifPdf<CoeffType>::UnifPdf(const CoeffType &min, const CoeffType &max):
+      BasePdf<CoeffType>(PDFName::Unif),
       _min(min),
       _max(max)
   {
@@ -112,6 +117,15 @@ namespace Planet
       antioch_assert_equal_to(pars.size(),2);
       _min = pars[0];
       _max = pars[1];
+  }
+
+  template <typename CoeffType>
+  inline
+  void UnifPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "Unif(" 
+         << _min  << "," << _max
+         << ")";
   }
 }
 

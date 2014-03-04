@@ -71,12 +71,24 @@ namespace Planet
 
         const CoeffType value(unsigned int ip) const;
 
+        void print(std::ostream &out = std::cout) const;
+
+        friend std::ostream& operator<<(std::ostream &out, const BranchingRatioNode &brn)
+        {
+           brn.print(out);
+           return out;
+        }
+
+        template <typename StateType>
+        BranchingRatioNode<CoeffType> &operator=(const BranchingRatioNode<StateType> &rhs);
+
   };
 
   template <typename CoeffType>
   inline
   BranchingRatioNode<CoeffType>::BranchingRatioNode():
      _pdf(PDFName::Norm),
+     _n_channels(0),
      _pdf_object(NULL)
   {
      return;
@@ -87,11 +99,24 @@ namespace Planet
   inline
   BranchingRatioNode<CoeffType>::BranchingRatioNode(const BranchingRatioNode<StateType> &rhs)
   {
-     _pdf = rhs.pdf();
-     _id  = rhs.id();
-     _n_channels = rhs.n_channels();
-     _pdf_object = ManagePDF::create_pdf_pointer<CoeffType>(_pdf);
-     return;
+     *this = rhs;
+  }
+
+  
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  BranchingRatioNode<CoeffType> &BranchingRatioNode<CoeffType>::operator=(const BranchingRatioNode<StateType> &rhs)
+  {
+     if(this != &rhs)
+     {
+       _pdf = rhs.pdf();
+       _id  = rhs.id();
+       _n_channels = rhs.n_channels();
+       _pdf_object = ManagePDF::create_pdf_pointer<CoeffType>(_pdf);
+     }
+
+     return *this;
   }
 
   template <typename CoeffType>
@@ -166,7 +191,25 @@ namespace Planet
   inline
   BasePdf<CoeffType> * BranchingRatioNode<CoeffType>::pdf_object_ptr()
   {
+     if(_pdf_object)
+     {
+       if(_pdf != _pdf_object->pdf())
+       {
+         std::cout << "What the hell???" << std::endl;
+//         _pdf_object->set_pdf_type(_pdf);
+       }
+     }
      return _pdf_object;
+  }
+
+  template <typename CoeffType>
+  inline
+  void BranchingRatioNode<CoeffType>::print(std::ostream &out) const
+  {
+     out << "Node " << _id << std::endl;
+     (_pdf_object)?out << "Distribution " << *_pdf_object:out << "No distribution associated";
+     out << std::endl;
+     out << _n_channels << " channels" << std::endl;
   }
 }
 

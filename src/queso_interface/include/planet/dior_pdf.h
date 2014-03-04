@@ -28,6 +28,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 
@@ -51,11 +52,14 @@ namespace Planet
         std::vector<unsigned int> n() const;
 
         const CoeffType value(unsigned int ip = 0) const;
+
+        void print(std::ostream &out = std::cout)  const;
   };
 
   template <typename CoeffType>
   inline
-  DiOrPdf<CoeffType>::DiOrPdf()
+  DiOrPdf<CoeffType>::DiOrPdf():
+      BasePdf<CoeffType>(PDFName::DiOr)
   {
      return;
   }
@@ -104,6 +108,20 @@ namespace Planet
      {
        _n[i] = (unsigned int)pars[i];
      }
+  }
+
+  template <typename CoeffType>
+  inline
+  void DiOrPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "DiOr("
+         << _n[0];
+
+     for(unsigned int ibr = 1; ibr < _n.size(); ibr++)
+     {
+        out << "," << _n[ibr];
+     }
+     out << ")";
   }
 }
 

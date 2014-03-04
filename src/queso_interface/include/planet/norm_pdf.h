@@ -28,6 +28,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 
@@ -60,11 +61,14 @@ namespace Planet
 
         const CoeffType value(unsigned int ip = 0) const;
 
+        void print(std::ostream &out = std::cout)  const;
+
   };
 
   template <typename CoeffType>
   inline
   NormPdf<CoeffType>::NormPdf():
+      BasePdf<CoeffType>(PDFName::Norm),
       _mu(0.L),
       _sigma(0.L)
   {
@@ -74,6 +78,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   NormPdf<CoeffType>::NormPdf(const CoeffType &mu, const CoeffType &sigma):
+      BasePdf<CoeffType>(PDFName::Norm),
       _mu(mu),
       _sigma(sigma)
   {
@@ -133,6 +138,14 @@ namespace Planet
       _mu    = pars[0];
       _sigma = pars[1];
   }
-}
+
+  template <typename CoeffType>
+  inline
+  void NormPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "Norm(" << _mu << "," << _sigma << ")";
+  }
+
+}//end namespace
 
 #endif

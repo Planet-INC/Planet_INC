@@ -28,6 +28,7 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
+#include "planet/base_pdf.h"
 
 //C++
 
@@ -59,11 +60,14 @@ namespace Planet
         const CoeffType f() const;
 
         const CoeffType value(unsigned int ip = 0) const;
+
+        void print(std::ostream &out = std::cout)  const;
   };
 
   template <typename CoeffType>
   inline
   LogNPdf<CoeffType>::LogNPdf():
+      BasePdf<CoeffType>(PDFName::LogN),
       _mu(0.L),
       _f(0.L)
   {
@@ -73,6 +77,7 @@ namespace Planet
   template <typename CoeffType>
   inline
   LogNPdf<CoeffType>::LogNPdf(const CoeffType &mu, const CoeffType &f):
+      BasePdf<CoeffType>(PDFName::LogN),
       _mu(mu),
       _f(f)
   {
@@ -131,6 +136,14 @@ namespace Planet
       antioch_assert_equal_to(pars.size(),2);
       _mu = pars[0];
       _f  = pars[1];
+  }
+
+  template <typename CoeffType>
+  inline
+  void LogNPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "LogN(" << _mu  << "," << _f
+                    << ")";
   }
 }
 

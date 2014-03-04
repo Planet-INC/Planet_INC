@@ -159,8 +159,6 @@ namespace Planet
           break;
        }
 
-       pdf->set_pdf_type(type_pdf);
-
        return pdf;
      }
 
