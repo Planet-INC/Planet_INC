@@ -31,6 +31,7 @@
 #include "planet/base_pdf.h"
 
 //C++
+#include <vector>
 
 namespace Planet
 {
