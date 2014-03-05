@@ -19,6 +19,11 @@ check_PROGRAMS += pdf_nort_unit
 check_PROGRAMS += pdf_logn_unit
 check_PROGRAMS += pdf_logu_unit
 check_PROGRAMS += pdf_unif_unit
+check_PROGRAMS += pdf_diri_unit
+check_PROGRAMS += pdf_diun_unit
+check_PROGRAMS += pdf_diut_unit
+check_PROGRAMS += pdf_dirg_unit
+check_PROGRAMS += pdf_dior_unit
 check_PROGRAMS += ionospheric_test
 
 AM_CPPFLAGS  = 
@@ -58,6 +63,11 @@ pdf_nort_unit_SOURCES = pdf_nort_unit.C
 pdf_logn_unit_SOURCES = pdf_logn_unit.C
 pdf_logu_unit_SOURCES = pdf_logu_unit.C
 pdf_unif_unit_SOURCES = pdf_unif_unit.C
+pdf_diri_unit_SOURCES = pdf_diri_unit.C
+pdf_diun_unit_SOURCES = pdf_diun_unit.C
+pdf_diut_unit_SOURCES = pdf_diut_unit.C
+pdf_dirg_unit_SOURCES = pdf_dirg_unit.C
+pdf_dior_unit_SOURCES = pdf_dior_unit.C
 solver_test_SOURCES = solver_test.C
 ionospheric_test_SOURCES = ionospheric_test.C
 
@@ -80,6 +90,11 @@ TESTS += pdf_nort_unit
 TESTS += pdf_logn_unit
 TESTS += pdf_logu_unit
 TESTS += pdf_unif_unit
+TESTS += pdf_diri_unit
+TESTS += pdf_diun_unit
+TESTS += pdf_diut_unit
+TESTS += pdf_dirg_unit
+TESTS += pdf_dior_unit
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

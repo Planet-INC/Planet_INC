@@ -138,7 +138,7 @@ namespace Planet
       CoeffType sum(0.L);
       for(unsigned int i = 0; i < _min.size(); i++)
       {
-          out[i] = (_min[i] + _max[ip])/2.L;
+          out[i] = (_min[i] + _max[i])/2.L;
           sum += out[i];
       }
       for(unsigned int i = 0; i < _min.size(); i++)

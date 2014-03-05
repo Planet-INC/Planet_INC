@@ -31,6 +31,7 @@
 #include "planet/base_pdf.h"
 
 //C++
+#include <vector>
 
 namespace Planet
 {
@@ -42,6 +43,7 @@ namespace Planet
 
       public:
         DiOrPdf();
+        DiOrPdf(const std::vector<unsigned int> &n);
         ~DiOrPdf();
 
         template <typename StateType>
@@ -60,6 +62,15 @@ namespace Planet
   inline
   DiOrPdf<CoeffType>::DiOrPdf():
       BasePdf<CoeffType>(PDFName::DiOr)
+  {
+     return;
+  }
+
+  template <typename CoeffType>
+  inline
+  DiOrPdf<CoeffType>::DiOrPdf(const std::vector<unsigned int> &n):
+      BasePdf<CoeffType>(PDFName::DiOr),
+      _n(n)
   {
      return;
   }
