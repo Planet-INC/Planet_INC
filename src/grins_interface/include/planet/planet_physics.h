@@ -159,8 +159,8 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::element_time_derivative( bool compute_jacobian,
-                                               GRINS::AssemblyContext& context,
-                                               GRINS::CachedValues& cache )
+                                                                                          GRINS::AssemblyContext& context,
+                                                                                          GRINS::CachedValues& /*cache*/ )
   {
     unsigned int n_qpoints = context.get_element_qrule().n_points();
 
@@ -232,8 +232,8 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::mass_residual( bool compute_jacobian,
-                                     GRINS::AssemblyContext& context,
-                                     GRINS::CachedValues& cache )
+                                                                                GRINS::AssemblyContext& context,
+                                                                                GRINS::CachedValues& /*cache*/ )
   {
     unsigned int n_qpoints = context.get_element_qrule().n_points();
 
