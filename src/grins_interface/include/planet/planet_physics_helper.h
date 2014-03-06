@@ -45,6 +45,8 @@ namespace Planet
   {
   public:
 
+    PlanetPhysicsHelper( const GetPot& input );
+
     PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &compo,
                         AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics = NULL,
                         DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion = NULL);
@@ -104,6 +106,13 @@ namespace Planet
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;//for first guess
 
   };
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper( const GetPot& input )
+  {
+    return;
+  }
+
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
