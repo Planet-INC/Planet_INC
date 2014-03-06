@@ -90,3 +90,7 @@ src/.license.stamp
 src/version.o
 src/utilities/include/planet/planet_version.h
 doxygen/txt_common/about_vpath.page
+src/physics_factory.lo
+src/physics_factory.o
+src/planet_physics_instantiate.lo
+src/planet_physics_instantiate.o
