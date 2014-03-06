@@ -293,9 +293,37 @@ namespace Planet
     this->read_temperature(T0,Tz,input_T);
     _temperature = new AtmosphericTemperature<CoeffType,VectorCoeffType>(T0,T0,Tz,Tz);
 
-    _diffusion = new DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( molecular_diffusion, eddy_diffusion, composition, temperature );
+    // Read neutral and ionic species from input
+    unsigned int n_neutral = input.vector_variable_size("Planet/neutral_species");
+    unsigned int n_ionic = input.vector_variable_size("Planet/ionic_species");
 
-    _kinetics = new AtmosphericKinetics<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( neutral_kinetics, ionic_kinetics, temperature, photon, *_composition );
+    std::vector<std::string> neutrals(n_neutral);
+    std::vector<std::string> ions(n_ionic);
+
+    for( unsigned int s = 0; s < n_neutral; s++ )
+      {
+        neutrals[s] = input("Planet/neutral_species", "DIE!", s);
+      }
+
+    for( unsigned int s = 0; s < n_neutral; s++ )
+      {
+        ions[s] = input("Planet/ionic_species", "DIE!", s);
+      }
+
+    _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals);
+    _ionic_species = new Antioch::ChemicalMixture<CoeffType>(ions);
+
+    // Build up reaction sets
+    _neutral_reaction_set = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
+    _ionic_reaction_set = new Antioch::ReactionSet<CoeffType>(*_ionic_species);
+    _neut_reac_theo = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
+
+    _composition = new AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>( _neutral_species, _ionic_species, _temperature );
+
+    /*
+    _diffusion = new DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>( _molecular_diffusion, _eddy_diffusion, _composition, _temperature );
+
+    _kinetics = new AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>( _neutral_kinetics, _ionic_kinetics, _temperature, _photon, *_composition );
     */
 
     return;
