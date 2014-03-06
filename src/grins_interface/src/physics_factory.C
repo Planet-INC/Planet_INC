@@ -21,33 +21,42 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_PHYSICS_FACTORY_H
-#define PLANET_PHYSICS_FACTORY_H
+// This class
+#include "planet/physics_factory.h"
 
-#include "grins/physics_factory.h"
+// Planet
+#include "planet/physics_names.h"
 
 namespace Planet
 {
-  //! Build PlanetPhysics
-  /*!
-   * Extends the underlying GRINS::PhysicsFactory to build
-   * PlanetPhysics, but still play nice with other GRINS::Physics.
-   */
-  class PhysicsFactory : public GRINS::PhysicsFactory
+
+  PhysicsFactory::PhysicsFactory()
+    : GRINS::PhysicsFactory()
   {
-  public:
+    return;
+  }
 
-    PhysicsFactory();
+  PhysicsFactory::~PhysicsFactory()
+  {
+    return;
+  }
 
-    virtual ~PhysicsFactory();
+  void PhysicsFactory::add_physics( const GetPot& input,
+                                    const std::string& physics_to_add,
+                                    GRINS::PhysicsList& physics_list )
+  {
+    // Deal with creating PlanetPhysics
+    if( physics_to_add == planet_physics )
+      {
+        
+      }
+    // Call base class otherwise
+    else
+      {
+        GRINS::PhysicsFactory::add_physics(input,physics_to_add,physics_list);
+      }
 
-  protected:
-
-    virtual void add_physics( const GetPot& input,
-			      const std::string& physics_to_add,
-			      GRINS::PhysicsList& physics_list );
-  };
+    return;
+  }
 
 } // end namespace Planet
-
-#endif // PLANET_PHYSICS_FACTORY_H
