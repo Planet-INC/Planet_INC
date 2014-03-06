@@ -36,6 +36,7 @@
 // libMesh
 #include "libmesh/libmesh_common.h"
 #include "libmesh/string_to_enum.h"
+#include "libmesh/getpot.h"
 
 namespace Planet
 {
