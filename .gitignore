@@ -89,3 +89,4 @@ src/planet_version.o
 src/.license.stamp
 src/version.o
 src/utilities/include/planet/planet_version.h
+doxygen/txt_common/about_vpath.page
