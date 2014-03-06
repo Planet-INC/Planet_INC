@@ -731,7 +731,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
  * fifth level
  **************************/
 
-  Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > helper(composition,&kinetics,&diffusion);
+  Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > helper(&composition,&kinetics,&diffusion);
 
 /************************
  * solver here, Paul work here

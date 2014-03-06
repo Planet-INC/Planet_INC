@@ -48,7 +48,7 @@ namespace Planet
 
     PlanetPhysicsHelper( const GetPot& input );
 
-    PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &compo,
+    PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> *compo,
                         AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics = NULL,
                         DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion = NULL);
 
@@ -86,8 +86,9 @@ namespace Planet
 
   private:
 
-    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> *_kinetics;
-    DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType> *_diffusion;
+    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
+    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>* _kinetics;
+    DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
 
     template<typename VectorStateType, typename StateType>
     void update_cache(const VectorStateType &molar_concentrations, const StateType &z);
@@ -144,7 +145,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &compo,
+  PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> *compo,
                                                         AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics,
                                                         DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion):
         _kinetics(kinetics),
@@ -180,8 +181,8 @@ namespace Planet
   {
      if(!_cache.count(z))
      {
-        VectorCoeffType first_sum_guess = Antioch::zero_clone(_composition.neutral_molar_fraction_bottom());
-        _composition.first_guess_densities_sum(z,first_sum_guess);
+        VectorCoeffType first_sum_guess = Antioch::zero_clone(_composition->neutral_molar_fraction_bottom());
+        _composition->first_guess_densities_sum(z,first_sum_guess);
         return first_sum_guess;
      }else
      {
@@ -238,21 +239,21 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
   {
-      _composition.first_guess_densities(z,molar_concentrations_first_guess);
+      _composition->first_guess_densities(z,molar_concentrations_first_guess);
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename VectorStateType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::lower_boundary_dirichlet(VectorStateType & lower_boundary) const
   {
-      _composition.lower_boundary_concentrations(lower_boundary);
+      _composition->lower_boundary_concentrations(lower_boundary);
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename VectorStateType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const
   {
-      _composition.upper_boundary_fluxes(upper_boundary, molar_densities);
+      _composition->upper_boundary_fluxes(upper_boundary, molar_densities);
   }
 
 
