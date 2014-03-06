@@ -25,7 +25,9 @@
 #define PLANET_PLANET_PHYSICS_HELPER_H
 
 //Antioch
+#include "antioch/vector_utils_decl.h"
 #include "antioch/metaprogramming.h"
+#include "antioch/vector_utils.h"
 
 //Planet
 #include "planet/diffusion_evaluator.h"
