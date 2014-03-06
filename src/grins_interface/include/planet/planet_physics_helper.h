@@ -105,13 +105,23 @@ namespace Planet
     VectorCoeffType _cache_altitudes;
     std::map<CoeffType,VectorCoeffType> _cache;
 
-    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;//for first guess
+    /*! Convenience method to hide all the construction code for
+        composition, kinetics, and diffusion */
+    void build_helper();
 
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper( const GetPot& input )
+    : _composition(NULL),
+      _kinetics(NULL),
+      _diffusion(NULL)
   {
+    this->build_helper();
+
+    _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+    _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+
     return;
   }
 
@@ -256,6 +266,19 @@ namespace Planet
       _composition->upper_boundary_fluxes(upper_boundary, molar_densities);
   }
 
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_helper()
+  {
+    /*
+    _composition = new AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( neutral_species, ionic_species, temperature );
+
+    _diffusion = new DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( molecular_diffusion, eddy_diffusion, composition, temperature );
+
+    _kinetics = new AtmosphericKinetics<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( neutral_kinetics, ionic_kinetics, temperature, photon, *_composition );
+    */
+
+    return;
+  }
 
 } // end namespace Planet
 
