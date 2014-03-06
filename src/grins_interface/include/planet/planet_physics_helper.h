@@ -118,6 +118,9 @@ namespace Planet
     Antioch::ReactionSet<CoeffType>* _ionic_reaction_set;
     Antioch::ReactionSet<CoeffType>* _neut_reac_theo;
 
+    // Helper functions for build_helper
+    void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
+
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -284,13 +287,36 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_helper(const GetPot& input)
   {
-    /*
-    _composition = new AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( neutral_species, ionic_species, temperature );
+    // Read temperature profile
+    std::string input_T = input( "Planet/temperature_file", "DIE!" );
+    std::vector<CoeffType> T0,Tz;
+    this->read_temperature(T0,Tz,input_T);
+    _temperature = new AtmosphericTemperature<CoeffType,VectorCoeffType>(T0,T0,Tz,Tz);
 
     _diffusion = new DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( molecular_diffusion, eddy_diffusion, composition, temperature );
 
     _kinetics = new AtmosphericKinetics<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( neutral_kinetics, ionic_kinetics, temperature, photon, *_composition );
     */
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const
+  {
+    T0.clear();
+    Tz.clear();
+    std::string line;
+    std::ifstream temp(file);
+    getline(temp,line);
+    while(!temp.eof())
+      {
+        CoeffType t,tz,dt,dtz;
+        temp >> t >> tz >> dt >> dtz;
+        T0.push_back(t);
+        Tz.push_back(tz);
+      }
+    temp.close();
 
     return;
   }
