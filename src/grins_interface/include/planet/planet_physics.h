@@ -28,6 +28,7 @@
 #include "grins/var_typedefs.h"
 #include "grins/assembly_context.h"
 #include "grins/cached_values.h"
+#include "grins/bc_handling_base.h"
 
 // Planet
 #include "planet/planet_physics_helper.h"
