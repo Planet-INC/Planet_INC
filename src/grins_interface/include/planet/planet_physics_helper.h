@@ -88,7 +88,7 @@ namespace Planet
 
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>* _kinetics;
-    DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
+    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
 
     template<typename VectorStateType, typename StateType>
     void update_cache(const VectorStateType &molar_concentrations, const StateType &z);
