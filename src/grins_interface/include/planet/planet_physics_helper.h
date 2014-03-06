@@ -107,7 +107,16 @@ namespace Planet
 
     /*! Convenience method to hide all the construction code for
         composition, kinetics, and diffusion */
-    void build_helper();
+    void build_helper( const GetPot& input );
+
+    // Additional data structures that need to be cached
+    AtmosphericTemperature<CoeffType,VectorCoeffType>* _temperature;
+    Antioch::ChemicalMixture<CoeffType>* _neutral_species;
+    Antioch::ChemicalMixture<CoeffType>* _ionic_species;
+
+    Antioch::ReactionSet<CoeffType>* _neutral_reaction_set;
+    Antioch::ReactionSet<CoeffType>* _ionic_reaction_set;
+    Antioch::ReactionSet<CoeffType>* _neut_reac_theo;
 
   };
 
@@ -115,9 +124,15 @@ namespace Planet
   PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper( const GetPot& input )
     : _composition(NULL),
       _kinetics(NULL),
-      _diffusion(NULL)
+      _diffusion(NULL),
+      _temperature(NULL),
+      _neutral_species(NULL),
+      _ionic_species(NULL),
+      _neutral_reaction_set(NULL),
+      _ionic_reaction_set(NULL),
+      _neut_reac_theo(NULL)
   {
-    this->build_helper();
+    this->build_helper(input);
 
     _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
     _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
@@ -267,7 +282,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_helper()
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_helper(const GetPot& input)
   {
     /*
     _composition = new AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > >( neutral_species, ionic_species, temperature );
