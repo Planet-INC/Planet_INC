@@ -26,6 +26,7 @@
 
 // Planet
 #include "planet/physics_names.h"
+#include "planet/planet_physics.h"
 
 namespace Planet
 {
@@ -45,10 +46,16 @@ namespace Planet
                                     const std::string& physics_to_add,
                                     GRINS::PhysicsList& physics_list )
   {
+    // Convenience
+    typedef std::tr1::shared_ptr<GRINS::Physics> PhysicsPtr;
+
     // Deal with creating PlanetPhysics
     if( physics_to_add == planet_physics )
       {
-        
+        /* For now, just using standard types. Can generalize later to other types
+           from input. */
+        physics_list[physics_to_add] =
+          PhysicsPtr( new PlanetPhysics<double,std::vector<double>, std::vector<std::vector<double> > >(physics_to_add,input) );
       }
     // Call base class otherwise
     else
