@@ -27,9 +27,9 @@ libplanet_la_SOURCES +=
 # utilities
 libplanet_la_SOURCES += utilities/src/planet_version.C
 
-# grins_interface, all templated
-libplanet_la_SOURCES += #grins_interface/src/planet_physics.C
-libplanet_la_SOURCES += #grins_interface/src/planet_physics_helper.C
+# grins_interface
+libplanet_la_SOURCES += grins_interface/src/physics_factory.C
+
 
 #----------------------------
 # INCLUDES we want distributed
@@ -55,6 +55,8 @@ include_HEADERS += kinetics/include/planet/atmospheric_kinetics.h
 # grins_interface
 include_HEADERS += grins_interface/include/planet/planet_physics.h
 include_HEADERS += grins_interface/include/planet/planet_physics_helper.h
+include_HEADERS += grins_interface/include/planet/physics_factory.h
+include_HEADERS += grins_interface/include/planet/physics_names.h
 
 # temperature
 include_HEADERS += temperature/include/planet/atmospheric_temperature.h
