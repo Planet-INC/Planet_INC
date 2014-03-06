@@ -89,7 +89,7 @@ namespace Planet
     //! Element orders, read from input
     libMeshEnums::Order _species_order;
 
-    PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType> _helper;
+    PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>* _helper;
 
   private:
 
@@ -103,7 +103,8 @@ namespace Planet
     : GRINS::Physics(physics_name,input), 
       _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
       _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
-      _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) )
+      _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
+    _helper(NULL)
   {
      _species_var_names.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
@@ -204,12 +205,12 @@ namespace Planet
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            _helper.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
+            _helper->compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
                             r - Constants::Titan::radius<double>() ) ; // z
 
-            libMesh::Real omega = _helper.diffusion_term(s);
+            libMesh::Real omega = _helper->diffusion_term(s);
 
-            libMesh::Real omega_dot = _helper.chemical_term(s);
+            libMesh::Real omega_dot = _helper->chemical_term(s);
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
