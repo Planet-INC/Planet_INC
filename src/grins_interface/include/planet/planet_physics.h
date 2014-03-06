@@ -26,22 +26,17 @@
 // GRINS
 #include "grins/physics.h"
 #include "grins/var_typedefs.h"
-
-namespace GRINS
-{
-  class AssemblyContext;
-  class CachedValues;
-}
+#include "grins/assembly_context.h"
+#include "grins/cached_values.h"
 
 // Planet
 #include "planet/planet_physics_helper.h"
 
 // libMesh
-class GetPot;
-namespace libMesh
-{
-  class FEMSystem;
-}
+#include "libmesh/getpot.h"
+#include "libmesh/fem_system.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/quadrature.h"
 
 namespace Planet
 {
@@ -72,9 +67,9 @@ namespace Planet
                                 GRINS::AssemblyContext& context,
                                 GRINS::CachedValues& cache );
 
-    virtual void Physics::side_time_derivative( bool /*compute_jacobian*/,
-				      AssemblyContext& /*context*/,
-				      CachedValues& /*cache*/ );
+    virtual void side_time_derivative( bool /*compute_jacobian*/,
+                                       GRINS::AssemblyContext& /*context*/,
+                                       GRINS::CachedValues& /*cache*/ );
 
   protected:
 
@@ -273,7 +268,7 @@ namespace Planet
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
-                Fs(i) += ( n_s_dot*phi[i][qp] )*jac;
+                Fs(i) += ( n_s_dot*s_phi[i][qp] )*jac;
 
                 if( compute_jacobian )
                   {
