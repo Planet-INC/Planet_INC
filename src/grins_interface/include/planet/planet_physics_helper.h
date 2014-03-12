@@ -54,12 +54,6 @@ namespace Planet
 
     ~PlanetPhysicsHelper();
 
-    template <typename StateType, typename VectorStateType, typename MatrixStateType>
-    void set_kinetics(AtmosphericKinetics<StateType,VectorStateType,MatrixStateType> *kinetics);
-
-    template <typename StateType, typename VectorStateType, typename MatrixStateType>
-    void set_diffusion(DiffusionEvaluator<StateType,VectorStateType,MatrixStateType> *diffusion);
-
     libMesh::Real diffusion_term(unsigned int s) const;
 
     libMesh::Real chemical_term(unsigned int s)  const;
@@ -174,20 +168,6 @@ namespace Planet
    this->update_cache(molar_concentrations,z);
 
     return;
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template <typename StateType, typename VectorStateType, typename MatrixStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::set_kinetics(AtmosphericKinetics<StateType,VectorStateType,MatrixStateType> *kinetics)
-  {
-     _kinetics = kinetics;
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template <typename StateType, typename VectorStateType, typename MatrixStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::set_diffusion(DiffusionEvaluator <StateType,VectorStateType,MatrixStateType> *diffusion)
-  {
-     _diffusion = diffusion;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
