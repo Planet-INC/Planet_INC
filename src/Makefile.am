@@ -55,6 +55,7 @@ include_HEADERS += kinetics/include/planet/atmospheric_kinetics.h
 # grins_interface
 include_HEADERS += grins_interface/include/planet/planet_physics.h
 include_HEADERS += grins_interface/include/planet/planet_physics_helper.h
+include_HEADERS += grins_interface/include/planet/planet_physics_evaluator.h
 include_HEADERS += grins_interface/include/planet/physics_factory.h
 include_HEADERS += grins_interface/include/planet/physics_names.h
 
