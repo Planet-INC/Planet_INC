@@ -28,6 +28,10 @@
 #include "antioch/vector_utils_decl.h"
 #include "antioch/metaprogramming.h"
 #include "antioch/vector_utils.h"
+#include "antioch/physical_constants.h"
+#include "antioch/string_utils.h"
+#include "antioch/kinetics_parsing.h"
+#include "antioch/reaction_parsing.h"
 
 //Planet
 #include "planet/diffusion_evaluator.h"
@@ -148,6 +152,14 @@ namespace Planet
 
     // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
+
+    void fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
+                                           const std::string &N2_hv_file,
+                                           const std::string &CH4_hv_file,
+                                           Antioch::ReactionSet<CoeffType>& neutral_reaction_set );
+
+    void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
+                                        Antioch::ReactionSet<CoeffType>& neutral_reaction_set);
 
   };
 
@@ -445,6 +457,152 @@ namespace Planet
     temp.close();
 
     return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
+                                                                                                         const std::string &N2_hv_file,
+                                                                                                         const std::string &CH4_hv_file,
+                                                                                                         Antioch::ReactionSet<CoeffType> &neutral_reaction_set)
+  {
+    //here only simple ones: bimol Kooij/Arrhenius model
+    std::ifstream data(neutral_reactions_file.c_str());
+    std::string line;
+    getline(data,line); //title
+    Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::KOOIJ);
+    Antioch::ReactionType::ReactionType reactionType(Antioch::ReactionType::ELEMENTARY);
+    const Antioch::ChemicalMixture<CoeffType>& chem_mixture = neutral_reaction_set.chemical_mixture();
+    while(!data.eof())
+      {
+        if(!getline(data,line))break;
+        std::vector<std::string> reactants;
+        std::vector<std::string> products;
+
+        bool skip(false);
+        std::string equation;
+        std::vector<unsigned int> stoi_reac;
+        std::vector<unsigned int> stoi_prod;
+        parse_equation(reactants,products,line,skip,chem_mixture,equation,stoi_reac,stoi_prod);
+
+        if(skip)continue;
+
+        VectorCoeffType dataf;
+        std::vector<std::string> str_data;
+        Antioch::SplitString(line," ",str_data,false);
+        if(str_data.size() != 4)
+          {
+            std::cerr << "data are badly shaped, need 4 numbers in this line\n"
+                      << line << std::endl;
+            antioch_error();
+          }
+
+        dataf.push_back(std::atof(str_data[0].c_str())); //Cf
+        if(dataf[1] == 0.) //Arrhenius
+          {
+            kineticsModel = Antioch::KineticsModel::ARRHENIUS;
+          }else
+          {
+            dataf.push_back(std::atof(str_data[1].c_str())); //beta
+          }
+        dataf.push_back(std::atof(str_data[2].c_str()));//Ea
+
+        if(kineticsModel == Antioch::KineticsModel::KOOIJ)dataf.push_back(1.); //Tref
+        dataf.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
+
+
+        Antioch::KineticsType<CoeffType, VectorCoeffType>* rate = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf,kineticsModel); //kinetics rate
+        Antioch::Reaction<CoeffType> * reaction = Antioch::build_reaction<CoeffType>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
+        reaction->add_forward_rate(rate);
+
+        for(unsigned int ir = 0; ir < reactants.size(); ir++)
+          {
+            reaction->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+          }
+        for(unsigned int ip = 0; ip < products.size(); ip++)
+          {
+            reaction->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+          }
+        neutral_reaction_set.add_reaction(reaction);
+      }
+    data.close();
+    //now the photochemical ones
+    read_photochemistry_reac(N2_hv_file, "N2", neutral_reaction_set);
+    read_photochemistry_reac(CH4_hv_file, "CH4", neutral_reaction_set);
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
+                                                                                                      Antioch::ReactionSet<CoeffType> &neutral_reaction_set)
+  {
+    //Lindemann
+    std::ifstream data(neutral_reactions_file.c_str());
+    std::string line;
+    getline(data,line); //title
+    getline(data,line); //title
+    getline(data,line); //title
+    Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::KOOIJ);
+    Antioch::ReactionType::ReactionType reactionType(Antioch::ReactionType::LINDEMANN_FALLOFF);
+    const Antioch::ChemicalMixture<CoeffType>& chem_mixture = neutral_reaction_set.chemical_mixture();
+    while(!data.eof())
+      {
+        if(!getline(data,line))break;
+        std::vector<std::string> reactants;
+        std::vector<std::string> products;
+
+        bool skip(false);
+        std::string equation;
+        std::vector<unsigned int> stoi_reac;
+        std::vector<unsigned int> stoi_prod;
+        parse_equation(reactants,products,line,skip,chem_mixture,equation,stoi_reac,stoi_prod);
+        if(skip)continue;
+        VectorCoeffType dataf1,dataf2;
+        std::vector<std::string> str_data;
+        Antioch::SplitString(line," ",str_data,false);
+        if(str_data.size() != 7)
+          {
+            std::cerr << "data are badly shaped, need 7 numbers in this line\n"
+                      << line << std::endl;
+            antioch_error();
+          }
+
+        dataf1.push_back(std::atof(str_data[0].c_str()));
+        dataf2.push_back(std::atof(str_data[3].c_str()));
+        if(str_data[1] == "0" && str_data[4] == "0")
+          {
+            kineticsModel = Antioch::KineticsModel::ARRHENIUS;
+          }else
+          {
+            dataf1.push_back(std::atof(str_data[1].c_str()));
+            dataf2.push_back(std::atof(str_data[4].c_str()));
+          }
+        dataf1.push_back(std::atof(str_data[2].c_str()));
+        dataf2.push_back(std::atof(str_data[5].c_str()));
+        if(kineticsModel == Antioch::KineticsModel::KOOIJ)
+          {
+            dataf1.push_back(1.); //Tref
+            dataf2.push_back(1.); //Tref
+          }
+        dataf1.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
+        dataf2.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
+
+        Antioch::KineticsType<CoeffType, VectorCoeffType>* rate1 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf1,kineticsModel); //kinetics rate
+        Antioch::KineticsType<CoeffType, VectorCoeffType>* rate2 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf2,kineticsModel); //kinetics rate
+        Antioch::Reaction<CoeffType> * reaction = Antioch::build_reaction<CoeffType>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
+        reaction->add_forward_rate(rate1);
+        reaction->add_forward_rate(rate2);
+
+        for(unsigned int ir = 0; ir < reactants.size(); ir++)
+          {
+            reaction->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+          }
+        for(unsigned int ip = 0; ip < products.size(); ip++)
+          {
+            reaction->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+          }
+        neutral_reaction_set.add_reaction(reaction);
+
+      }
+    data.close();
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
