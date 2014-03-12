@@ -82,7 +82,7 @@ namespace Planet
     template<typename VectorStateType>
     void upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const;
 
-    
+    const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& composition() const;
 
   private:
 
@@ -347,6 +347,12 @@ namespace Planet
     temp.close();
 
     return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::composition() const
+  {
+    return *_composition;
   }
 
 } // end namespace Planet
