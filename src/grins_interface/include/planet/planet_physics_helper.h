@@ -128,6 +128,10 @@ namespace Planet
 
     std::vector<std::vector<BinaryDiffusion<CoeffType> > > _bin_diff_coeff;
 
+    //! Parameter for diffusion
+    /*! Needs to be cached because some Evaluators depend on this value */
+    CoeffType _K0;
+
     PhotonOpacity<CoeffType,VectorCoeffType>* _tau;
 
     // Helper functions for build_helper
