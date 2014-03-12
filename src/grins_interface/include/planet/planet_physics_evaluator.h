@@ -65,13 +65,13 @@ namespace Planet
     Antioch::KineticsEvaluator<CoeffType> _neutral_kinetics;
     Antioch::KineticsEvaluator<CoeffType> _ionic_kinetics;
 
-    Planet::PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _photon;
+    PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _photon;
 
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
     DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
 
-    Planet::MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _molecular_diffusion;
-    Planet::EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _eddy_diffusion;
+    MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _molecular_diffusion;
+    EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _eddy_diffusion;
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
@@ -100,7 +100,7 @@ namespace Planet
     _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
     _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
 
-    _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Planet::Constants::Saturn::d_Sun<CoeffType>());
+    _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Constants::Saturn::d_Sun<CoeffType>());
 
     /*! \todo This call to set_particle_flux is going to kill thread safety because
               it's resetting stuff in the ReactionSet */
