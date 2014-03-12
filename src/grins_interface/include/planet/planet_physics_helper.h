@@ -134,6 +134,18 @@ namespace Planet
         composition, kinetics, and diffusion */
     void build( const GetPot& input );
 
+    /*! Convenience method within a convenience method */
+    void build_temperature( const GetPot& input );
+
+    /*! Convenience method within a convenience method */
+    void build_species( const GetPot& input );
+
+    /*! Convenience method within a convenience method */
+    void build_reaction_sets( const GetPot& input );
+
+    /*! Convenience method within a convenience method */
+    void build_composition( const GetPot& input );
+
     // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
 
@@ -291,12 +303,33 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
-    // Read temperature profile
+    this->build_temperature(input);
+
+    this->build_species(input);
+
+    // Must be called after: build_species
+    this->build_reaction_sets(input);
+
+    // Must be called after: build_temperature, build_species
+    this->build_composition(input);
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_temperature( const GetPot& input )
+  {
     std::string input_T = input( "Planet/temperature_file", "DIE!" );
     std::vector<CoeffType> T0,Tz;
     this->read_temperature(T0,Tz,input_T);
     _temperature = new AtmosphericTemperature<CoeffType,VectorCoeffType>(T0,T0,Tz,Tz);
 
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_species( const GetPot& input )
+  {
     // Read neutral and ionic species from input
     unsigned int n_neutral = input.vector_variable_size("Planet/neutral_species");
     unsigned int n_ionic = input.vector_variable_size("Planet/ionic_species");
@@ -317,18 +350,79 @@ namespace Planet
     _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals);
     _ionic_species = new Antioch::ChemicalMixture<CoeffType>(ions);
 
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_reaction_sets( const GetPot& input )
+  {
     // Build up reaction sets
     _neutral_reaction_set = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
     _ionic_reaction_set = new Antioch::ReactionSet<CoeffType>(*_ionic_species);
     _neut_reac_theo = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
 
+    if( !input.have_variable("Planet/input_reactions_elem") )
+      {
+        std::cerr << "Error: could not find input_reactions_elem filename!" << std::endl;
+        antioch_error();
+      }
+
+    if( !input.have_variable("Planet/input_reactions_fall") )
+      {
+        std::cerr << "Error: could not find input_reactions_fall filename!" << std::endl;
+        antioch_error();
+      }
+
+    if( !input.have_variable("Planet/input_N2") )
+      {
+        std::cerr << "Error: could not find input_N2 filename!" << std::endl;
+        antioch_error();
+      }
+
+    if( !input.have_variable("Planet/input_CH4") )
+      {
+        std::cerr << "Error: could not find input_CH4 filename!" << std::endl;
+        antioch_error();
+      }
+
+    std::string input_reactions_elem = input( "Planet/input_reactions_elem", "DIE!" );
+    std::string input_reactions_fall = input( "Planet/input_reactions_fall", "DIE!" );
+    std::string input_N2  = input( "Planet/input_N2", "DIE!" );
+    std::string input_CH4 = input( "Planet/input_CH4", "DIE!" );
+
+    // here read the reactions, Antioch will take care of it once hdf5, no ionic reactions there
+    //Kooij / Arrhenius + photochem
+    this->fill_neutral_reactions_elementary(input_reactions_elem, input_N2, input_CH4, *_neutral_reaction_set);
+
+    this->fill_neutral_reactions_falloff(input_reactions_fall, *_neutral_reaction_set);
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input )
+  {
+
+    // Build AtmosphericMixture
     _composition = new AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>( _neutral_species, _ionic_species, _temperature );
 
-    /*
-    _diffusion = new DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>( _molecular_diffusion, _eddy_diffusion, _composition, _temperature );
+    if( !input.have_variable("Planet/zmin") )
+      {
+        std::cerr << "Error: zmin not found in input file!" << std::endl;
+        antioch_error();
+      }
 
-    _kinetics = new AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>( _neutral_kinetics, _ionic_kinetics, _temperature, _photon, *_composition );
-    */
+    if( !input.have_variable("Planet/zmax") )
+      {
+        std::cerr << "Error: zmax not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+    CoeffType zmin = input("Planet/zmin", 0.0 );
+    CoeffType zmax = input("Planet/zmin", 0.0 );
+
+    //_composition->init_composition(molar_frac, dens_tot, zmin, zmax);
+    //_composition->set_thermal_coefficient(tc);
 
     return;
   }
