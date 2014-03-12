@@ -104,10 +104,15 @@ namespace Planet
     MatrixCoeffType _cache_composition;
     VectorCoeffType _cache_altitudes;
     std::map<CoeffType,VectorCoeffType> _cache;
+    //const & lambda_hv() const;
 
     /*! Convenience method to hide all the construction code for
         composition, kinetics, and diffusion */
     void build_helper( const GetPot& input );
+    //const & phy1AU() const;
+
+    //const & medium() const;
+
 
     // Additional data structures that need to be cached
     AtmosphericTemperature<CoeffType,VectorCoeffType>* _temperature;
