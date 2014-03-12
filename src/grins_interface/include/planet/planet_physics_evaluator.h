@@ -61,6 +61,12 @@ namespace Planet
     const VectorCoeffType get_cache(const StateType &z) const;
 
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& _composition;
+
+    Antioch::KineticsEvaluator<CoeffType> _neutral_kinetics;
+    Antioch::KineticsEvaluator<CoeffType> _ionic_kinetics;
+
+    Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > _photon;
+
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
     DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
 
@@ -79,8 +85,11 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsEvaluator( PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>& helper )
-    : _composition(),
-      _kinetics(),
+    : _composition(helper.composition()),
+      _neutral_kinetics(helper.neutral_reaction_set(),0), /*! \todo generalize 0 for other types*/
+      _ionic_kinetics(helper.ionic_reaction_set(),0), /*! \todo generalize 0 for other types*/
+      _photon(helper.tau(),_composition),
+      _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition),
       _diffusion()
   {
     _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
