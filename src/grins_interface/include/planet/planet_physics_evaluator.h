@@ -65,10 +65,13 @@ namespace Planet
     Antioch::KineticsEvaluator<CoeffType> _neutral_kinetics;
     Antioch::KineticsEvaluator<CoeffType> _ionic_kinetics;
 
-    Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > _photon;
+    Planet::PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _photon;
 
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
     DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
+
+    Planet::MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _molecular_diffusion;
+    Planet::EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _eddy_diffusion;
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
@@ -89,11 +92,21 @@ namespace Planet
       _neutral_kinetics(helper.neutral_reaction_set(),0), /*! \todo generalize 0 for other types*/
       _ionic_kinetics(helper.ionic_reaction_set(),0), /*! \todo generalize 0 for other types*/
       _photon(helper.tau(),_composition),
+      _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature()),
+      _eddy_diffusion(_composition,helper.K0()),
       _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition),
-      _diffusion()
+      _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature())
   {
     _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
     _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+
+    _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Planet::Constants::Saturn::d_Sun<CoeffType>());
+
+    /*! \todo This call to set_particle_flux is going to kill thread safety because
+              it's resetting stuff in the ReactionSet */
+    helper.neutral_reaction_set().set_particle_flux(photon.photon_flux_ptr()); // reactions know the solar flux
+
+    molecular_diffusion.set_medium_species(helper.medium());
 
     return;
   }
