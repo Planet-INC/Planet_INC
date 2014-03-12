@@ -106,9 +106,6 @@ namespace Planet
     std::map<CoeffType,VectorCoeffType> _cache;
     //const & lambda_hv() const;
 
-    /*! Convenience method to hide all the construction code for
-        composition, kinetics, and diffusion */
-    void build_helper( const GetPot& input );
     //const & phy1AU() const;
 
     //const & medium() const;
@@ -133,7 +130,11 @@ namespace Planet
 
     PhotonOpacity<CoeffType,VectorCoeffType>* _tau;
 
-    // Helper functions for build_helper
+    /*! Convenience method to hide all the construction code for
+        composition, kinetics, and diffusion */
+    void build( const GetPot& input );
+
+    // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
 
   };
@@ -152,7 +153,7 @@ namespace Planet
       _chapman(NULL),
       _tau(NULL)
   {
-    this->build_helper(input);
+    this->build(input);
 
     _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
     _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
@@ -288,7 +289,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_helper(const GetPot& input)
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
     // Read temperature profile
     std::string input_T = input( "Planet/temperature_file", "DIE!" );
