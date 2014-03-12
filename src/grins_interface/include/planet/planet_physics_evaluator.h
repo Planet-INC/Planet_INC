@@ -106,7 +106,7 @@ namespace Planet
               it's resetting stuff in the ReactionSet */
     helper.neutral_reaction_set().set_particle_flux(photon.photon_flux_ptr()); // reactions know the solar flux
 
-    molecular_diffusion.set_medium_species(helper.medium());
+    _molecular_diffusion.set_medium_species(helper.medium());
 
     return;
   }
