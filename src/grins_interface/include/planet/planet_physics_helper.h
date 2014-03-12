@@ -85,19 +85,25 @@ namespace Planet
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& composition() const;
 
   private:
+    /*! \todo This should really be const. Need to fix up ParticleFlux stuff. */
+    Antioch::ReactionSet<CoeffType>& neutral_reaction_set();
 
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>* _kinetics;
     DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
+    const Antioch::ReactionSet<CoeffType>& ionic_reaction_set() const;
 
     template<typename VectorStateType, typename StateType>
     void update_cache(const VectorStateType &molar_concentrations, const StateType &z);
+    const PhotonOpacity<CoeffType,VectorCoeffType>& tau() const;
 
     void cache_recompute();
+    const std::vector<std::vector<BinaryDiffusion<CoeffType> > >& bin_diff_coeff() const;
 
     //! uses compo.barometric_density(z);
     template <typename StateType>
     const VectorCoeffType get_cache(const StateType &z) const;
+    const AtmosphericTemperature<CoeffType,VectorCoeffType>& temperature() const;
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
@@ -118,6 +124,12 @@ namespace Planet
     Antioch::ReactionSet<CoeffType>* _ionic_reaction_set;
     Antioch::ReactionSet<CoeffType>* _neut_reac_theo;
 
+    Chapman<CoeffType>* _chapman;
+
+    std::vector<std::vector<BinaryDiffusion<CoeffType> > > _bin_diff_coeff;
+
+    PhotonOpacity<CoeffType,VectorCoeffType>* _tau;
+
     // Helper functions for build_helper
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
 
@@ -133,7 +145,9 @@ namespace Planet
       _ionic_species(NULL),
       _neutral_reaction_set(NULL),
       _ionic_reaction_set(NULL),
-      _neut_reac_theo(NULL)
+      _neut_reac_theo(NULL),
+      _chapman(NULL),
+      _tau(NULL)
   {
     this->build_helper(input);
 
@@ -353,6 +367,36 @@ namespace Planet
   const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::composition() const
   {
     return *_composition;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  Antioch::ReactionSet<CoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_reaction_set()
+  {
+    return *_neutral_reaction_set;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const Antioch::ReactionSet<CoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::ionic_reaction_set() const
+  {
+    return *_ionic_reaction_set;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const PhotonOpacity<CoeffType,VectorCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::tau() const
+  {
+    return *_tau;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const std::vector<std::vector<BinaryDiffusion<CoeffType> > >& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::bin_diff_coeff() const
+  {
+    return _bin_diff_coeff;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const AtmosphericTemperature<CoeffType,VectorCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::temperature() const
+  {
+    return *_temperature;
   }
 
 } // end namespace Planet
