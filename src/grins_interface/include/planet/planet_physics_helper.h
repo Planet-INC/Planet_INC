@@ -195,8 +195,22 @@ namespace Planet
                                       std::vector<std::vector<DiffusionType> >& bin_diff_model,
                                       const std::string & file_neutral_charac) const;
 
-    void shave_string(std::string &str);
+    void fill_molar_frac(const std::vector<std::string> &neutrals, VectorCoeffType& molar_frac,
+                         const std::string &file, const std::string &root_input) const;
 
+    void parse_equation(std::vector<std::string> &reactants, std::vector<std::string> &products,
+                        std::string &line, bool &skip, const Antioch::ChemicalMixture<CoeffType>& chem_mixture,
+                        std::string &equation, std::vector<unsigned int> &stoi_reac,
+                        std::vector<unsigned int> &stoi_prod) const;
+
+    void condense_molecule(std::vector<unsigned int> &stoi, std::vector<std::string> &mol) const;
+
+    void read_photochemistry_reac(const std::string &hv_file, const std::string &reac,
+                                  Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const;
+
+    void shave_string(std::string &str) const;
+
+    void shave_strings(std::vector<std::string> &stock) const;
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -926,10 +940,207 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::shave_string(std::string &str)
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_molar_frac(const std::vector<std::string> &neutrals, VectorCoeffType& molar_frac,
+                                                                                       const std::string &file, const std::string &root_input) const
+  {
+    std::ifstream frac((root_input + file).c_str());
+    std::string line;
+    getline(frac,line);//title
+    molar_frac.resize(neutrals.size(),0.L);
+    while(!frac.eof())
+      {
+        std::string neutral;
+        CoeffType frac_600, frac_1050, Dfrac_1050;
+        frac >> neutral >> frac_600 >> frac_1050 >> Dfrac_1050;
+        for(unsigned int s = 0; s < neutrals.size(); s++)
+          {
+            if(neutral == neutrals[s])
+              {
+                molar_frac[s] = frac_600;
+                break;
+              }
+          }
+      }
+    frac.close();
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::parse_equation(std::vector<std::string> &reactants, std::vector<std::string> &products,
+                                                                                      std::string &line, bool &skip, const Antioch::ChemicalMixture<CoeffType>& chem_mixture,
+                                                                                      std::string &equation, std::vector<unsigned int> &stoi_reac,
+                                                                                      std::vector<unsigned int> &stoi_prod) const
+  {
+    std::vector<std::string> out;
+    Antioch::SplitString(line,";",out,false);
+    if(out.size() != 2)antioch_error();
+    equation = out[0];
+    std::string parameters(out[1]);
+    ///// equation
+    std::vector<std::string> molecules;
+    Antioch::SplitString(equation,"->",molecules,false);
+    if(molecules.size() != 2)antioch_error();
+
+    Antioch::SplitString(molecules[0],"+",reactants,false);
+    Antioch::SplitString(molecules[1],"+",products,false);
+    this->shave_strings(reactants);
+    this->shave_strings(products);
+    stoi_reac.resize(reactants.size(),1);
+    stoi_prod.resize(products.size(),1);
+
+    this->condense_molecule(stoi_reac,reactants);
+    this->condense_molecule(stoi_prod,products);
+
+    for(unsigned int ir = 0; ir < reactants.size(); ir++)
+      {
+        if( !chem_mixture.active_species_name_map().count(reactants[ir]))
+          {
+            skip = true;
+            break;
+          }
+      }
+    if(!skip)
+      {
+        for(unsigned int ip = 0; ip < products.size(); ip++)
+          {
+            if( !chem_mixture.active_species_name_map().count(products[ip]))
+              {
+                skip = true;
+                break;
+              }
+          }
+      }
+    line.erase(0,line.find(';') + 1);
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::condense_molecule(std::vector<unsigned int> &stoi, std::vector<std::string> &mol) const
+  {
+    for(unsigned int ir = 1; ir < mol.size(); ir++)
+      {
+        for(unsigned int jr = 0; jr < ir; jr++)
+          {
+            if(mol[jr] == mol[ir])
+              {
+                stoi[jr]++;
+                stoi.erase(stoi.begin() + ir);
+                mol.erase(mol.begin() + ir);
+                break;
+              }
+          }
+      }
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_photochemistry_reac(const std::string &hv_file, const std::string &reac,
+                                                                                                Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const
+  {
+    Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::PHOTOCHEM);
+    Antioch::ReactionType::ReactionType reactionType(Antioch::ReactionType::ELEMENTARY);
+
+    const Antioch::ChemicalMixture<CoeffType>& chem_mixture = neutral_reaction_set.chemical_mixture();
+
+    std::ifstream data(hv_file.c_str());
+    std::string line;
+    getline(data,line);
+    std::vector<std::string> out;
+    Antioch::SplitString(line," ",out,false);
+    unsigned int nbr = out.size();
+    if(nbr == 0)antioch_error();
+
+    MatrixCoeffType datas;
+    std::vector<std::vector<std::string> > produc;
+    std::vector<bool > skip;
+    skip.resize(nbr,false);
+    produc.resize(nbr - 2);
+    for(unsigned int ibr = 2; ibr < nbr; ibr++)
+      {
+        Antioch::SplitString(out[ibr],"/",produc[ibr - 2],false);
+        if(produc[ibr - 2].empty())produc[ibr - 2].push_back(out[ibr]);
+      }
+    std::vector<std::vector<unsigned int> > stoi_prod;
+    stoi_prod.resize(nbr - 2);
+
+    for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)
+      {
+        stoi_prod[ibr].resize(produc[ibr].size(),1);
+        condense_molecule(stoi_prod[ibr],produc[ibr]);
+        for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
+          {
+            if( !chem_mixture.active_species_name_map().count(produc[ibr][ip]))
+              {
+                skip[ibr] = true;
+                break;
+              }
+          }
+      }
+
+    datas.resize(nbr - 1);
+    while(!data.eof())
+      {
+        CoeffType lambda, total;
+        VectorCoeffType sigmas;
+        sigmas.resize(nbr - 2,0.L);
+        data >> lambda >> total;
+        for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr];
+        datas[0].push_back(lambda);
+        for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)datas[ibr].push_back(sigmas[ibr]);
+      }
+    data.close();
+
+    for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)
+      {
+        if(skip[ibr])continue;
+        std::string equation(reac + " -> ");
+        for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
+          {
+            for(unsigned int i = 0; i < stoi_prod[ibr][ip]; i++)equation += produc[ibr][ip] + " + ";
+          }
+        equation.erase(equation.size() - 3, 3);
+        Antioch::Reaction<CoeffType> * reaction = Antioch::build_reaction<CoeffType>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
+
+        reaction->add_reactant( reac,chem_mixture.active_species_name_map().find(reac)->second,1);
+        for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
+          {
+            reaction->add_product( produc[ibr][ip],chem_mixture.active_species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
+          }
+
+        VectorCoeffType dataf = datas[0];
+        for(unsigned int i = 0; i < datas[ibr].size(); i++)
+          {
+            dataf.push_back(datas[ibr][i]);
+          }
+        Antioch::KineticsType<CoeffType,VectorCoeffType> * rate  = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf,kineticsModel); //kinetics rate
+        reaction->add_forward_rate(rate);
+
+        neutral_reaction_set.add_reaction(reaction);
+      }
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::shave_string(std::string &str) const
   {
     while(str[0] == ' ')str.erase(0,1);
     while(str[str.size() - 1] == ' ')str.erase(str.size() - 1,1);
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::shave_strings(std::vector<std::string> &stock) const
+  {
+    for(unsigned int i = 0; i < stock.size(); i++)
+      {
+        this->shave_string(stock[i]);
+      }
+
+    return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
