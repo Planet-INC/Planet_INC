@@ -375,6 +375,9 @@ namespace Planet
 
     _chapman = new Chapman<CoeffType>(chi);
 
+    // Must be called after: build_species, chapman
+    this->build_opacity(input);
+
     this->build_temperature(input);
 
     // Must be called after: build_species
