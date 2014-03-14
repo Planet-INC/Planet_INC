@@ -160,7 +160,7 @@ namespace Planet
     void build_reaction_sets( const GetPot& input );
 
     /*! Convenience method within a convenience method */
-    void build_composition( const GetPot& input, CoeffType molar_frac,
+    void build_composition( const GetPot& input, VectorCoeffType& molar_frac,
                             CoeffType dens_tot, VectorCoeffType& tc);
 
     void build_diffusion( std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
@@ -395,12 +395,12 @@ namespace Planet
     std::string file_flyby = input("Planet/file_flyby", "DIE!");
     std::string root_input = input("Planet/root_input", "DIE!");
 
-    std::vector<CoeffType> molar_frac;
+    VectorCoeffType molar_frac;
     CoeffType dens_tot;
     CoeffType chi;
 
-    this->read_flyby_info( neutrals, dens_tot, molar_frac, chi, _K0,
-                           file_flyby, root_input );
+    this->read_flyby_infos( neutrals, dens_tot, molar_frac, chi, _K0,
+                            file_flyby, root_input );
 
     // Parse more stuff
     if( !input.have_variable("Planet/file_neutral_charac") )
@@ -528,13 +528,13 @@ namespace Planet
     this->read_crossSection(input_CH4, 9, lambda_CH4, sigma_CH4);
 
     /* here only N2 and CH4 absorb */
-    tau.add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
-                           _neutral_species->active_species_name_map().at("N2") );
+    _tau->add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
+                             _neutral_species->active_species_name_map().at("N2") );
 
-    tau.add_cross_section( lambda_CH4, sigma_CH4, Antioch::Species::CH4,
-                           _neutral_species->active_species_name_map().at("CH4") );
+    _tau->add_cross_section( lambda_CH4, sigma_CH4, Antioch::Species::CH4,
+                             _neutral_species->active_species_name_map().at("CH4") );
 
-    tau.update_cross_section(_lambda_hv);
+    _tau->update_cross_section(_lambda_hv);
 
     return;
   }
@@ -585,11 +585,11 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, CoeffType molar_frac, CoeffType dens_tot, VectorCoeffType& tc )
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, VectorCoeffType& molar_frac, CoeffType dens_tot, VectorCoeffType& tc )
   {
 
     // Build AtmosphericMixture
-    _composition = new AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>( _neutral_species, _ionic_species, _temperature );
+    _composition = new AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>( *_neutral_species, *_ionic_species, *_temperature );
 
     if( !input.have_variable("Planet/zmin") )
       {
