@@ -139,6 +139,9 @@ namespace Planet
 
     PhotonOpacity<CoeffType,VectorCoeffType>* _tau;
 
+    VectorCoeffType _lambda_hv;
+    VectorCoeffType _phy1AU;
+
     /*! Convenience method to hide all the construction code for
         composition, kinetics, and diffusion */
     void build( const GetPot& input );
@@ -460,8 +463,17 @@ namespace Planet
         antioch_error();
       }
 
-    std::string input_N2 = input("Planet/input_N2", "DIE!" );
+    if( !input.have_variable("Planet/input_hv") )
+      {
+        std::cerr << "Error: input_hv not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+    std::string input_hv  = input("Planet/input_hv", "DIE!" );
+    std::string input_N2  = input("Planet/input_N2", "DIE!" );
     std::string input_CH4 = input("Planet/input_CH4", "DIE!" );
+
+    this->read_hv_flux(_lambda_hv, _phy1AU, input_hv);
 
     /*! \todo What are these magic numbers? */
     this->read_crossSection(input_N2,  3, lambda_N2,  sigma_N2);
@@ -474,7 +486,7 @@ namespace Planet
     tau.add_cross_section( lambda_CH4, sigma_CH4, Antioch::Species::CH4,
                            _neutral_species->active_species_name_map().at("CH4") );
 
-    //tau.update_cross_section(lambda_hv);
+    tau.update_cross_section(_lambda_hv);
 
     return;
   }
