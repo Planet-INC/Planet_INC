@@ -252,6 +252,8 @@ void fill_neutral_reactions_elementary(const std::string &neutral_reactions_file
       std::vector<unsigned int> stoi_prod;
       parse_equation(reactants,products,line,skip,chem_mixture,equation,stoi_reac,stoi_prod);
 
+      kineticsModel = Antioch::KineticsModel::KOOIJ;
+
       if(skip)continue;
 
       VectorScalar dataf;
@@ -322,6 +324,9 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
       std::vector<unsigned int> stoi_reac; 
       std::vector<unsigned int> stoi_prod;
       parse_equation(reactants,products,line,skip,chem_mixture,equation,stoi_reac,stoi_prod);
+
+      kineticsModel = Antioch::KineticsModel::KOOIJ;
+
       if(skip)continue;
       VectorScalar dataf1,dataf2;
       std::vector<std::string> str_data;
