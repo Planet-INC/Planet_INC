@@ -460,6 +460,12 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_temperature( const GetPot& input )
   {
+    if( !input.have_variable("Planet/temperature_file") )
+      {
+        std::cerr << "Error: temperature_file not found in input file!" << std::endl;
+        antioch_error();
+      }
+
     std::string input_T = input( "Planet/temperature_file", "DIE!" );
     std::vector<CoeffType> T0,Tz;
     this->read_temperature(T0,Tz,input_T);
