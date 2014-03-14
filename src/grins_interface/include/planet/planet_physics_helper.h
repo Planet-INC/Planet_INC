@@ -142,13 +142,14 @@ namespace Planet
     void build_temperature( const GetPot& input );
 
     /*! Convenience method within a convenience method */
-    void build_species( const GetPot& input );
+    void build_species( const GetPot& input, std::vector<std::string>& neutrals, std::vector<std::string>& ionic_species );
 
     /*! Convenience method within a convenience method */
     void build_reaction_sets( const GetPot& input );
 
     /*! Convenience method within a convenience method */
-    void build_composition( const GetPot& input );
+    void build_composition( const GetPot& input, CoeffType molar_frac,
+                            CoeffType dens_tot );
 
     // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
@@ -323,15 +324,41 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
-    this->build_temperature(input);
+    std::vector<std::string> neutrals;
+    std::vector<std::string> ions;
 
-    this->build_species(input);
+    this->build_species(input, neutrals, ions);
+
+    if( !input.have_variable("Planet/file_flyby") )
+      {
+        std::cerr << "Error: Could not find file_flyby filename!" << std::endl;
+        antioch_error();
+      }
+    if( !input.have_variable("Planet/root_input") )
+      {
+        std::cerr << "Error: Could not find root_input filename!" << std::endl;
+        antioch_error();
+      }
+
+    std::string file_flyby = input("Planet/file_flyby", "DIE!");
+    std::string root_input = input("Planet/root_input", "DIE!");
+
+    std::vector<CoeffType> molar_frac;
+    CoeffType dens_tot;
+    CoeffType chi;
+
+    this->read_flyby_info( neutrals, dens_tot, molar_frac, chi, _K0,
+                           file_flyby, root_input );
+
+    _chapman = new Chapman<CoeffType>(chi);
+
+    this->build_temperature(input);
 
     // Must be called after: build_species
     this->build_reaction_sets(input);
 
     // Must be called after: build_temperature, build_species
-    this->build_composition(input);
+    this->build_composition(input, molar_frac, dens_tot);
 
     return;
   }
@@ -348,14 +375,26 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_species( const GetPot& input )
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_species( const GetPot& input, std::vector<std::string>& neutrals, std::vector<std::string>& ions )
   {
+    if( !input.have_variable("Planet/neutral_species") )
+      {
+        std::cerr << "Error: neutral_species not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+    if( !input.have_variable("Planet/ionic_species") )
+      {
+        std::cerr << "Error: ionic_species not found in input file!" << std::endl;
+        antioch_error();
+      }
+
     // Read neutral and ionic species from input
     unsigned int n_neutral = input.vector_variable_size("Planet/neutral_species");
     unsigned int n_ionic = input.vector_variable_size("Planet/ionic_species");
 
-    std::vector<std::string> neutrals(n_neutral);
-    std::vector<std::string> ions(n_ionic);
+    neutrals.resize(n_neutral);
+    ions.resize(n_ionic);
 
     for( unsigned int s = 0; s < n_neutral; s++ )
       {
@@ -420,7 +459,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input )
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, CoeffType molar_frac, CoeffType dens_tot )
   {
 
     // Build AtmosphericMixture
@@ -441,7 +480,7 @@ namespace Planet
     CoeffType zmin = input("Planet/zmin", 0.0 );
     CoeffType zmax = input("Planet/zmin", 0.0 );
 
-    //_composition->init_composition(molar_frac, dens_tot, zmin, zmax);
+    _composition->init_composition(molar_frac, dens_tot, zmin, zmax);
     //_composition->set_thermal_coefficient(tc);
 
     return;
