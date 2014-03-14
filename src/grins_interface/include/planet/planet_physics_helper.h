@@ -432,6 +432,7 @@ namespace Planet
     /*! \todo What are these magic numbers? */
     bin_diff_data.resize(2);
     bin_diff_model.resize(2);
+    _bin_diff_coeff.resize(2);
 
     VectorCoeffType tc;
 
