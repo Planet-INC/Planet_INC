@@ -153,6 +153,8 @@ AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/dif
 AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/physics_helper_unit.sh])
 AC_CONFIG_FILES(test/solver_test.sh,                          [chmod +x test/solver_test.sh])
 
+AC_CONFIG_FILES(test/input/grins_input.in)
+
 dnl-----------------------------------------------
 dnl Generate header files
 dnl-----------------------------------------------
