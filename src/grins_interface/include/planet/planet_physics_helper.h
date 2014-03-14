@@ -93,9 +93,9 @@ namespace Planet
 
     const AtmosphericTemperature<CoeffType,VectorCoeffType>& temperature() const;
 
-    //const & lambda_hv() const;
+    const VectorCoeffType& lambda_hv() const;
 
-    //const & phy1AU() const;
+    const VectorCoeffType& phy1AU() const;
 
     //const & medium() const;
 
@@ -851,6 +851,18 @@ namespace Planet
   const AtmosphericTemperature<CoeffType,VectorCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::temperature() const
   {
     return *_temperature;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const VectorCoeffType& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::lambda_hv() const
+  {
+    return _lambda_hv;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const VectorCoeffType& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::phy1AU() const
+  {
+    return _phy1AU;
   }
 
 } // end namespace Planet
