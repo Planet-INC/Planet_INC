@@ -82,38 +82,43 @@ namespace Planet
 
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& composition() const;
 
-  private:
     /*! \todo This should really be const. Need to fix up ParticleFlux stuff. */
     Antioch::ReactionSet<CoeffType>& neutral_reaction_set();
 
-    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
-    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>* _kinetics;
-    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
     const Antioch::ReactionSet<CoeffType>& ionic_reaction_set() const;
 
-    template<typename VectorStateType, typename StateType>
-    void update_cache(const VectorStateType &molar_concentrations, const StateType &z);
     const PhotonOpacity<CoeffType,VectorCoeffType>& tau() const;
 
-    void cache_recompute();
     const std::vector<std::vector<BinaryDiffusion<CoeffType> > >& bin_diff_coeff() const;
 
-    //! uses compo.barometric_density(z);
-    template <typename StateType>
-    const VectorCoeffType get_cache(const StateType &z) const;
     const AtmosphericTemperature<CoeffType,VectorCoeffType>& temperature() const;
 
-    VectorCoeffType _omegas;
-    VectorCoeffType _omegas_dots;
-    MatrixCoeffType _cache_composition;
-    VectorCoeffType _cache_altitudes;
-    std::map<CoeffType,VectorCoeffType> _cache;
     //const & lambda_hv() const;
 
     //const & phy1AU() const;
 
     //const & medium() const;
 
+  private:
+
+    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
+    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>* _kinetics;
+    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
+
+    template<typename VectorStateType, typename StateType>
+    void update_cache(const VectorStateType &molar_concentrations, const StateType &z);
+
+    void cache_recompute();
+
+    //! uses compo.barometric_density(z);
+    template <typename StateType>
+    const VectorCoeffType get_cache(const StateType &z) const;
+
+    VectorCoeffType _omegas;
+    VectorCoeffType _omegas_dots;
+    MatrixCoeffType _cache_composition;
+    VectorCoeffType _cache_altitudes;
+    std::map<CoeffType,VectorCoeffType> _cache;
 
     // Additional data structures that need to be cached
     AtmosphericTemperature<CoeffType,VectorCoeffType>* _temperature;
