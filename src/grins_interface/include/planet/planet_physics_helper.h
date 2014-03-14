@@ -703,6 +703,8 @@ namespace Planet
         std::vector<unsigned int> stoi_prod;
         parse_equation(reactants,products,line,skip,chem_mixture,equation,stoi_reac,stoi_prod);
 
+        kineticsModel = Antioch::KineticsModel::KOOIJ;
+
         if(skip)continue;
 
         VectorCoeffType dataf;
@@ -773,6 +775,9 @@ namespace Planet
         std::vector<unsigned int> stoi_reac;
         std::vector<unsigned int> stoi_prod;
         parse_equation(reactants,products,line,skip,chem_mixture,equation,stoi_reac,stoi_prod);
+
+        kineticsModel = Antioch::KineticsModel::KOOIJ;
+
         if(skip)continue;
         VectorCoeffType dataf1,dataf2;
         std::vector<std::string> str_data;
