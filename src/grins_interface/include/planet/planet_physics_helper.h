@@ -97,7 +97,7 @@ namespace Planet
 
     const VectorCoeffType& phy1AU() const;
 
-    //const & medium() const;
+    const std::vector<std::string>& medium() const;
 
   private:
 
@@ -951,6 +951,12 @@ namespace Planet
   const VectorCoeffType& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::phy1AU() const
   {
     return _phy1AU;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const std::vector<std::string>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::medium() const
+  {
+    return _medium;
   }
 
 } // end namespace Planet
