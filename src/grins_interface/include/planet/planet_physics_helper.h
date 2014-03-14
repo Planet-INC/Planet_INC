@@ -174,27 +174,27 @@ namespace Planet
     void fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
                                            const std::string &N2_hv_file,
                                            const std::string &CH4_hv_file,
-                                           Antioch::ReactionSet<CoeffType>& neutral_reaction_set );
+                                           Antioch::ReactionSet<CoeffType>& neutral_reaction_set ) const;
 
     void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
-                                        Antioch::ReactionSet<CoeffType>& neutral_reaction_set);
+                                        Antioch::ReactionSet<CoeffType>& neutral_reaction_set) const;
 
     void read_flyby_infos(const std::vector<std::string>& neutrals,
                           CoeffType& dens_tot, std::vector<CoeffType>& molar_frac,
                           CoeffType& chi, CoeffType& K0,
                           const std::string& file_flyby,
-                          const std::string& root_input);
+                          const std::string& root_input) const;
 
     void read_crossSection( const std::string &file, unsigned int nbr,
-                            VectorCoeffType &lambda, VectorCoeffType &sigma );
+                            VectorCoeffType &lambda, VectorCoeffType &sigma ) const;
 
-    void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file);
+    void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file) const;
 
     void read_neutral_characteristics(const std::vector<std::string>& neutrals,
                                       VectorCoeffType& tc,
                                       std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                                       std::vector<std::vector<DiffusionType> >& bin_diff_model,
-                                      const std::string & file_neutral_charac);
+                                      const std::string & file_neutral_charac) const;
 
     void shave_string(std::string &str);
 
@@ -663,7 +663,7 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
                                                                                                          const std::string &N2_hv_file,
                                                                                                          const std::string &CH4_hv_file,
-                                                                                                         Antioch::ReactionSet<CoeffType> &neutral_reaction_set)
+                                                                                                         Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const
   {
     //here only simple ones: bimol Kooij/Arrhenius model
     std::ifstream data(neutral_reactions_file.c_str());
@@ -732,7 +732,7 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
-                                                                                                      Antioch::ReactionSet<CoeffType> &neutral_reaction_set)
+                                                                                                      Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const
   {
     //Lindemann
     std::ifstream data(neutral_reactions_file.c_str());
@@ -810,7 +810,7 @@ namespace Planet
                                                                                         CoeffType& dens_tot, std::vector<CoeffType>& molar_frac,
                                                                                         CoeffType& chi, CoeffType& K0,
                                                                                         const std::string& file_flyby,
-                                                                                        const std::string& root_input)
+                                                                                        const std::string& root_input) const
   {
     std::ifstream flyby(file_flyby.c_str());
     std::string line;
@@ -847,7 +847,7 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_crossSection( const std::string &file, unsigned int nbr,
-                            VectorCoeffType &lambda, VectorCoeffType &sigma )
+                            VectorCoeffType &lambda, VectorCoeffType &sigma ) const
   {
     std::string line;
     std::ifstream sig_f(file);
@@ -866,7 +866,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_hv_flux(VectorCoeffType &lambda, VectorCoeffType &phy1AU, const std::string &file)
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_hv_flux(VectorCoeffType &lambda, VectorCoeffType &phy1AU, const std::string &file) const
   {
     std::string line;
     std::ifstream flux_1AU(file);
@@ -889,7 +889,7 @@ namespace Planet
                                       VectorCoeffType& tc,
                                       std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                                       std::vector<std::vector<DiffusionType> >& bin_diff_model,
-                                      const std::string & file_neutral_charac)
+                                      const std::string & file_neutral_charac) const
   {
     for(unsigned int m = 0; m < bin_diff_data.size(); m++) //N2, then CH4
       {
