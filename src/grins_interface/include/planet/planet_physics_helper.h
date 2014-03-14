@@ -231,6 +231,18 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::~PlanetPhysicsHelper()
   {
+    /*
+      delete _tau;
+    delete _chapman;
+    delete _neut_reac_theo;
+    delete _ionic_reaction_set;
+    delete _neutral_reaction_set;
+    delete _ionic_species;
+    delete _neutral_species;
+    delete _temperature;
+    delete _composition;
+    */
+
     return;
   }
 
