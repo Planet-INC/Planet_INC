@@ -160,7 +160,7 @@ namespace Planet
 
     /*! Convenience method within a convenience method */
     void build_composition( const GetPot& input, CoeffType molar_frac,
-                            CoeffType dens_tot );
+                            CoeffType dens_tot, VectorCoeffType& tc);
 
     // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
@@ -384,6 +384,27 @@ namespace Planet
     this->read_flyby_info( neutrals, dens_tot, molar_frac, chi, _K0,
                            file_flyby, root_input );
 
+    if( !input.have_variable("Planet/file_neutral_charac") )
+      {
+        std::cerr << "Error: Could not find file_neutral_charac filename!" << std::endl;
+        antioch_error();
+      }
+
+    std::string file_neutral_charac = input("Planet/file_neutral_charac", "DIE!");
+
+    //binary diffusion
+    std::vector<std::vector<std::vector<CoeffType> > > bin_diff_data;    // (medium,species)[]
+    std::vector<std::vector<DiffusionType> > bin_diff_model; // (medium,species)
+
+    /*! \todo What are these magic numbers? */
+    bin_diff_data.resize(2);
+    bin_diff_model.resize(2);
+
+    VectorCoeffType tc;
+
+    this->read_neutral_characteristics( neutrals, tc, bin_diff_data, bin_diff_model,
+                                        file_neutral_charac);
+
     _chapman = new Chapman<CoeffType>(chi);
 
     // Must be called after: build_species, chapman
@@ -395,7 +416,7 @@ namespace Planet
     this->build_reaction_sets(input);
 
     // Must be called after: build_temperature, build_species
-    this->build_composition(input, molar_frac, dens_tot);
+    this->build_composition(input, molar_frac, dens_tot, tc);
 
     return;
   }
@@ -544,7 +565,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, CoeffType molar_frac, CoeffType dens_tot )
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, CoeffType molar_frac, CoeffType dens_tot, VectorCoeffType& tc )
   {
 
     // Build AtmosphericMixture
@@ -566,7 +587,7 @@ namespace Planet
     CoeffType zmax = input("Planet/zmin", 0.0 );
 
     _composition->init_composition(molar_frac, dens_tot, zmin, zmax);
-    //_composition->set_thermal_coefficient(tc);
+    _composition->set_thermal_coefficient(tc);
 
     return;
   }
