@@ -179,6 +179,8 @@ namespace Planet
     void read_crossSection( const std::string &file, unsigned int nbr,
                             VectorCoeffType &lambda, VectorCoeffType &sigma );
 
+    void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file);
+
     void shave_string(std::string &str);
 
   };
@@ -774,6 +776,25 @@ namespace Planet
       }
     sig_f.close();
 
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_hv_flux(VectorCoeffType &lambda, VectorCoeffType &phy1AU, const std::string &file)
+  {
+    std::string line;
+    std::ifstream flux_1AU(file);
+    getline(flux_1AU,line);
+    while(!flux_1AU.eof())
+      {
+        CoeffType wv,ir,dirr;
+        flux_1AU >> wv >> ir >> dirr;
+        if(!lambda.empty() && wv == lambda.back())continue;
+        lambda.push_back(wv * 10.L);//nm -> A
+        phy1AU.push_back(ir * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
+                                                   Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A
+      }
+    flux_1AU.close();
     return;
   }
 
