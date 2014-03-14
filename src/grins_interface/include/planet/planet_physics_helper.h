@@ -164,6 +164,11 @@ namespace Planet
     void build_composition( const GetPot& input, CoeffType molar_frac,
                             CoeffType dens_tot, VectorCoeffType& tc);
 
+    void build_diffusion( const GetPot& input,
+                          std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
+                          std::vector<std::vector<DiffusionType> >& bin_diff_model,
+                          const std::vector<std::string>& neutrals);
+
     // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
 
@@ -425,6 +430,8 @@ namespace Planet
 
     _chapman = new Chapman<CoeffType>(chi);
 
+    this->build_diffusion(input, bin_diff_data, bin_diff_model, neutrals);
+
     // Must be called after: build_species, chapman
     this->build_opacity(input);
 
@@ -606,6 +613,32 @@ namespace Planet
 
     _composition->init_composition(molar_frac, dens_tot, zmin, zmax);
     _composition->set_thermal_coefficient(tc);
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_diffusion( const GetPot& input,
+                                                                                        std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
+                                                                                        std::vector<std::vector<DiffusionType> >& bin_diff_model,
+                                                                                        const std::vector<std::string>& neutrals)
+  {
+    std::vector<Antioch::Species> spec;
+
+    for(unsigned int s = 0; s < neutrals.size(); s++)
+      {
+        spec.push_back(_neutral_species->species_name_map().at(neutrals[s]));
+      }
+
+    for(unsigned int n = 0; n < 2; n++)
+      {
+        _bin_diff_coeff[n].resize(neutrals.size());
+
+        for(unsigned int s = 0; s < neutrals.size(); s++)
+          {
+            _bin_diff_coeff[n][s] = BinaryDiffusion<CoeffType>( spec[n], spec[s], bin_diff_data[n][s][0], bin_diff_data[n][s][1], bin_diff_model[n][s]);
+          }
+      }
 
     return;
   }
