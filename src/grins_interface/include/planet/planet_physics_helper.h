@@ -145,6 +145,9 @@ namespace Planet
     void build_species( const GetPot& input, std::vector<std::string>& neutrals, std::vector<std::string>& ionic_species );
 
     /*! Convenience method within a convenience method */
+    void build_opacity( const GetPot& input );
+
+    /*! Convenience method within a convenience method */
     void build_reaction_sets( const GetPot& input );
 
     /*! Convenience method within a convenience method */
@@ -411,6 +414,45 @@ namespace Planet
 
     _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals);
     _ionic_species = new Antioch::ChemicalMixture<CoeffType>(ions);
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_opacity( const GetPot& input )
+  {
+    _tau = new PhotonOpacity<CoeffType,VectorCoeffType>(*_chapman);
+
+    std::vector<CoeffType> lambda_N2, sigma_N2;
+    std::vector<CoeffType> lambda_CH4, sigma_CH4;
+
+    if( !input.have_variable("Planet/input_N2") )
+      {
+        std::cerr << "Error: input_N2 not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+    if( !input.have_variable("Planet/input_CH4") )
+      {
+        std::cerr << "Error: input_CH4 not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+    std::string input_N2 = input("Planet/input_N2", "DIE!" );
+    std::string input_CH4 = input("Planet/input_CH4", "DIE!" );
+
+    /*! \todo What are these magic numbers? */
+    this->read_crossSection(input_N2,  3, lambda_N2,  sigma_N2);
+    this->read_crossSection(input_CH4, 9, lambda_CH4, sigma_CH4);
+
+    /* here only N2 and CH4 absorb */
+    tau.add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
+                           _neutral_species->active_species_name_map().at("N2") );
+
+    tau.add_cross_section( lambda_CH4, sigma_CH4, Antioch::Species::CH4,
+                           _neutral_species->active_species_name_map().at("CH4") );
+
+    //tau.update_cross_section(lambda_hv);
 
     return;
   }
