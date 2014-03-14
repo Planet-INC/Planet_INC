@@ -127,7 +127,6 @@ namespace Planet
 
     Antioch::ReactionSet<CoeffType>* _neutral_reaction_set;
     Antioch::ReactionSet<CoeffType>* _ionic_reaction_set;
-    Antioch::ReactionSet<CoeffType>* _neut_reac_theo;
 
     Chapman<CoeffType>* _chapman;
 
@@ -211,7 +210,6 @@ namespace Planet
       _ionic_species(NULL),
       _neutral_reaction_set(NULL),
       _ionic_reaction_set(NULL),
-      _neut_reac_theo(NULL),
       _chapman(NULL),
       _tau(NULL)
   {
@@ -257,7 +255,6 @@ namespace Planet
     /*
       delete _tau;
     delete _chapman;
-    delete _neut_reac_theo;
     delete _ionic_reaction_set;
     delete _neutral_reaction_set;
     delete _ionic_species;
@@ -549,7 +546,6 @@ namespace Planet
     // Build up reaction sets
     _neutral_reaction_set = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
     _ionic_reaction_set = new Antioch::ReactionSet<CoeffType>(*_ionic_species);
-    _neut_reac_theo = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
 
     if( !input.have_variable("Planet/input_reactions_elem") )
       {
