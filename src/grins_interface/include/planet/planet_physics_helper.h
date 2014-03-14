@@ -161,6 +161,14 @@ namespace Planet
     void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
                                         Antioch::ReactionSet<CoeffType>& neutral_reaction_set);
 
+    void read_flyby_infos(const std::vector<std::string>& neutrals,
+                          CoeffType& dens_tot, std::vector<CoeffType>& molar_frac,
+                          CoeffType& chi, CoeffType& K0,
+                          const std::string& file_flyby,
+                          const std::string& root_input);
+
+    void shave_string(std::string &str);
+
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -603,6 +611,53 @@ namespace Planet
 
       }
     data.close();
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_flyby_infos(const std::vector<std::string>& neutrals,
+                                                                                        CoeffType& dens_tot, std::vector<CoeffType>& molar_frac,
+                                                                                        CoeffType& chi, CoeffType& K0,
+                                                                                        const std::string& file_flyby,
+                                                                                        const std::string& root_input)
+  {
+    std::ifstream flyby(file_flyby.c_str());
+    std::string line;
+    while(getline(flyby,line))
+      {
+        if(line.substr(0,line.find(':')) == "zenith angle")
+          {
+            line = line.substr(line.find(':') + 1,std::string::npos);
+            line = line.substr(0,line.rfind(' '));
+            shave_string(line);
+            chi = std::atof(line.c_str()); // deg, alright
+          }else if(line.substr(0,line.find(':')) == "lower boundary total density")
+          {
+            line = line.substr(line.find(':') + 1,std::string::npos);
+            line = line.substr(0,line.rfind(' '));
+            shave_string(line);
+            dens_tot = std::atof(line.c_str()); // cm-3
+          }else if(line.substr(0,line.find(':')) == "K0")
+          {
+            line = line.substr(line.find(':') + 1,std::string::npos);
+            line = line.substr(0,line.rfind(' '));
+            shave_string(line);
+            K0 = std::atof(line.c_str()) * 1e-4; //cm2/s -> m2/s
+          }else if(line.substr(0,line.find(':')) == "file mix")
+          {
+            line = line.substr(line.find(':') + 1,std::string::npos);
+            shave_string(line);
+            fill_molar_frac(neutrals,molar_frac,line,root_input);
+          }
+      }
+
+    flyby.close();
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::shave_string(std::string &str)
+  {
+    while(str[0] == ' ')str.erase(0,1);
+    while(str[str.size() - 1] == ' ')str.erase(str.size() - 1,1);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
