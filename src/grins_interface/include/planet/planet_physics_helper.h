@@ -379,6 +379,7 @@ namespace Planet
 
     this->build_species(input, neutrals, ions);
 
+    // Parse stuff
     if( !input.have_variable("Planet/file_flyby") )
       {
         std::cerr << "Error: Could not find file_flyby filename!" << std::endl;
@@ -400,6 +401,7 @@ namespace Planet
     this->read_flyby_info( neutrals, dens_tot, molar_frac, chi, _K0,
                            file_flyby, root_input );
 
+    // Parse more stuff
     if( !input.have_variable("Planet/file_neutral_charac") )
       {
         std::cerr << "Error: Could not find file_neutral_charac filename!" << std::endl;
