@@ -184,6 +184,12 @@ namespace Planet
 
     void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file);
 
+    void read_neutral_characteristics(const std::vector<std::string>& neutrals,
+                                      VectorCoeffType& tc,
+                                      std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
+                                      std::vector<std::vector<DiffusionType> >& bin_diff_model,
+                                      const std::string & file_neutral_charac);
+
     void shave_string(std::string &str);
 
   };
@@ -807,6 +813,49 @@ namespace Planet
                                                    Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A
       }
     flux_1AU.close();
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_neutral_characteristics(const std::vector<std::string>& neutrals,
+                                      VectorCoeffType& tc,
+                                      std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
+                                      std::vector<std::vector<DiffusionType> >& bin_diff_model,
+                                      const std::string & file_neutral_charac)
+  {
+    for(unsigned int m = 0; m < bin_diff_data.size(); m++) //N2, then CH4
+      {
+        bin_diff_data[m].resize(neutrals.size());
+        bin_diff_model[m].resize(neutrals.size(),Planet::DiffusionType::NoData); // no data by default
+      }
+
+    tc.resize(neutrals.size(),0.L);
+
+    std::ifstream neu(file_neutral_charac.c_str());
+    std::string line;
+    getline(neu,line); //first line
+    while(!neu.eof())
+      {
+        std::string name;
+        CoeffType mass,AN2,sN2,ACH4,sCH4,alpha,enth,hsr,mr;
+        neu >> name >> mass >> AN2 >> sN2 >> ACH4 >> sCH4 >> alpha >> enth >> hsr >> mr;
+        for(unsigned int s = 0; s < neutrals.size(); s++)
+          {
+            if(name == neutrals[s])
+              {
+                tc[s] = alpha; // no unit
+                bin_diff_model[0][s] = Planet::DiffusionType::Wilson; //N2
+                bin_diff_model[1][s] = Planet::DiffusionType::Wilson; //CH4
+                bin_diff_data[0][s].push_back(AN2 * 1e-4);  //N2 - A  -- cm2/s -> m2/s
+                bin_diff_data[0][s].push_back(sN2);  //N2 - s  -- no unit
+                bin_diff_data[1][s].push_back(ACH4 * 1e-4); //CH4 - A  -- cm2/s -> m2/s
+                bin_diff_data[1][s].push_back(sCH4); //CH4 - s  -- no unit
+                break;
+              }
+          }
+      }
+    neu.close();
+
     return;
   }
 
