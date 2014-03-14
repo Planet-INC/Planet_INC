@@ -228,8 +228,8 @@ namespace Planet
   {
     this->build(input);
 
-    _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
-    _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+    //_omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+    //_omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
 
     return;
   }
