@@ -142,6 +142,8 @@ namespace Planet
     VectorCoeffType _lambda_hv;
     VectorCoeffType _phy1AU;
 
+    std::vector<std::string> _medium;
+
     /*! Convenience method to hide all the construction code for
         composition, kinetics, and diffusion */
     void build( const GetPot& input );
@@ -358,6 +360,20 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
+    // Parse medium
+    if( !input.have_variable("Planet/medium") )
+      {
+        std::cerr << "Error: Could not find medium!" << std::endl;
+        antioch_error();
+      }
+    unsigned int n_medium = input.vector_variable_size("Planet/medium");
+    _medium.resize(n_medium);
+    for( unsigned int s = 0; s < n_medium; s++ )
+      {
+        _medium[s] = input("Planet/medium", "DIE!", s);
+      }
+
+    // Parse neutrals, ions
     std::vector<std::string> neutrals;
     std::vector<std::string> ions;
 
