@@ -168,6 +168,9 @@ namespace Planet
                           const std::string& file_flyby,
                           const std::string& root_input);
 
+    void read_crossSection( const std::string &file, unsigned int nbr,
+                            VectorCoeffType &lambda, VectorCoeffType &sigma );
+
     void shave_string(std::string &str);
 
   };
@@ -690,6 +693,26 @@ namespace Planet
       }
 
     flyby.close();
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_crossSection( const std::string &file, unsigned int nbr,
+                            VectorCoeffType &lambda, VectorCoeffType &sigma )
+  {
+    std::string line;
+    std::ifstream sig_f(file);
+    getline(sig_f,line);
+    while(!sig_f.eof())
+      {
+        CoeffType wv,sigt,sigbr;
+        sig_f >> wv >> sigt;
+        for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
+        lambda.push_back(wv);//A
+        sigma.push_back(sigt);//cm-2/A
+      }
+    sig_f.close();
+
+    return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
