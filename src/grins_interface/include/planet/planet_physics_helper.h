@@ -163,8 +163,7 @@ namespace Planet
     void build_composition( const GetPot& input, CoeffType molar_frac,
                             CoeffType dens_tot, VectorCoeffType& tc);
 
-    void build_diffusion( const GetPot& input,
-                          std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
+    void build_diffusion( std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                           std::vector<std::vector<DiffusionType> >& bin_diff_model,
                           const std::vector<std::string>& neutrals);
 
@@ -427,7 +426,7 @@ namespace Planet
 
     _chapman = new Chapman<CoeffType>(chi);
 
-    this->build_diffusion(input, bin_diff_data, bin_diff_model, neutrals);
+    this->build_diffusion(bin_diff_data, bin_diff_model, neutrals);
 
     // Must be called after: build_species, chapman
     this->build_opacity(input);
@@ -614,8 +613,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_diffusion( const GetPot& input,
-                                                                                        std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_diffusion( std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                                                                                         std::vector<std::vector<DiffusionType> >& bin_diff_model,
                                                                                         const std::vector<std::string>& neutrals)
   {
