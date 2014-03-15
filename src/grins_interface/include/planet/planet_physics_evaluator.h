@@ -97,8 +97,8 @@ namespace Planet
       _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition),
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature())
   {
-    _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
-    _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
+    _omegas.resize(_kinetics.neutral_kinetics().reaction_set().n_species());
+    _omegas_dots.resize(_kinetics.neutral_kinetics().reaction_set().n_species());
 
     _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Constants::Saturn::d_Sun<CoeffType>());
 
