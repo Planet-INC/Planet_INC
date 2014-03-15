@@ -99,6 +99,8 @@ namespace Planet
 
     const std::vector<std::string>& medium() const;
 
+    CoeffType K0() const;
+
   private:
 
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
@@ -1207,6 +1209,12 @@ namespace Planet
   const std::vector<std::string>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::medium() const
   {
     return _medium;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::K0() const
+  {
+    return _K0;
   }
 
 } // end namespace Planet
