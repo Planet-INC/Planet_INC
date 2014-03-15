@@ -94,5 +94,5 @@ src/physics_factory.lo
 src/physics_factory.o
 src/planet_physics_instantiate.lo
 src/planet_physics_instantiate.o
-.libs/
-input/grins_input.in
+test/.libs/
+test/input/grins_input.in
