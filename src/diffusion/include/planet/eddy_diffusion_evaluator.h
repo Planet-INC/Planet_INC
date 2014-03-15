@@ -42,7 +42,7 @@ namespace Planet{
          CoeffType _K0;
 
 //dependencies
-         AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
+         const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
 
          EddyDiffusionEvaluator() {antioch_error();return;}
 
@@ -62,7 +62,7 @@ namespace Planet{
          ANTIOCH_AUTOFUNC(StateType,_K0 * Antioch::ant_sqrt(_mixture.total_bottom_density()/ntot))
 
          //!
-         EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
+         EddyDiffusionEvaluator(const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                 const CoeffType &K0 = -1.);
 
          //!
@@ -71,7 +71,7 @@ namespace Planet{
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
+EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                                                           const CoeffType &K0):
   _K0(K0),
   _mixture(mix)

@@ -53,16 +53,16 @@ namespace Planet
         std::vector<Antioch::Species> _ions_species;
         
 //
-        AtmosphericTemperature<CoeffType,VectorCoeffType>             &_temperature;
+        const AtmosphericTemperature<CoeffType,VectorCoeffType>             &_temperature;
         PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &_photon;
-        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
+        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
       public:
         //!
         AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                         &neu,
                             Antioch::KineticsEvaluator<CoeffType>                         &ion,
-                            AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
+                            const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
                             PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
-                            AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition);
+                            const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition);
         //!
         ~AtmosphericKinetics();
 
@@ -87,9 +87,9 @@ namespace Planet
   inline
   AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>         &neu,
                                                                       Antioch::KineticsEvaluator<CoeffType>                         &ion,
-                                                                      AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
+                                                                      const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
                                                                       PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
-                                                                      AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition):
+                                                                      const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition):
    _neutral_reactions(neu),
    _ionic_reactions(ion),
    _temperature(temperature),

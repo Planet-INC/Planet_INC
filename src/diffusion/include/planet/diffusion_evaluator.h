@@ -50,15 +50,15 @@ namespace Planet{
 //dependencies
        MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_molecular_diffusion;
        EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &_eddy_diffusion;
-       AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &_mixture;
-       AtmosphericTemperature<CoeffType,VectorCoeffType>                      &_temperature;
+       const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &_mixture;
+       const AtmosphericTemperature<CoeffType,VectorCoeffType>                      &_temperature;
 
       public:
        //!
        DiffusionEvaluator(MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
                           EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
-                          AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
-                          AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp);
+                          const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
+                          const AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp);
 
         //!
        ~DiffusionEvaluator();
@@ -76,8 +76,8 @@ namespace Planet{
   DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::DiffusionEvaluator(
                           MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
                           EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
-                          AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
-                          AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp):
+                          const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
+                          const AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp):
     _molecular_diffusion(mol_diff),
     _eddy_diffusion(eddy_diff),
     _mixture(mix),

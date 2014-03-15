@@ -49,9 +49,9 @@ namespace Planet
         std::vector<unsigned int> _i_medium;
 
         std::vector<std::vector<BinaryDiffusion<CoeffType> > > _diffusion;
-//dependencies
-        AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>     &_mixture;
-        AtmosphericTemperature<CoeffType, VectorCoeffType>                 &_temperature;
+    //dependencies
+        const AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>     &_mixture;
+        const AtmosphericTemperature<CoeffType, VectorCoeffType>                 &_temperature;
 
         //! The coefficients are known
         template<typename StateType>
@@ -75,9 +75,9 @@ namespace Planet
 
      public:
         //!
-        MolecularDiffusionEvaluator(const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
-                                    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                                    AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
+        MolecularDiffusionEvaluator( const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
+                                     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                                     const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
         //!
         ~MolecularDiffusionEvaluator();
 
@@ -115,8 +115,8 @@ namespace Planet
   inline
   MolecularDiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::MolecularDiffusionEvaluator
                        (const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
-                        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                        AtmosphericTemperature<CoeffType,VectorCoeffType> &temp
+                        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
+                        const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp
                        ):
        _n_medium(diff.size()),
        _diffusion(diff),
