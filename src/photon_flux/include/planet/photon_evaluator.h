@@ -51,11 +51,11 @@ namespace Planet
 
 //dependencies
         PhotonOpacity<CoeffType,VectorCoeffType>      &_hv_tau;
-        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
+        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
 
      public:
         PhotonEvaluator(PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
-                        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix);
+                        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix);
         ~PhotonEvaluator();
 
         //!\return const ref photon flux
@@ -80,7 +80,7 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
   PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonEvaluator(PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
-                                                              AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix):
+                                                              const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix):
   _phy(NULL),
   _hv_tau(hv_tau),
   _mixture(mix)
