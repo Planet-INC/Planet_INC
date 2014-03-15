@@ -67,11 +67,11 @@ namespace Planet
 
     PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _photon;
 
-    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
-    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
-
     MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _molecular_diffusion;
     EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _eddy_diffusion;
+
+    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
+    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
