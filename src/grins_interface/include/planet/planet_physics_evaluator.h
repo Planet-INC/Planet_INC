@@ -104,7 +104,7 @@ namespace Planet
 
     /*! \todo This call to set_particle_flux is going to kill thread safety because
               it's resetting stuff in the ReactionSet */
-    helper.neutral_reaction_set().set_particle_flux(photon.photon_flux_ptr()); // reactions know the solar flux
+    helper.neutral_reaction_set().set_particle_flux(_photon.photon_flux_ptr()); // reactions know the solar flux
 
     _molecular_diffusion.set_medium_species(helper.medium());
 
@@ -128,7 +128,7 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template <typename StateType>
-  const VectorCoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::get_cache(const StateType &z) const
+  const VectorCoeffType PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::get_cache(const StateType &z) const
   {
      if(!_cache.count(z))
      {
@@ -143,7 +143,7 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template <typename VectorStateType, typename StateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::update_cache(const VectorStateType &molar_concentrations, const StateType &z)
+  void PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::update_cache(const VectorStateType &molar_concentrations, const StateType &z)
   {
     bool recompute(true);
     if(!_cache.count(z))
@@ -158,7 +158,7 @@ namespace Planet
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::cache_recompute()
+  void PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::cache_recompute()
   {
    //from highest altitude to lowest altitude
    unsigned int istart(0);
@@ -188,19 +188,19 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
+  void PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
   {
       _composition->first_guess_densities(z,molar_concentrations_first_guess);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_term(unsigned int s) const
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_term(unsigned int s) const
   {
     return _omegas[s];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
   {
     return _omegas_dots[s];
   }
