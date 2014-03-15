@@ -111,6 +111,11 @@ namespace Planet
     return;
   }
 
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::~PlanetPhysicsEvaluator()
+  {
+    return;
+  }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
