@@ -87,7 +87,7 @@ namespace Planet
 
     const Antioch::ReactionSet<CoeffType>& ionic_reaction_set() const;
 
-    const PhotonOpacity<CoeffType,VectorCoeffType>& tau() const;
+    PhotonOpacity<CoeffType,VectorCoeffType>& tau();
 
     const std::vector<std::vector<BinaryDiffusion<CoeffType> > >& bin_diff_coeff() const;
 
@@ -1176,7 +1176,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  const PhotonOpacity<CoeffType,VectorCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::tau() const
+  PhotonOpacity<CoeffType,VectorCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::tau()
   {
     return *_tau;
   }
