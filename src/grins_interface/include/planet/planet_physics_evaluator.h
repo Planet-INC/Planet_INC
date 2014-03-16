@@ -123,8 +123,8 @@ namespace Planet
                                                                                   const VectorStateType & dmolar_concentrations_dz,
                                                                                   const StateType & z)
   {
-   _diffusion->diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
-   _kinetics->chemical_rate(molar_concentrations,this->get_cache(z),z,_omegas_dots);
+   _diffusion.diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
+   _kinetics.chemical_rate(molar_concentrations,this->get_cache(z),z,_omegas_dots);
 
    this->update_cache(molar_concentrations,z);
 
@@ -137,8 +137,8 @@ namespace Planet
   {
      if(!_cache.count(z))
      {
-        VectorCoeffType first_sum_guess = Antioch::zero_clone(_composition->neutral_molar_fraction_bottom());
-        _composition->first_guess_densities_sum(z,first_sum_guess);
+        VectorCoeffType first_sum_guess = Antioch::zero_clone(_composition.neutral_molar_fraction_bottom());
+        _composition.first_guess_densities_sum(z,first_sum_guess);
         return first_sum_guess;
      }else
      {
@@ -195,7 +195,7 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   void PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
   {
-      _composition->first_guess_densities(z,molar_concentrations_first_guess);
+      _composition.first_guess_densities(z,molar_concentrations_first_guess);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
