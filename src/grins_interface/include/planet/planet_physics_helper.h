@@ -627,7 +627,7 @@ namespace Planet
       }
 
     CoeffType zmin = input("Planet/zmin", 0.0 );
-    CoeffType zmax = input("Planet/zmin", 0.0 );
+    CoeffType zmax = input("Planet/zmax", 0.0 );
 
     _composition->init_composition(molar_frac, dens_tot, zmin, zmax);
     _composition->set_thermal_coefficient(tc);
