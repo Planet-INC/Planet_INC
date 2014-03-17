@@ -154,6 +154,7 @@ AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/phy
 AC_CONFIG_FILES(test/solver_test.sh,                          [chmod +x test/solver_test.sh])
 
 AC_CONFIG_FILES(test/input/grins_input.in)
+AC_CONFIG_FILES(test/input/grins_input_physics_helper.in)
 
 dnl-----------------------------------------------
 dnl Generate header files
