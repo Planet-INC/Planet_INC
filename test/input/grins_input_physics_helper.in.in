@@ -1,0 +1,22 @@
+[Planet]
+
+medium = 'N2 CH4'
+
+neutral_species = 'N2 CH4 N(4S) CH3 (1)CH2 (3)CH2 H H2'
+
+# This example, the ionic species and neutral species are the same.
+# If ionic species were different, would just list them here
+ionic_species = '${Planet/neutral_species}'
+
+temperature_file = '@abs_top_srcdir@/test/input/temperature.dat'
+file_flyby = '@abs_top_srcdir@/test/input/T40_Flyby'
+root_input = '@abs_top_srcdir@/test/input/'
+file_neutral_charac = '@abs_top_srcdir@/test/input/neutrals.dat'
+input_N2 = '@abs_top_srcdir@/test/input/N2_hv_cross-sections.dat'
+input_CH4 = '@abs_top_srcdir@/test/input/CH4_hv_cross-sections.dat'
+input_hv = '@abs_top_srcdir@/test/input/hv_SSI.dat'
+input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
+input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
+
+zmin = '600.0'
+zmax = '1400.0'
