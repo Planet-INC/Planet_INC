@@ -96,3 +96,4 @@ src/planet_physics_instantiate.lo
 src/planet_physics_instantiate.o
 test/.libs/
 test/input/grins_input.in
+test/input/grins_input_physics_helper.in
