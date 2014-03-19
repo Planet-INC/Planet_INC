@@ -667,6 +667,11 @@ namespace Planet
     Tz.clear();
     std::string line;
     std::ifstream temp(file);
+    if( !temp )
+      {
+        std::cerr << "Could not open file " << file << std::endl;
+        antioch_error();
+      }
     getline(temp,line);
     while(!temp.eof())
       {
@@ -688,6 +693,11 @@ namespace Planet
   {
     //here only simple ones: bimol Kooij/Arrhenius model
     std::ifstream data(neutral_reactions_file.c_str());
+    if( !data )
+      {
+        std::cerr << "Could not open file " << neutral_reactions_file << std::endl;
+        antioch_error();
+      }
     std::string line;
     getline(data,line); //title
     Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::KOOIJ);
@@ -759,6 +769,11 @@ namespace Planet
   {
     //Lindemann
     std::ifstream data(neutral_reactions_file.c_str());
+    if( !data )
+      {
+        std::cerr << "Could not open file " << neutral_reactions_file << std::endl;
+        antioch_error();
+      }
     std::string line;
     getline(data,line); //title
     getline(data,line); //title
@@ -839,6 +854,12 @@ namespace Planet
                                                                                         const std::string& root_input) const
   {
     std::ifstream flyby(file_flyby.c_str());
+    if( !flyby )
+      {
+        std::cerr << "Could not open file " << file_flyby << std::endl;
+        antioch_error();
+      }
+
     std::string line;
     while(getline(flyby,line))
       {
@@ -877,6 +898,11 @@ namespace Planet
   {
     std::string line;
     std::ifstream sig_f(file);
+    if( !sig_f)
+      {
+        std::cerr << "Could not open file " << file << std::endl;
+        antioch_error();
+      }
     getline(sig_f,line);
     while(!sig_f.eof())
       {
@@ -896,6 +922,11 @@ namespace Planet
   {
     std::string line;
     std::ifstream flux_1AU(file);
+    if( !flux_1AU)
+      {
+        std::cerr << "Could not open file " << file << std::endl;
+        antioch_error();
+      }
     getline(flux_1AU,line);
     while(!flux_1AU.eof())
       {
@@ -926,6 +957,11 @@ namespace Planet
     tc.resize(neutrals.size(),0.L);
 
     std::ifstream neu(file_neutral_charac.c_str());
+    if( !neu)
+      {
+        std::cerr << "Could not open file " << file_neutral_charac << std::endl;
+        antioch_error();
+      }
     std::string line;
     getline(neu,line); //first line
     while(!neu.eof())
@@ -958,6 +994,11 @@ namespace Planet
                                                                                        const std::string &file, const std::string &root_input) const
   {
     std::ifstream frac((root_input + file).c_str());
+    if( !frac )
+      {
+        std::cerr << "Could not open file " << root_input + file << std::endl;
+        antioch_error();
+      }
     std::string line;
     getline(frac,line);//title
     molar_frac.resize(neutrals.size(),0.L);
