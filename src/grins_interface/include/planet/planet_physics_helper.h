@@ -675,8 +675,9 @@ namespace Planet
     getline(temp,line);
     while(!temp.eof())
       {
-        CoeffType t,tz,dt,dtz;
+        CoeffType t(0.),tz(0.),dt(0.),dtz(0.);
         temp >> t >> tz >> dt >> dtz;
+        if(tz < 1.)continue; //altitude < 1. possible only if nothing is read
         T0.push_back(t);
         Tz.push_back(tz);
       }
@@ -809,7 +810,9 @@ namespace Planet
 
         dataf1.push_back(std::atof(str_data[0].c_str()));
         dataf2.push_back(std::atof(str_data[3].c_str()));
-        if(str_data[1] == "0" && str_data[4] == "0")
+        CoeffType temp1 = std::atof(str_data[1].c_str());
+        CoeffType temp2 = std::atof(str_data[4].c_str());
+        if(temp1 == 0 && temp2 == 0)
           {
             kineticsModel = Antioch::KineticsModel::ARRHENIUS;
           }else
