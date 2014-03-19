@@ -713,7 +713,10 @@ int tester(const std::string &input_T,const std::string & input_hv,
 //photon evaluator
   Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
   photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
-  neutral_reaction_set.set_particle_flux(photon.photon_flux_ptr()); // reactions know the solar flux
+
+  //neutral_reaction_set.set_particle_flux(photon.photon_flux_ptr()); // reactions know the solar flux
+  neutral_kinetics.set_photon_flux(photon.photon_flux_ptr());
+
 
 //molecular diffusion
   Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);

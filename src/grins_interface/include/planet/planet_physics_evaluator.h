@@ -119,7 +119,8 @@ namespace Planet
 
     /*! \todo This call to set_particle_flux is going to kill thread safety because
               it's resetting stuff in the ReactionSet */
-    helper.neutral_reaction_set().set_particle_flux(_photon.photon_flux_ptr()); // reactions know the solar flux
+    //helper.neutral_reaction_set().set_particle_flux(_photon.photon_flux_ptr()); // reactions know the solar flux
+    _neutral_kinetics.set_photon_flux(_photon.photon_flux_ptr());
 
     _molecular_diffusion.set_medium_species(helper.medium());
 
