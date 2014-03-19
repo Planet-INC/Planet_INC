@@ -52,21 +52,7 @@ namespace Planet
 
     PlanetPhysicsHelper( const GetPot& input );
 
-    PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> *compo,
-                        AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics = NULL,
-                        DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion = NULL);
-
     ~PlanetPhysicsHelper();
-
-    libMesh::Real diffusion_term(unsigned int s) const;
-
-    libMesh::Real chemical_term(unsigned int s)  const;
-
-    //computes omega_dot and omega
-    template<typename StateType, typename VectorStateType>
-    void compute(const VectorStateType & molar_concentrations,
-                 const VectorStateType & dmolar_concentrations_dz,
-                 const StateType & z);
 
     //!fills molar_concentrations_first_guess with barometric equation
     template<typename StateType, typename VectorStateType>
@@ -105,23 +91,6 @@ namespace Planet
   private:
 
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
-    AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>* _kinetics;
-    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>* _diffusion;
-
-    template<typename VectorStateType, typename StateType>
-    void update_cache(const VectorStateType &molar_concentrations, const StateType &z);
-
-    void cache_recompute();
-
-    //! uses compo.barometric_density(z);
-    template <typename StateType>
-    const VectorCoeffType get_cache(const StateType &z) const;
-
-    VectorCoeffType _omegas;
-    VectorCoeffType _omegas_dots;
-    MatrixCoeffType _cache_composition;
-    VectorCoeffType _cache_altitudes;
-    std::map<CoeffType,VectorCoeffType> _cache;
 
     // Additional data structures that need to be cached
     AtmosphericTemperature<CoeffType,VectorCoeffType>* _temperature;
@@ -219,8 +188,6 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper( const GetPot& input )
     : _composition(NULL),
-      _kinetics(NULL),
-      _diffusion(NULL),
       _temperature(NULL),
       _neutral_species(NULL),
       _ionic_species(NULL),
@@ -247,78 +214,6 @@ namespace Planet
     delete _composition;
 
     return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_term(unsigned int s) const
-  {
-    return _omegas[s];
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
-  {
-    return _omegas_dots[s];
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template <typename StateType>
-  const VectorCoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::get_cache(const StateType &z) const
-  {
-     if(!_cache.count(z))
-     {
-        VectorCoeffType first_sum_guess = Antioch::zero_clone(_composition->neutral_molar_fraction_bottom());
-        _composition->first_guess_densities_sum(z,first_sum_guess);
-        return first_sum_guess;
-     }else
-     {
-        return _cache.at(z);
-     }
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template <typename VectorStateType, typename StateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::update_cache(const VectorStateType &molar_concentrations, const StateType &z)
-  {
-    bool recompute(true);
-    if(!_cache.count(z))
-    {
-        recompute = false;
-       _cache[z] = get_cache(z);
-    }
-
-     _cache_composition.push_back(molar_concentrations);
-     _cache_altitudes.push_back(z);
-     if(recompute && _cache_composition.size() == _cache.size())this->cache_recompute();
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::cache_recompute()
-  {
-   //from highest altitude to lowest altitude
-   unsigned int istart(0);
-   int istep(1);
-   if(_cache_altitudes.back() > _cache_altitudes.front())
-   {
-      istep = -1;
-      istart = _cache_altitudes.size() - 1;
-   }
- 
-
-   //sum densities are sdens_{i} = n(z_{i+1}) * (z_{i+1} - z_{i}), top composition is useless
-   for(unsigned int i = 1; i < _cache_altitudes.size(); i++)
-   {
-      unsigned int j = istart + istep * i;
-      unsigned int jbottom = istart + istep * (i - 1);
-      for(unsigned int s = 0; s < _cache_composition[j].size(); s++)
-      {
-        _cache.at(_cache_altitudes[j])[s] = _cache.at(_cache_altitudes[jbottom])[s] + 
-                                           _cache_composition[j][s] * (_cache_altitudes[j] - _cache_altitudes[jbottom]);
-      }
-   }
-
-    _cache_composition.clear();
-    _cache_altitudes.clear();
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>

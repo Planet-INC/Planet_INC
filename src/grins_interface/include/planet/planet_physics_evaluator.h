@@ -45,10 +45,6 @@ namespace Planet
 
     libMesh::Real chemical_term(unsigned int s)  const;
 
-    //!fills molar_concentrations_first_guess with barometric equation
-    template<typename StateType, typename VectorStateType>
-    void first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const;
-
     const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& eddy_diffusion() const;
 
     const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& molecular_diffusion() const;
@@ -205,13 +201,6 @@ namespace Planet
 
     _cache_composition.clear();
     _cache_altitudes.clear();
-  }
-
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType, typename VectorStateType>
-  void PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
-  {
-      _composition.first_guess_densities(z,molar_concentrations_first_guess);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
