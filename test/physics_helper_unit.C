@@ -152,6 +152,11 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
    const Antioch::ChemicalMixture<Scalar>& chem_mixture = neutral_reaction_set.chemical_mixture();
 
    std::ifstream data(hv_file.c_str());
+   if( !data )
+     {
+       std::cerr << "Could not open file " << hv_file << std::endl;
+       antioch_error();
+     }
    std::string line;
    getline(data,line);
    std::vector<std::string> out;
@@ -242,6 +247,11 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
 {
 //Lindemann
    std::ifstream data(neutral_reactions_file.c_str());
+   if( !data )
+     {
+       std::cerr << "Could not open file " << neutral_reactions_file << std::endl;
+       antioch_error();
+     }
    std::string line;
    getline(data,line); //title
    getline(data,line); //title
@@ -340,6 +350,11 @@ void fill_neutral_reactions(const std::string &neutral_reactions_elem,
 {
 //here only simple ones: bimol Kooij/Arrhenius model
    std::ifstream data(neutral_reactions_elem.c_str());
+   if( !data )
+     {
+       std::cerr << "Could not open file " << neutral_reactions_elem << std::endl;
+       antioch_error();
+     }
    std::string line;
    getline(data,line); //title
    Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::KOOIJ);
@@ -420,6 +435,11 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   Tz.clear();
   std::string line;
   std::ifstream temp(file);
+  if( !temp )
+    {
+      std::cerr << "Could not open file " << file << std::endl;
+      antioch_error();
+    }
   getline(temp,line);
   while(!temp.eof())
   {
@@ -437,6 +457,11 @@ void read_hv_flux(VectorScalar &lambda, VectorScalar &phy1AU, const std::string 
 {
   std::string line;
   std::ifstream flux_1AU(file);
+  if( !flux_1AU )
+    {
+      std::cerr << "Could not open file " << file << std::endl;
+      antioch_error();
+    }
   getline(flux_1AU,line);
   while(!flux_1AU.eof())
   {
@@ -456,6 +481,11 @@ void read_crossSection(const std::string &file, unsigned int nbr, VectorScalar &
 {
   std::string line;
   std::ifstream sig_f(file);
+  if( !sig_f )
+    {
+      std::cerr << "Could not open file " << file << std::endl;
+      antioch_error();
+    }
   getline(sig_f,line);
   while(!sig_f.eof())
   {
