@@ -9,7 +9,7 @@ neutral_species = 'N2 CH4 N(4S) CH3 (1)CH2 (3)CH2 H H2'
 ionic_species = '${Planet/neutral_species}'
 
 temperature_file = '@abs_top_srcdir@/test/input/T40_temp.profile'
-file_flyby = '@abs_top_srcdir@/test/input/test_Flyby'
+file_flyby = '@abs_top_srcdir@/test/input/test_Flyby.txt'
 root_input = '@abs_top_srcdir@/test/input/'
 file_neutral_charac = '@abs_top_srcdir@/test/input/neutrals.dat'
 input_N2 = '@abs_top_srcdir@/test/input/N2_hv_cross-sections.dat'
