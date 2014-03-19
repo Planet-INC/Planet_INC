@@ -902,9 +902,9 @@ namespace Planet
         CoeffType wv,ir,dirr;
         flux_1AU >> wv >> ir >> dirr;
         if(!lambda.empty() && wv == lambda.back())continue;
-        lambda.push_back(wv * 10.L);//nm -> A
-        phy1AU.push_back(ir * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
-                                                   Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A
+        lambda.push_back(wv);// * 10.L);//nm -> A
+        phy1AU.push_back(ir);/* * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
+                                                   Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A*/
       }
     flux_1AU.close();
     return;
