@@ -230,45 +230,13 @@ namespace Planet
   {
     this->build(input);
 
-    //_omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
-    //_omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
-
-    return;
-  }
-
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType, typename VectorStateType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::compute(const VectorStateType & molar_concentrations,
-                                                               const VectorStateType & dmolar_concentrations_dz,
-                                                               const StateType & z)
-  {
-   _diffusion->diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
-   _kinetics->chemical_rate(molar_concentrations,this->get_cache(z),z,_omegas_dots);
-
-   this->update_cache(molar_concentrations,z);
-
-    return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsHelper(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> *compo,
-                                                        AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType > *kinetics,
-                                                        DiffusionEvaluator <CoeffType,VectorCoeffType,MatrixCoeffType > *diffusion):
-        _kinetics(kinetics),
-        _diffusion(diffusion),
-        _composition(compo)
-  {
-    _omegas.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
-    _omegas_dots.resize(_kinetics->neutral_kinetics().reaction_set().n_species());
     return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::~PlanetPhysicsHelper()
   {
-    /*
-      delete _tau;
+    delete _tau;
     delete _chapman;
     delete _ionic_reaction_set;
     delete _neutral_reaction_set;
@@ -276,7 +244,6 @@ namespace Planet
     delete _neutral_species;
     delete _temperature;
     delete _composition;
-    */
 
     return;
   }
