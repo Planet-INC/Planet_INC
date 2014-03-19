@@ -85,6 +85,7 @@ namespace Planet
   _hv_tau(hv_tau),
   _mixture(mix)
   {
+     _phy = new Antioch::ParticleFlux<VectorCoeffType>;
      return;
   }
 
@@ -92,7 +93,7 @@ namespace Planet
   inline
   PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::~PhotonEvaluator()
   {
-     if(_phy)delete _phy;
+     delete _phy;
      return;
   }
 
@@ -105,6 +106,7 @@ namespace Planet
 
 //phy at top
      _phy_at_top.set_abscissa(lambda);
+     _phy->set_abscissa(lambda);
      VectorCoeffType flux;
      flux.resize(hv.size());
      for(unsigned int i = 0; i < hv.size(); i++)
@@ -150,12 +152,7 @@ namespace Planet
      antioch_assert_equal_to(sum_dens.size(), _mixture.neutral_composition().n_species());
      antioch_assert(!_phy_at_top.abscissa().empty());
      antioch_assert(!_phy_at_top.flux().empty());
-
-     if(!_phy)
-     {
-       _phy = new Antioch::ParticleFlux<VectorCoeffType>;
-       _phy->set_abscissa(_phy_at_top.abscissa());
-     }
+     antioch_assert(_phy);
 
      VectorCoeffType tau;
      _hv_tau.compute_tau(_mixture.a(molar_densities,z),sum_dens,tau);
