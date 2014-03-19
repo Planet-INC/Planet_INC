@@ -94,6 +94,53 @@ void condense_molecule(std::vector<unsigned int> &stoi, std::vector<std::string>
       }
 }
 
+template <typename Scalar>
+void parse_equation(std::vector<std::string> &reactants, std::vector<std::string> &products, std::string &line,
+                     bool &skip, const Antioch::ChemicalMixture<Scalar>& chem_mixture, std::string &equation,
+                     std::vector<unsigned int> &stoi_reac, std::vector<unsigned int> &stoi_prod)
+{
+   std::vector<std::string> out;
+   Antioch::SplitString(line,";",out,false);
+   if(out.size() != 2)antioch_error();
+   equation = out[0];
+   std::string parameters(out[1]);
+///// equation
+   std::vector<std::string> molecules;
+   Antioch::SplitString(equation,"->",molecules,false);
+   if(molecules.size() != 2)antioch_error();
+
+   Antioch::SplitString(molecules[0],"+",reactants,false);
+   Antioch::SplitString(molecules[1],"+",products,false);
+   shave_strings(reactants);
+   shave_strings(products);
+   stoi_reac.resize(reactants.size(),1);
+   stoi_prod.resize(products.size(),1);
+
+   condense_molecule(stoi_reac,reactants);
+   condense_molecule(stoi_prod,products);
+
+   for(unsigned int ir = 0; ir < reactants.size(); ir++)
+   {
+     if( !chem_mixture.active_species_name_map().count(reactants[ir]))
+     {
+       skip = true;
+       break;
+     }
+   }
+   if(!skip)
+   {
+     for(unsigned int ip = 0; ip < products.size(); ip++)
+     {
+       if( !chem_mixture.active_species_name_map().count(products[ip]))
+       {
+         skip = true;
+         break;
+       }
+     }
+   }
+   line.erase(0,line.find(';') + 1);
+}
+
 template<typename Scalar>
 void read_photochemistry_reac(const std::string &hv_file, const std::string &reac,
                               Antioch::ReactionSet<Scalar> &neutral_reaction_set, 
