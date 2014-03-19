@@ -730,7 +730,8 @@ namespace Planet
           }
 
         dataf.push_back(std::atof(str_data[0].c_str())); //Cf
-        if(dataf[1] == 0.) //Arrhenius
+        CoeffType temp = std::atof(str_data[1].c_str());
+        if(temp == 0) //Arrhenius
           {
             kineticsModel = Antioch::KineticsModel::ARRHENIUS;
           }else
