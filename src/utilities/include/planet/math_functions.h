@@ -79,7 +79,6 @@ namespace Planet
     CoeffType linear_evaluation_dz(const VectorCoeffType &alt, const VectorCoeffType &data, const CoeffType &value)
     {
       unsigned int iz = find_floor_index(alt,value);
-      //return (data.at(iz + 1) - data.at(iz)) / (alt.at(iz+1) - alt.at(iz));
       return (data[iz + 1] - data[iz]) / (alt[iz + 1] - alt[iz]);
     }
 
