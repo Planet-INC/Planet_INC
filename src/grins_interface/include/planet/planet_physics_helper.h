@@ -87,6 +87,7 @@ namespace Planet
 
     const Antioch::ReactionSet<CoeffType>& ionic_reaction_set() const;
 
+    /*! \todo This should really be const. Losing thread-safety somewhere */
     PhotonOpacity<CoeffType,VectorCoeffType>& tau();
 
     const std::vector<std::vector<BinaryDiffusion<CoeffType> > >& bin_diff_coeff() const;
