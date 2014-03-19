@@ -1185,8 +1185,11 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::shave_string(std::string &str) const
   {
-    while(str[0] == ' ')str.erase(0,1);
-    while(str[str.size() - 1] == ' ')str.erase(str.size() - 1,1);
+    // Trim from the left
+    str.erase(str.begin(), std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+
+    // Trim from the right
+    str.erase(std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), str.end());
 
     return;
   }
