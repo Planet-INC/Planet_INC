@@ -97,12 +97,14 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
+     Scalar t(0.),tz(0.),dt(0.),dtz(0.);
      temp >> t >> tz >> dt >> dtz;
+     if(tz < 1.)continue;
      T0.push_back(t);
      Tz.push_back(tz);
   }
   temp.close();
+
   return;
 }
 
@@ -375,7 +377,6 @@ int tester(const std::string &input_T)
                             );
 //
        Scalar Hs = scale_height(T,z,Mm[s] * Scalar(1e-3));
-
        Scalar omega_theo = - Dtilde * ( dns_dz[s] /densities[s]
                                       + Scalar(1.L)/Hs 
                                       + dT_dz /T * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s]))

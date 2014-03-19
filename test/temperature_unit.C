@@ -64,6 +64,14 @@ Scalar linear_interpolation(const Scalar &x0, const Scalar &x1,
 }
 
 template<typename Scalar>
+Scalar dlinear_interpolation(const Scalar &x0, const Scalar &x1,
+                             const Scalar &y0, const Scalar &y1)
+{
+
+   return (y1 - y0)/(x1 - x0);
+}
+
+template<typename Scalar>
 Scalar electron_temperature(const Scalar &alt)
 {
   if(alt < 900.L)
@@ -90,7 +98,7 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
+     Scalar t(0.),tz(0.),dt(0.),dtz(0.);
      temp >> t >> tz >> dt >> dtz;
      T0.push_back(t);
      Tz.push_back(tz);
@@ -113,10 +121,12 @@ int tester(const std::string & input_file)
   for(unsigned int iz = 0; iz < T0.size() - 1; iz++)
   {
       Scalar z = (T0[iz] + T0[iz + 1]) / Scalar(2.L);
-      Scalar neu_temp = linear_interpolation(Tz[iz],Tz[iz+1],T0[iz],T0[iz+1],z);
-      Scalar e_temp   = electron_temperature(z);
+      Scalar neu_temp  = linear_interpolation(Tz[iz],Tz[iz+1],T0[iz],T0[iz+1],z);
+      Scalar neu_dtemp = dlinear_interpolation(Tz[iz],Tz[iz+1],T0[iz],T0[iz+1]);
+      Scalar e_temp    = electron_temperature(z);
       return_flag = return_flag && 
                     check(temperature.neutral_temperature(z)   ,neu_temp,tol,"neutral temperature") &&
+                    check(temperature.dneutral_temperature_dz(z)   ,neu_dtemp,tol,"neutral temperature differentiate") &&
                     check(temperature.ionic_temperature(z)     ,neu_temp,tol,"ionic temperature")   &&
                     check(temperature.electronic_temperature(z),e_temp  ,tol,"electron temperature");
   }

@@ -286,7 +286,9 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
 
       dataf1.push_back(std::atof(str_data[0].c_str()));
       dataf2.push_back(std::atof(str_data[3].c_str()));
-      if(str_data[1] == "0" && str_data[4] == "0")
+      Scalar temp1 = std::atof(str_data[1].c_str());
+      Scalar temp2 = std::atof(str_data[4].c_str());
+      if(temp1 == 0 && temp2 == 0)
       {
          kineticsModel = Antioch::KineticsModel::ARRHENIUS;
       }else
@@ -911,7 +913,6 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 /**************************
  * fifth level
  **************************/
-
   GetPot input(input_filename);
 
   Planet::PlanetPhysicsHelper<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > helper(input);
