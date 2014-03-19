@@ -32,6 +32,7 @@
 
 // Planet
 #include "planet/planet_physics_helper.h"
+#include "planet/planet_physics_evaluator.h"
 
 // libMesh
 #include "libmesh/getpot.h"
@@ -89,7 +90,7 @@ namespace Planet
     //! Element orders, read from input
     libMeshEnums::Order _species_order;
 
-    PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>* _helper;
+    PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType> _helper;
 
   private:
 
@@ -104,7 +105,7 @@ namespace Planet
       _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
       _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
       _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
-    _helper(NULL)
+    _helper(input)
   {
      _species_var_names.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
@@ -184,6 +185,10 @@ namespace Planet
     const std::vector<libMesh::Point>& s_qpoint = 
       context.get_element_fe(var)->get_xyz();
 
+    // We shouldn't have to create this for every element and put it in a context,
+    // but just getting this going for now.
+    PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> evaluator(_helper);
+
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
@@ -205,12 +210,12 @@ namespace Planet
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            _helper->compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
-                            r - Constants::Titan::radius<double>() ) ; // z
+            evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
+                              r - Constants::Titan::radius<double>() ) ; // z
 
-            libMesh::Real omega = _helper->diffusion_term(s);
+            libMesh::Real omega = evaluator.diffusion_term(s);
 
-            libMesh::Real omega_dot = _helper->chemical_term(s);
+            libMesh::Real omega_dot = evaluator.chemical_term(s);
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
@@ -288,8 +293,6 @@ namespace Planet
                                                                        GRINS::AssemblyContext& context,
                                                                        GRINS::CachedValues& cache )
   {
-    /*! \todo Need to implement thermodynamic pressure calcuation for cases where it's needed. */
-
     std::vector<GRINS::BoundaryID> ids = context.side_boundary_ids();
 
     for( std::vector<GRINS::BoundaryID>::const_iterator it = ids.begin();
