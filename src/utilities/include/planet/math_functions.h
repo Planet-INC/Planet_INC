@@ -41,6 +41,8 @@ namespace Planet
          if((alt[iz] <= value && alt[iz + 1] >  value) ||
             (alt[iz] >  value && alt[iz + 1] <= value))break;
       }
+
+      if(iz == alt.size() - 1)iz--;
       return iz;
     }
 
@@ -77,7 +79,8 @@ namespace Planet
     CoeffType linear_evaluation_dz(const VectorCoeffType &alt, const VectorCoeffType &data, const CoeffType &value)
     {
       unsigned int iz = find_floor_index(alt,value);
-      return (data[iz + 1] - data[iz]) / (alt[iz] - alt[iz + 1]);
+      //return (data.at(iz + 1) - data.at(iz)) / (alt.at(iz+1) - alt.at(iz));
+      return (data[iz + 1] - data[iz]) / (alt[iz + 1] - alt[iz]);
     }
 
   } // end namespace Functions
