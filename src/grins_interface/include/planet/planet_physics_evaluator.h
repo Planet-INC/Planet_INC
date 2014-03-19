@@ -49,6 +49,21 @@ namespace Planet
     template<typename StateType, typename VectorStateType>
     void first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const;
 
+    const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& eddy_diffusion() const;
+
+    const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& molecular_diffusion() const;
+
+    const DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& diffusion() const;
+
+    const Antioch::KineticsEvaluator<CoeffType>& neutral_kinetics() const;
+
+    const Antioch::KineticsEvaluator<CoeffType>& ionic_kinetics () const;
+
+    const AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>& kinetics() const;
+
+    const PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& photon() const;
+
+
   protected:
 
     template<typename VectorStateType, typename StateType>
@@ -208,6 +223,48 @@ namespace Planet
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
   {
     return _omegas_dots[s];
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>  & PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::eddy_diffusion() const
+  {
+     return _eddy_diffusion;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> & PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::molecular_diffusion() const
+  {
+     return _molecular_diffusion;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> & PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion() const
+  {
+     return _diffusion;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const Antioch::KineticsEvaluator<CoeffType> & PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::neutral_kinetics() const
+  {
+     return _neutral_kinetics;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const Antioch::KineticsEvaluator<CoeffType> & PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ionic_kinetics () const
+  {
+     return _ionic_kinetics;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> & PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::kinetics() const
+  {
+     return _kinetics;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon() const
+  {
+     return _photon;
   }
 
 } // end namespace Planet
