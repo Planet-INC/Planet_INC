@@ -34,6 +34,7 @@
 #include "planet/diffusion_evaluator.h"
 #include "planet/planet_constants.h"
 #include "planet/planet_physics_helper.h"
+#include "planet/planet_physics_evaluator.h"
 
 //C++
 #include <vector>
