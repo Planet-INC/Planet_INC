@@ -62,9 +62,14 @@ namespace Planet
 					 const GRINS::BoundaryID bc_id,
 					 const GRINS::BCType bc_type ) const;
     
+    unsigned int n_species() const;
+
   protected:
   
     const PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>& _physics_helper;
+
+    enum PLANET_BC_TYPES{ LOWER_BOUNDARY_DIRICHLET = 0,
+                          UPPER_BOUNDARY_NEUMANN };
 
   private:
 
@@ -87,6 +92,42 @@ namespace Planet
     return;
   }
 
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  int PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::string_to_int( const std::string& bc_type_in ) const
+  {
+    int bc_type_out;
+
+    if( bc_type == "lower_boundary_dirichlet" )
+      bc_type_out = LOWER_BOUNDARY_DIRICHLET;
+
+    else if( bc_type == "upper_boundary_neumann" )
+      bc_type_out = UPPER_BOUNDARY_NEUMANN;
+
+    else
+      {
+	// Call base class to detect any physics-common boundary conditions
+	bc_type_out = BCHandlingBase::string_to_int( bc_type );
+      }
+
+    return bc_type_out;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::init_bc_data( const libMesh::FEMSystem& system )
+  {
+    for( unsigned int s = 0; s < this->_n_species; s++ )
+      {
+	_species_vars[s] = system.variable_number( _species_var_names[s] );
+      }
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  unsigned int n_species() const
+  {
+    return _helper.neutral_composition().
+  }
 } // end namespace Planet
 
 #endif // PLANET_PLANET_BC_HANDLING_H
