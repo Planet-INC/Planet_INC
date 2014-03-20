@@ -61,19 +61,25 @@ namespace Planet
 					 const bool request_jacobian,
 					 const GRINS::BoundaryID bc_id,
 					 const GRINS::BCType bc_type ) const;
-    
+ 
     unsigned int n_species() const;
 
+    std::string& species_name(unsigned int s) const;
+
   protected:
+
+    void set_species_bc_type( GRINS::BoundaryID bc_id, int bc_type );
+
+    void set_species_bc_values( GRINS::BoundaryID bc_id, const std::vector<libMesh::Real>& species_values );
   
     const PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>& _physics_helper;
 
     enum PLANET_BC_TYPES{ LOWER_BOUNDARY_DIRICHLET = 0,
                           UPPER_BOUNDARY_NEUMANN };
 
-    std::vector<std::string> _species_var_names;
-
     std::vector<GRINS::VariableIndex> _species_vars;
+
+    std::map<GRINS::BoundaryID,VectorCoeffType> _species_bc_values;
 
   private:
 
@@ -87,7 +93,6 @@ namespace Planet
     : GRINS::BCHandlingBase(physics_name),
       _physics_helper(physics_helper)
   {
-    _species_var_names.resize(this->n_species());
     _species_vars.resize(this->n_species());
 
     return;
@@ -122,9 +127,9 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::init_bc_data( const libMesh::FEMSystem& system )
   {
-    for( unsigned int s = 0; s < this->_n_species; s++ )
+    for( unsigned int s = 0; s < this->n_species(); s++ )
       {
-	_species_vars[s] = system.variable_number( _species_var_names[s] );
+	_species_vars[s] = system.variable_number( "n_"+this->species_name(s) );
       }
 
     return;
@@ -144,7 +149,11 @@ namespace Planet
 	{
           this->set_species_bc_type( bc_id, bc_type );
 
-          this->set_species_bc_values( bc_id, species_mass_fracs );
+          VectorCoeffType species_densities(this->n_species());
+
+          _helper.lower_boundary_dirichlet(species_densities);
+
+          this->set_species_bc_values( bc_id, species_densities );
 	}
 	break;
 
@@ -179,7 +188,7 @@ namespace Planet
 	  std::set<GRINS::BoundaryID> dbc_ids;
 	  dbc_ids.insert(bc_id);
 
-	  for( unsigned int s = 0; s < _n_species; s++ )
+	  for( unsigned int s = 0; s < this->n_species(); s++ )
 	    {
 	      std::vector<GRINS::VariableIndex> dbc_vars(1,_species_vars[s]);
 
@@ -217,10 +226,10 @@ namespace Planet
 	// General heat flux from user specified function
       case(UPPER_BOUNDARY_NEUMANN):
 	{
-          for( unsigned int s = 0; s < _n_species; s++ )
+          for( unsigned int s = 0; s < this->n_species(); s++ )
 	    {
-              _bound_conds.apply_neumann( context, cache, request_jacobian, _species_vars[s], -1.0,
-                                          this->get_neumann_bound_func( bc_id, _species_vars[s] ) );
+              _bound_conds.apply_neumann_normal( context, cache, request_jacobian, _species_vars[s], -1.0,
+                                                 this->get_neumann_bound_func( bc_id, _species_vars[s] ) );
             }
 	}
 	break;
@@ -239,6 +248,12 @@ namespace Planet
   unsigned int n_species() const
   {
     return _helper.neutral_composition().n_species();
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  std::string& species_name(unsigned int s) const
+  {
+    return _helper.neutral_composition().chemical_species()[s]->species();
   }
 } // end namespace Planet
 
