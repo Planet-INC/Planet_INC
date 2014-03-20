@@ -71,6 +71,10 @@ namespace Planet
     enum PLANET_BC_TYPES{ LOWER_BOUNDARY_DIRICHLET = 0,
                           UPPER_BOUNDARY_NEUMANN };
 
+    std::vector<std::string> _species_var_names;
+
+    std::vector<GRINS::VariableIndex> _species_vars;
+
   private:
 
     PlanetBCHandling();
@@ -80,9 +84,12 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetBCHandling( const std::string& physics_name, const GetPot& input,
                                                                                  const PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>& physics_helper )
-    : GRINS::BCHandlingBase(physics_name,input),
+    : GRINS::BCHandlingBase(physics_name),
       _physics_helper(physics_helper)
   {
+    _species_var_names.resize(this->n_species());
+    _species_vars.resize(this->n_species());
+
     return;
   }
 
@@ -124,9 +131,84 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::init_bc_types( const GRINS::BoundaryID bc_id, 
+                                                                                   const std::string& bc_id_string, 
+                                                                                   const int bc_type, 
+                                                                                   const std::string& bc_vars, 
+                                                                                   const std::string& bc_value, 
+                                                                                   const GetPot& input )
+  {
+    switch(bc_type)
+      {
+      case(LOWER_BOUNDARY_DIRICHLET):
+	{
+          this->set_species_bc_type( bc_id, bc_type );
+
+          this->set_species_bc_values( bc_id, species_mass_fracs );
+	}
+	break;
+
+      case(UPPER_BOUNDARY_NEUMANN):
+        {
+          this->set_neumann_bc_type( bc_id, bc_type );
+        }
+        break;
+
+      default:
+	{
+	  // Call base class to detect any physics-common boundary conditions
+	  BCHandlingBase::init_bc_types( bc_id, bc_id_string, bc_type,
+                                         bc_vars, bc_value, input );
+	}
+
+      }// End switch(bc_type)
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::user_init_dirichlet_bcs( libMesh::FEMSystem* system,
+                                                                                             libMesh::DofMap& dof_map,
+                                                                                             GRINS::BoundaryID bc_id,
+                                                                                             GRINS::BCType bc_type ) const
+  {
+    switch( bc_type )
+      {
+      case(LOWER_BOUNDARY_DIRICHLET):
+	{
+	  std::set<GRINS::BoundaryID> dbc_ids;
+	  dbc_ids.insert(bc_id);
+
+	  for( unsigned int s = 0; s < _n_species; s++ )
+	    {
+	      std::vector<GRINS::VariableIndex> dbc_vars(1,_species_vars[s]);
+
+	      ConstFunction<libMesh::Number> species_func( this->get_species_bc_value(bc_id,s) );
+
+	      libMesh::DirichletBoundary species_dbc( dbc_ids,
+						      dbc_vars,
+						      &species_func );
+
+	      dof_map.add_dirichlet_boundary( species_dbc );
+	    }
+	}
+	break;
+
+      default:
+	{
+	  std::cerr << "Error: Invalid Dirichlet BC type for " << _physics_name
+		    << std::endl;
+	  libmesh_error();
+	}
+      } //switch( bc_type )
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   unsigned int n_species() const
   {
-    return _helper.neutral_composition().
+    return _helper.neutral_composition().n_species();
   }
 } // end namespace Planet
 
