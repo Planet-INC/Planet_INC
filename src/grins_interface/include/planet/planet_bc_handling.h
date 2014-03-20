@@ -206,6 +206,36 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::user_apply_neumann_bcs( AssemblyContext& context,
+                                                                                            const GRINS::CachedValues& cache,
+                                                                                            const bool request_jacobian,
+                                                                                            const GRINS::BoundaryID bc_id,
+                                                                                            const GRINS::BCType bc_type ) const
+  {
+    switch( bc_type )
+      {
+	// General heat flux from user specified function
+      case(UPPER_BOUNDARY_NEUMANN):
+	{
+          for( unsigned int s = 0; s < _n_species; s++ )
+	    {
+              _bound_conds.apply_neumann( context, cache, request_jacobian, _species_vars[s], -1.0,
+                                          this->get_neumann_bound_func( bc_id, _species_vars[s] ) );
+            }
+	}
+	break;
+      default:
+	{
+	  std::cerr << "Error: Invalid Neumann BC type for " << _physics_name
+		    << std::endl;
+	  libmesh_error();
+	}
+      } // End switch
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   unsigned int n_species() const
   {
     return _helper.neutral_composition().n_species();
