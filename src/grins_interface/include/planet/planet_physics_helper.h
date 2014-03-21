@@ -66,6 +66,8 @@ namespace Planet
     template<typename VectorStateType>
     void upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const;
 
+    CoeffType upper_boundary_neumann(const VectorCoeffType &molar_densities, unsigned int s) const;
+
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& composition() const;
 
     /*! \todo This should really be const. Need to fix up ParticleFlux stuff. */
@@ -235,6 +237,12 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const
   {
       _composition->upper_boundary_fluxes(upper_boundary, molar_densities);
+  }
+
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_neumann(const VectorCoeffType &molar_densities, unsigned int s) const
+  {
+    return _composition->upper_boundary_flux(molar_densities,s);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
