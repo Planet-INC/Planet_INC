@@ -120,10 +120,11 @@ namespace Planet
 
     this->_bc_handler = new PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>(physics_name,input,_helper);
 
+    /*
     this->_ic_handler = new GRINS::GenericICHandler( physics_name, input );
-
     PlanetInitialGuess<CoeffType,VectorCoeffType,MatrixCoeffType> initial_func(_helper);
     _ic_handler->attach_initial_func(initial_func);
+    */
 
     return;
   }
