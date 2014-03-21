@@ -29,10 +29,12 @@
 #include "grins/assembly_context.h"
 #include "grins/cached_values.h"
 #include "grins/bc_handling_base.h"
+#include "grins/assembly_context.h"
 
 // Planet
 #include "planet/planet_physics_helper.h"
 #include "planet/planet_physics_evaluator.h"
+#include "planet/planet_bc_handling.h"
 
 // libMesh
 #include "libmesh/getpot.h"
@@ -95,7 +97,6 @@ namespace Planet
   private:
 
     PlanetPhysics();
-    
 
   };
 
@@ -105,7 +106,7 @@ namespace Planet
       _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
       _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
       _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
-    _helper(input)
+      _helper(input)
   {
      _species_var_names.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
@@ -114,6 +115,8 @@ namespace Planet
 	std::string var_name = "n_"+std::string(input( "Physics/Chemistry/species", "DIE!", i ));
 	_species_var_names.push_back( var_name );
       }
+
+    this->_bc_handler = new PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>(physics_name,input,_helper);
 
     return;
   }
