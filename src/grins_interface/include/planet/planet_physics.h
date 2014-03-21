@@ -30,11 +30,13 @@
 #include "grins/cached_values.h"
 #include "grins/bc_handling_base.h"
 #include "grins/assembly_context.h"
+#include "grins/generic_ic_handler.h"
 
 // Planet
 #include "planet/planet_physics_helper.h"
 #include "planet/planet_physics_evaluator.h"
 #include "planet/planet_bc_handling.h"
+#include "planet/planet_initial_guess.h"
 
 // libMesh
 #include "libmesh/getpot.h"
@@ -117,6 +119,11 @@ namespace Planet
       }
 
     this->_bc_handler = new PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>(physics_name,input,_helper);
+
+    this->_ic_handler = new GRINS::GenericICHandler( physics_name, input );
+
+    PlanetInitialGuess<CoeffType,VectorCoeffType,MatrixCoeffType> initial_func(_helper);
+    _ic_handler->attach_initial_func(initial_func);
 
     return;
   }
