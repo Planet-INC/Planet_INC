@@ -84,7 +84,6 @@ TESTS += molecular_diffusion_evaluator_unit.sh
 TESTS += diffusion_evaluator_unit.sh
 TESTS += physics_helper_unit.sh
 TESTS += solver_test.sh
-#TESTS += ionospheric_test.sh
 TESTS += pdf_norm_unit
 TESTS += pdf_nort_unit
 TESTS += pdf_logn_unit
@@ -95,6 +94,7 @@ TESTS += pdf_diun_unit
 TESTS += pdf_diut_unit
 TESTS += pdf_dirg_unit
 TESTS += pdf_dior_unit
+TESTS += ionospheric_test.sh
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED
