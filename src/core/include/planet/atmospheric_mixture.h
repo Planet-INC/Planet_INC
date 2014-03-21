@@ -157,6 +157,8 @@ namespace Planet
         template <typename VectorStateType>
         void upper_boundary_fluxes(VectorStateType &upper_fluxes, const VectorStateType &molar_concentrations) const;
 
+        CoeffType upper_boundary_flux(const VectorCoeffType &molar_concentrations, unsigned int s) const;
+
         //!
         template<typename StateType, typename VectorStateType>
         void scale_heights(const StateType &z, VectorStateType &Hs) const;
@@ -416,11 +418,14 @@ namespace Planet
   inline
   void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::lower_boundary_concentrations(VectorStateType &low_densities) const
   {
-      antioch_assedrt_equal_to(low_densities.size(),_neutral_composition.n_species());
+      antioch_assert_equal_to(low_densities.size(),_neutral_composition.n_species());
+
       for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
       {
           low_densities[s] = _neutral_molar_fraction_bottom[s] * _total_bottom_density;
       }
+
+      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -435,6 +440,19 @@ namespace Planet
           CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
           upper_fluxes[s] = this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax);
       }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_flux(const VectorCoeffType &molar_concentrations, unsigned int s) const
+  {
+      antioch_assert_less(s,_neutral_composition.n_species());
+      antioch_assert_less(s,molar_concentrations.size());
+
+      CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
+      CoeffType value = this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax);
+
+      return value;
   }
 
 
