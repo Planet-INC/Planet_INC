@@ -172,6 +172,7 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
 {
    Antioch::ReactionType::ReactionType typeReaction(Antioch::ReactionType::ELEMENTARY);
    Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::CONSTANT);
+
    Planet::KineticsBranchingStructure<Scalar> prob_reac;
    prob_reac.set_n_channels(reac.channels.size());
 
@@ -527,6 +528,7 @@ void read_reactions(const std::string &file_reac, Antioch::ReactionSet<Scalar> &
         cur_reac.br_path.push_back(br);
      }else
      {
+
         sanity_check_reaction(cur_reac);
 
         treat_reaction(cur_reac,reaction_set, n_species);
@@ -611,6 +613,7 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
 // then, the ionospheric reactions
   read_reactions(file_reac,reaction_set, mixture.n_species());
   filter_ions(reaction_set,ss_species);
+
   Antioch::KineticsEvaluator<Scalar> reactions_system(reaction_set,0);
   std::vector<Scalar> molar_concentrations, molar_sources;
 

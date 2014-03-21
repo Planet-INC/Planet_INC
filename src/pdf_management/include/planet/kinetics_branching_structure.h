@@ -246,12 +246,8 @@ namespace Planet
        data[0] *= _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])]->value(_track_br_in_nodes[ibr][inode]);
      }
 
-//TODO: either better read the input or change them
-     if(kineticsModel == Antioch::KineticsModel::HERCOURT_ESSEN)
-     {
-        data[1] = -data[1];
-        data.push_back(300.); // DR
-     }
+
+     if(kineticsModel == Antioch::KineticsModel::HERCOURT_ESSEN)data.push_back(300.); // DR
 
      return Antioch::build_rate<CoeffType>(data,kineticsModel);
   }
