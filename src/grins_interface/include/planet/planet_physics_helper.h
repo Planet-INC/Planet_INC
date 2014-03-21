@@ -58,6 +58,9 @@ namespace Planet
     template<typename StateType, typename VectorStateType>
     void first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const;
 
+    template<typename StateType>
+    StateType first_guess(unsigned int s, const StateType z) const;
+
     //!fills lower boundary conditions
     template<typename VectorStateType>
     void lower_boundary_dirichlet(VectorStateType & lower_boundary) const;
@@ -223,6 +226,14 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
   {
       _composition->first_guess_densities(z,molar_concentrations_first_guess);
+      return;
+  }
+
+  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType>
+  StateType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(unsigned int s, const StateType z) const
+  {
+    return _composition->first_guess_density(z,s);
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>

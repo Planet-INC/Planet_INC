@@ -145,6 +145,9 @@ namespace Planet
         template <typename StateType, typename VectorStateType>
         void first_guess_densities(const StateType &z, VectorStateType &densities) const;
 
+        template <typename StateType>
+        StateType first_guess_density(const StateType &z, unsigned int species) const;
+
         //!use isobaric equation, molar fractions at bottom and zstep = 10
         template <typename StateType, typename VectorStateType>
         void first_guess_densities_sum(const StateType &z, VectorStateType &sum_densities) const;
@@ -389,6 +392,29 @@ namespace Planet
       {
          densities[s] = _neutral_molar_fraction_bottom[s] * nTot;
       }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType>
+  inline
+  StateType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess_density(const StateType& z, unsigned int species) const
+  {
+      antioch_assert_less(species,_neutral_composition.n_species());
+      antioch_assert(!_neutral_molar_fraction_bottom.empty());
+
+      CoeffType Mm(0.L);
+      for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+      {
+         Mm += _neutral_molar_fraction_bottom[s] * _neutral_composition.M(s);
+      }
+
+      Mm *= 1e-3L; //to kg
+
+      CoeffType nTot = this->barometry_density(z, _zmin, _total_bottom_density, _temperature.neutral_temperature(z), Mm);
+
+      StateType density = _neutral_molar_fraction_bottom[species] * nTot;
+
+      return density;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
