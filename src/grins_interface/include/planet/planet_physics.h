@@ -105,7 +105,7 @@ namespace Planet
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
     : GRINS::Physics(physics_name,input), 
-      _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
+      _n_species( input.vector_variable_size("Planet/neutral_species") ),
       _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
       _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
       _helper(input)
@@ -114,7 +114,7 @@ namespace Planet
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
 	/*! \todo Make this prefix string an input option */
-	std::string var_name = "n_"+std::string(input( "Physics/Chemistry/species", "DIE!", i ));
+	std::string var_name = "n_"+std::string(input( "Planet/neutral_species", "DIE!", i ));
 	_species_var_names.push_back( var_name );
       }
 
