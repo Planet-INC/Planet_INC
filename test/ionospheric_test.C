@@ -108,6 +108,7 @@ void get_the_ions(const Antioch::ChemicalMixture<Scalar> &mixture, std::vector<A
       if( mixture.species_inverse_name_map().at(mixture.species_list()[s]).find('+') != std::string::npos)
                         ss_species.push_back(mixture.species_list()[s]);
   }
+  ss_species.push_back(mixture.species_name_map().at("e"));
 }
 
 
@@ -486,6 +487,7 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
        }
       
        reaction_set.add_reaction(my_rxn);     
+std::cout << (*my_rxn) << std::endl;
    }
 }
 
@@ -542,6 +544,7 @@ void read_reactions(const std::string &file_reac, Antioch::ReactionSet<Scalar> &
         cur_reac.br_path.push_back(br);
      }
   }
+  treat_reaction(cur_reac,reaction_set,n_species);
   data.close();
 }
 
@@ -591,15 +594,39 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
   Planet::AtmosphericSteadyState solver;
   solver.steady_state(reactions_system, ss_species, mixture, T, molar_concentrations, molar_sources);
 
-  int return_flag(1);
+  int return_flag(0);
+
+  Scalar sum(0.L);
+  for(unsigned int s = 0; s < ss_species.size(); s++)
+  {
+      sum += std::abs(molar_sources[mixture.species_list_map().at(ss_species[s])]);
+  }
+  Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.;
+  if(std::abs(sum) > tol)
+  {
+      std::cerr << std::scientific << std::setprecision(15)
+                << "Steady state not reached\n"
+                << "sum is " << sum 
+                << "\ntolerance is " << tol << std::endl;
+      return_flag = 1;
+  }
+
+/*
+  std::ofstream out("ions.dat");
 
   for(unsigned int s = 0; s < ss_species.size(); s++)
   {
-      std::cout << ss_species[s] << " " << molar_sources[s] << std::endl;
+      out << mixture.species_inverse_name_map().at(ss_species[s]) << " ";
+  }
+  std::cout << std::endl;
+  for(unsigned int s = 0; s < ss_species.size(); s++)
+  {
+      out << std::setprecision(10) << std::scientific << molar_sources[s] << " ";
   }
 
-
-  return return_flag;
+  out.close();
+*/
+  return 1;//return_flag;
 
 }
 
@@ -613,7 +640,7 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
+  return (//tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
           tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
           tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])));
 
