@@ -24,9 +24,20 @@
 #ifndef PLANET_PLANET_BC_HANDLING_H
 #define PLANET_PLANET_BC_HANDLING_H
 
+// libMesh
+#include "libmesh/fem_system.h"
+#include "libmesh/const_function.h"
+#include "libmesh/dirichlet_boundaries.h"
+#include "libmesh/dof_map.h"
+
 // GRINS
 #include "grins/bc_handling_base.h"
+#include "grins/assembly_context.h"
+#include "grins/neumann_func_obj.h"
 
+// Planet
+#include "planet/planet_physics_helper.h"
+#include "planet/planet_upper_neumann_bc.h"
 
 namespace Planet
 {
@@ -56,7 +67,7 @@ namespace Planet
 					  GRINS::BoundaryID bc_id, 
 					  GRINS::BCType bc_type ) const;
 
-    virtual void user_apply_neumann_bcs( AssemblyContext& context,
+    virtual void user_apply_neumann_bcs( GRINS::AssemblyContext& context,
 					 const GRINS::CachedValues& cache,
 					 const bool request_jacobian,
 					 const GRINS::BoundaryID bc_id,
@@ -64,13 +75,15 @@ namespace Planet
  
     unsigned int n_species() const;
 
-    std::string& species_name(unsigned int s) const;
+    const std::string& species_name(unsigned int s) const;
 
   protected:
 
     void set_species_bc_type( GRINS::BoundaryID bc_id, int bc_type );
 
-    void set_species_bc_values( GRINS::BoundaryID bc_id, const std::vector<libMesh::Real>& species_values );
+    void set_species_bc_values( GRINS::BoundaryID bc_id, const VectorCoeffType& species_values );
+
+    libMesh::Real get_species_bc_value( GRINS::BoundaryID bc_id, unsigned int species ) const;
   
     const PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>& _physics_helper;
 
@@ -78,6 +91,8 @@ namespace Planet
                           UPPER_BOUNDARY_NEUMANN };
 
     std::vector<GRINS::VariableIndex> _species_vars;
+
+    std::vector<std::pair<GRINS::BoundaryID,GRINS::BCType> > _species_bc_map;
 
     std::map<GRINS::BoundaryID,VectorCoeffType> _species_bc_values;
 
@@ -95,6 +110,13 @@ namespace Planet
   {
     _species_vars.resize(this->n_species());
 
+    std::string id_str = "Physics/"+_physics_name+"/species_bc_ids";
+    std::string bc_str = "Physics/"+_physics_name+"/species_bc_types";
+    std::string var_str = "Physics/"+_physics_name+"/species_bc_variables";
+    std::string val_str = "Physics/"+_physics_name+"/species_bc_values";
+    
+    this->read_bc_data( input, id_str, bc_str, var_str, val_str );
+
     return;
   }
 
@@ -109,16 +131,16 @@ namespace Planet
   {
     int bc_type_out;
 
-    if( bc_type == "lower_boundary_dirichlet" )
+    if( bc_type_in == "lower_boundary_dirichlet" )
       bc_type_out = LOWER_BOUNDARY_DIRICHLET;
 
-    else if( bc_type == "upper_boundary_neumann" )
+    else if( bc_type_in == "upper_boundary_neumann" )
       bc_type_out = UPPER_BOUNDARY_NEUMANN;
 
     else
       {
 	// Call base class to detect any physics-common boundary conditions
-	bc_type_out = BCHandlingBase::string_to_int( bc_type );
+	bc_type_out = BCHandlingBase::string_to_int( bc_type_in );
       }
 
     return bc_type_out;
@@ -130,6 +152,38 @@ namespace Planet
     for( unsigned int s = 0; s < this->n_species(); s++ )
       {
 	_species_vars[s] = system.variable_number( "n_"+this->species_name(s) );
+      }
+
+    // Now setup upper boundary Neumann bc
+    /*! \todo GRINS needs an init_neumann_bc or something to take care of this */
+    for( std::map<GRINS::BoundaryID,GRINS::BCType>::const_iterator it = _neumann_bc_map.begin();
+         it != _neumann_bc_map.begin(); ++ it)
+      {
+        GRINS::BCType bc_type = it->second;
+        switch(bc_type)
+          {
+          case(UPPER_BOUNDARY_NEUMANN):
+            {
+              GRINS::NBCContainer nbc;
+              nbc.set_bc_id(it->first);
+              for( unsigned int s = 0; s < this->n_species(); s++ )
+                {
+                  std::tr1::shared_ptr<GRINS::NeumannFuncObj> func( new PlanetUpperNeumannBC<CoeffType,VectorCoeffType,MatrixCoeffType>( _physics_helper, _species_vars, s ) );
+
+                  nbc.add_var_func_pair( _species_vars[s], func );
+                }
+
+              this->attach_neumann_bound_func( nbc );
+            }
+            break;
+
+          default:
+            {
+              std::cerr << "Error: Invalid Neumann BC type for " << _physics_name
+                        << std::endl;
+              libmesh_error();
+            }
+          }
       }
 
     return;
@@ -151,7 +205,7 @@ namespace Planet
 
           VectorCoeffType species_densities(this->n_species());
 
-          _helper.lower_boundary_dirichlet(species_densities);
+          _physics_helper.lower_boundary_dirichlet(species_densities);
 
           this->set_species_bc_values( bc_id, species_densities );
 	}
@@ -176,7 +230,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::user_init_dirichlet_bcs( libMesh::FEMSystem* system,
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::user_init_dirichlet_bcs( libMesh::FEMSystem* /*system*/,
                                                                                              libMesh::DofMap& dof_map,
                                                                                              GRINS::BoundaryID bc_id,
                                                                                              GRINS::BCType bc_type ) const
@@ -192,7 +246,7 @@ namespace Planet
 	    {
 	      std::vector<GRINS::VariableIndex> dbc_vars(1,_species_vars[s]);
 
-	      ConstFunction<libMesh::Number> species_func( this->get_species_bc_value(bc_id,s) );
+              libMesh::ConstFunction<libMesh::Number> species_func( this->get_species_bc_value(bc_id,s) );
 
 	      libMesh::DirichletBoundary species_dbc( dbc_ids,
 						      dbc_vars,
@@ -215,7 +269,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::user_apply_neumann_bcs( AssemblyContext& context,
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::user_apply_neumann_bcs( GRINS::AssemblyContext& context,
                                                                                             const GRINS::CachedValues& cache,
                                                                                             const bool request_jacobian,
                                                                                             const GRINS::BoundaryID bc_id,
@@ -245,16 +299,39 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  unsigned int n_species() const
+  unsigned int PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::n_species() const
   {
-    return _helper.neutral_composition().n_species();
+    return _physics_helper.composition().neutral_composition().n_species();
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  std::string& species_name(unsigned int s) const
+  const std::string& PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::species_name(unsigned int s) const
   {
-    return _helper.neutral_composition().chemical_species()[s]->species();
+    return _physics_helper.composition().neutral_composition().chemical_species()[s]->species();
   }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::set_species_bc_type( GRINS::BoundaryID bc_id, int bc_type )
+  {
+    _species_bc_map.push_back( std::make_pair(bc_id,bc_type) );
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::set_species_bc_values( GRINS::BoundaryID bc_id, 
+                                                                                           const VectorCoeffType& species_values )
+  {
+    _species_bc_values[bc_id] = species_values;
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>::get_species_bc_value( GRINS::BoundaryID bc_id, 
+                                                                                                   unsigned int species ) const
+  {
+    return (_species_bc_values.find(bc_id)->second)[species];
+  }
+
 } // end namespace Planet
 
 #endif // PLANET_PLANET_BC_HANDLING_H
