@@ -1,3 +1,4 @@
+# Options related to all Planet
 [Planet]
 
 medium = 'N2 CH4'
@@ -25,3 +26,81 @@ input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
 
 zmin = '600.0'
 zmax = '1400.0'
+
+[]
+
+# Physics options
+[Physics]
+
+enabled_physics = 'Planet'
+
+[./Planet]
+
+species_FE_family = 'LAGRANGE'
+species_order = 'FIRST'
+
+species_bc_ids = '0 1'
+
+species_bc_types = 'lower_boundary_dirichlet upper_boundary_neumann'
+
+[]
+
+# Mesh related options
+[mesh-options]
+mesh_option = create_1D_mesh
+element_type = EDGE2
+
+domain_x1_min = ${Planet/zmin}
+domain_x1_max = ${Planet/zmax}
+
+mesh_nx1 = 100
+
+[]
+
+
+#Linear and nonlinear solver options
+[linear-nonlinear-solver]
+max_nonlinear_iterations = 100 
+max_linear_iterations = 2500
+
+verify_analytic_jacobians = 0.0
+
+initial_linear_tolerance = 1.0e-10
+
+use_numerical_jacobians_only = 'true'
+
+# Options for time solvers
+[unsteady-solver]
+transient = 'false' 
+theta = 1.0
+n_timesteps = 700
+deltat = 50.0
+
+[]
+
+# Visualization options
+[vis-options]
+output_vis = 'true'
+
+vis_output_file_prefix = 'planet' 
+
+output_residual = 'false' 
+
+output_format = 'ExodusII'
+
+[]
+
+# Options for print info to the screen
+[screen-options]
+
+system_name = 'Planet'
+
+print_equation_system_info = true
+print_mesh_info = true
+print_log_info = true
+solver_verbose = true
+solver_quiet = false
+
+print_element_jacobians = 'false'
+
+[]
