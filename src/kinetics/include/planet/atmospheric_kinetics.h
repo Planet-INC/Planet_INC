@@ -48,6 +48,7 @@ namespace Planet
         AtmosphericKinetics() {antioch_error();return;}
 
         Antioch::KineticsEvaluator<CoeffType> &_neutral_reactions;
+        Antioch::ReactionSet<CoeffType>       &_neutral_reactions_set;
         Antioch::KineticsEvaluator<CoeffType> &_ionic_reactions;
 
         bool _ionic_coupling;
@@ -61,6 +62,7 @@ namespace Planet
       public:
         //!
         AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                         &neu,
+                            Antioch::ReactionSet<CoeffType>                               &neu_set,
                             Antioch::KineticsEvaluator<CoeffType>                         &ion,
                             const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
                             PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
@@ -92,11 +94,13 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
   AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>         &neu,
+                                                                      Antioch::ReactionSet<CoeffType>                               &neu_set,
                                                                       Antioch::KineticsEvaluator<CoeffType>                         &ion,
                                                                       const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
                                                                       PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
                                                                       const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition):
    _neutral_reactions(neu),
+   _neutral_reactions_set(neu_set),
    _ionic_reactions(ion),
    _temperature(temperature),
    _photon(photon),
@@ -150,6 +154,7 @@ namespace Planet
      VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
+     _neutral_reactions_set.update_particle_flux_chemistry();
      _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
                                              molar_concentrations,dummy,kin_rates);
 
