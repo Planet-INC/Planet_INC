@@ -99,7 +99,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetInitialGuess<CoeffType,VectorCoeffType,MatrixCoeffType>::operator()(const libMesh::Point& p, const libMesh::Real time,
+  void PlanetInitialGuess<CoeffType,VectorCoeffType,MatrixCoeffType>::operator()(const libMesh::Point& p, const libMesh::Real /*time*/,
                                                                                  libMesh::DenseVector<CoeffType>& output)
   {
     CoeffType z = p(0);
