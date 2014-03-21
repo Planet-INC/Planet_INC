@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_DIUN_PDF_H
-#define PLANET_DIUN_PDF_H
+#ifndef PLANET_LOGN_PDF_H
+#define PLANET_LOGN_PDF_H
 
 //Antioch
 #include "antioch/antioch_asserts.h"
@@ -31,27 +31,36 @@
 #include "planet/base_pdf.h"
 
 //C++
-#include <vector>
 
 namespace Planet
 {
   template <typename CoeffType>
-  class DiUnPdf: public BasePdf<CoeffType>
+  class LogNPdf: public  BasePdf<CoeffType>
   {
       private:
-        unsigned int _n;
+        CoeffType _mu;
+        CoeffType _f;
 
       public:
-        DiUnPdf();
-        DiUnPdf(unsigned int n);
-        ~DiUnPdf();
+        LogNPdf();
+        LogNPdf(const CoeffType &mu, const CoeffType &f);
+        ~LogNPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
 
-        void set_n(unsigned int n);
+        template <typename StateType>
+        void get_parameters(std::vector<StateType> &pars) const;
 
-        unsigned int n() const;
+        template <typename StateType>
+        void set_mu(const StateType &mu);
+
+        template <typename StateType>
+        void set_f(const StateType &f);
+
+        const CoeffType mu() const;
+
+        const CoeffType f() const;
 
         const CoeffType value(unsigned int ip = 0) const;
 
@@ -60,66 +69,94 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  DiUnPdf<CoeffType>::DiUnPdf():
-      BasePdf<CoeffType>(PDFName::DiUn),
-      _n(0)
+  LogNPdf<CoeffType>::LogNPdf():
+      BasePdf<CoeffType>(PDFName::LogN),
+      _mu(0.L),
+      _f(0.L)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  DiUnPdf<CoeffType>::DiUnPdf(unsigned int n):
-      BasePdf<CoeffType>(PDFName::DiUn),
-      _n(n)
+  LogNPdf<CoeffType>::LogNPdf(const CoeffType &mu, const CoeffType &f):
+      BasePdf<CoeffType>(PDFName::LogN),
+      _mu(mu),
+      _f(f)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  DiUnPdf<CoeffType>::~DiUnPdf()
+  LogNPdf<CoeffType>::~LogNPdf()
   {
      return;
-  }
-
-  template <typename CoeffType>
-  inline
-  void DiUnPdf<CoeffType>::set_n(unsigned int n)
-  {
-     _n = n;
-  }
-
-  template <typename CoeffType>
-  inline
-  unsigned int DiUnPdf<CoeffType>::n() const
-  {
-      return _n;
-  }
-
-  template <typename CoeffType>
-  inline
-  const CoeffType DiUnPdf<CoeffType>::value(unsigned int ip) const
-  {
-      return CoeffType(1.L)/(CoeffType)_n;
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void DiUnPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  void LogNPdf<CoeffType>::set_mu(const StateType &mu)
   {
-      antioch_assert_equal_to(pars.size(),1);
-      _n = pars[0];
+     _mu = mu;
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void LogNPdf<CoeffType>::set_f(const StateType &f)
+  {
+     _f = f;
   }
 
   template <typename CoeffType>
   inline
-  void DiUnPdf<CoeffType>::print(std::ostream &out)  const
+  const CoeffType LogNPdf<CoeffType>::mu() const
   {
-     out << "DiUn(" 
-         << _n
-         << ")";
+      return _mu;
+  }
+
+  template <typename CoeffType>
+  inline
+  const CoeffType LogNPdf<CoeffType>::f() const
+  {
+      return _f;
+  }
+
+  template <typename CoeffType>
+  inline
+  const CoeffType LogNPdf<CoeffType>::value(unsigned int ip) const
+  {
+      return this->mu();
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void LogNPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  {
+      antioch_assert_equal_to(pars.size(),2);
+      _mu = pars[0];
+      _f  = pars[1];
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void LogNPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(2,0.L);
+     pars[0] = _mu;
+     pars[1] = _f;
+  }
+
+  template <typename CoeffType>
+  inline
+  void LogNPdf<CoeffType>::print(std::ostream &out)  const
+  {
+     out << "LogN(" << _mu  << "," << _f
+                    << ")";
   }
 }
 

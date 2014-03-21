@@ -44,11 +44,18 @@ namespace Planet
 
       public:
         DirGPdf();
+
+        template <typename StateType>
+        DirGPdf(const DirGPdf<StateType> & rhs);
+
         DirGPdf(const std::vector<CoeffType> &v, const std::vector<CoeffType> &dv);
         ~DirGPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
+
+        template <typename StateType>
+        void get_parameters(std::vector<StateType> &pars) const;
 
         template <typename StateType>
         void set_v(const std::vector<StateType> &v);
@@ -70,6 +77,23 @@ namespace Planet
   DirGPdf<CoeffType>::DirGPdf():
       BasePdf<CoeffType>(PDFName::DirG)
   {
+     return;
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  DirGPdf<CoeffType>::DirGPdf(const DirGPdf<StateType> & rhs):
+      BasePdf<CoeffType>(PDFName::DirG)
+  {
+     _v.resize(rhs.v().size(),0.L);
+     _dv.resize(rhs.v().size(),0.L);
+     for(unsigned int i = 0; i < rhs.v().size(); i++)
+     {
+        _v[i]  = rhs.v()[i];
+        _dv[i] = rhs.dv()[i];
+     }
+
      return;
   }
 
@@ -144,10 +168,23 @@ namespace Planet
 
      _v.resize(pars.size()/2,0.L);
      _dv.resize(pars.size()/2,0.L);
-     for(unsigned int i = 0; i < pars.size()/2; i++)
+     for(unsigned int i = 0; i < _v.size(); i++)
      {
        _v[i]  = pars[i];
-       _dv[i] = pars[i + pars.size()/2];
+       _dv[i] = pars[i + _v.size()];
+     }
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void DirGPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(_v.size() * 2,-1.L);
+     for(unsigned int i = 0; i < _v.size(); i++)
+     {
+       pars[i] = _v[i];
+       pars[i + _v.size()] = _dv[i];
      }
   }
 
@@ -155,20 +192,24 @@ namespace Planet
   inline
   void DirGPdf<CoeffType>::print(std::ostream &out)  const
   {
-     out << "DirG(" ;
-     out << _v[0];
-
-     for(unsigned int ibr = 1; ibr < _v.size(); ibr++)
+     out << "DirG";
+     if(!_v.empty())
      {
-        out << "," << _v[ibr];
-     }
-     out << "; " << _dv[0];
-     for(unsigned int ibr = 1; ibr < _dv.size(); ibr++)
-     {
-        out << "," << _dv[ibr];
-     }
+       out << "(" ;
+       out << _v[0];
 
-     out << ")";
+       for(unsigned int ibr = 1; ibr < _v.size(); ibr++)
+       {
+          out << "," << _v[ibr];
+       }
+       out << "; " << _dv[0];
+       for(unsigned int ibr = 1; ibr < _dv.size(); ibr++)
+       {
+          out << "," << _dv[ibr];
+       }
+
+       out << ")";
+     }
   }
 }
 

@@ -51,6 +51,9 @@ namespace Planet
         void set_parameters(const std::vector<StateType> &pars);
 
         template <typename StateType>
+        void get_parameters(std::vector<StateType> &pars) const;
+
+        template <typename StateType>
         void set_min(const std::vector<StateType> &min);
 
         template <typename StateType>
@@ -162,6 +165,19 @@ namespace Planet
      {
        _min[i] = pars[i];
        _max[i] = pars[i + pars.size()/2];
+     }
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void DiUTPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(_min.size() * 2,0.L);
+     for(unsigned int i = 0; i < _min.size(); i++)
+     {
+       pars[i] = _min[i];
+       pars[i + _min.size()] = _max[i];
      }
   }
 

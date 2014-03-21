@@ -58,7 +58,7 @@ namespace Planet
         std::vector<PDFName::PDFName>                 _pdf_k;
         std::vector<BasePdf<CoeffType>*>              _pdf_k_object;
 
-        std::vector<BranchingRatioNode<CoeffType> >   _nodes;
+        std::vector<BranchingRatioNode<CoeffType>*>   _nodes;
         std::vector<std::vector<std::string> >        _track_br_nodes;    // nodes of channel
         std::vector<std::vector<unsigned int> >       _track_br_in_nodes; // parameters ib channel in nodes
         std::map<std::string,PDFName::PDFName>        _pdf_map;
@@ -69,20 +69,23 @@ namespace Planet
         ~KineticsBranchingStructure();
 
         //! pdf map
-        const std::map<std::string,PDFName::PDFName> pdf_map() const;
+        const std::map<std::string,PDFName::PDFName> & pdf_map() const;
 
         //! pdf map
-        const std::map<std::string,unsigned int> nodes_map()   const;
+        const std::map<std::string,unsigned int> & nodes_map()   const;
 
         //! adds already defined node
         template <typename StateType>
-        void add_node(const BranchingRatioNode<StateType> &node);
+        void add_node(BranchingRatioNode<StateType> *node);
 
         //! adds new empty node, needs a name
         void create_node(const std::string &id);
 
         //! modifiable reference to node
         BranchingRatioNode<CoeffType> & node(const std::string &id);
+
+        //! nodes
+        const std::vector<BranchingRatioNode<CoeffType>*> & nodes() const;
 
         //!sets the pdf for k
         void set_k_pdf(const std::vector<PDFName::PDFName> & pdf);
@@ -102,6 +105,16 @@ namespace Planet
          */
         Antioch::KineticsType<CoeffType>* create_rate_constant(unsigned int ibr, Antioch::KineticsModel::KineticsModel kineticsModel) const;
 
+        //! print
+        void print(std::ostream &out = std::cout) const;
+
+        //! print
+        friend std::ostream& operator<<(std::ostream &out, const KineticsBranchingStructure &brn)
+        {
+           brn.print(out);
+           return out;
+        }
+
   };
 
   template <typename CoeffType>
@@ -118,7 +131,6 @@ namespace Planet
      _pdf_map["DiUT"] = PDFName::DiUT;
      _pdf_map["DirG"] = PDFName::DirG;
      _pdf_map["DiOr"] = PDFName::DiOr;
-     _nodes.reserve(20);
      return;
   }
 
@@ -128,14 +140,18 @@ namespace Planet
   {
     for(unsigned int ip = 0; ip < _pdf_k_object.size(); ip++)
     {
-      ManagePDF::delete_pdf_pointer(_pdf_k_object[ip],_pdf_k[ip]);
+      delete _pdf_k_object[ip];
+    }
+    for(unsigned int i = 0; i < _nodes.size(); i++)
+    {
+      delete _nodes[i];
     }
     return;
   }
 
   template <typename CoeffType>
   inline
-  const std::map<std::string,PDFName::PDFName> KineticsBranchingStructure<CoeffType>::pdf_map() const
+  const std::map<std::string,PDFName::PDFName> &KineticsBranchingStructure<CoeffType>::pdf_map() const
   {
       return _pdf_map;
   }
@@ -143,15 +159,10 @@ namespace Planet
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void KineticsBranchingStructure<CoeffType>::add_node(const BranchingRatioNode<StateType> &node)
+  void KineticsBranchingStructure<CoeffType>::add_node(BranchingRatioNode<StateType> *node)
   {
-std::cout << "before resizing" << std::endl;
-if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_object_ptr() << " ~ " << _nodes[0].pdf_object_ptr()->pdf() << std::endl;
-      _nodes.resize(_nodes.size() + 1);
-std::cout << "after resizing" << std::endl;
-if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_object_ptr() << " ~ " << _nodes[0].pdf_object_ptr()->pdf() << std::endl;
-      _nodes.back() = node;
-      _nodes_map[node.id()] = _nodes.size() - 1;
+      _nodes.push_back(node);
+      _nodes_map[node->id()] = _nodes.size() - 1;
   }
 
       
@@ -159,8 +170,8 @@ if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_obje
   inline
   void KineticsBranchingStructure<CoeffType>::create_node(const std::string &id)
   {
-    BranchingRatioNode<CoeffType> node;
-    node.set_id(id);
+    BranchingRatioNode<CoeffType> * node = new BranchingRatioNode<CoeffType>();
+    node->set_id(id);
     this->add_node(node);
   }
 
@@ -168,7 +179,7 @@ if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_obje
   inline
   BranchingRatioNode<CoeffType> & KineticsBranchingStructure<CoeffType>::node(const std::string &id)
   {
-      return _nodes[_nodes_map.at(id)];
+      return (*_nodes[_nodes_map.at(id)]);
   }
 
   template <typename CoeffType>
@@ -179,7 +190,7 @@ if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_obje
       {
          for(unsigned int i = 0; i < _pdf_k_object.size(); i++)
          {
-           ManagePDF::delete_pdf_pointer(_pdf_k_object[i],_pdf_k[i]);
+           delete _pdf_k_object[i];
          }
       }
       _pdf_k.resize(pdf.size());
@@ -226,27 +237,68 @@ if(!_nodes.empty())if(_nodes[0].pdf_object_ptr())std::cout << _nodes[0].pdf_obje
      data.resize(_pdf_k_object.size());
      for(unsigned int ik = 0; ik < _pdf_k_object.size(); ik++)
      {
-       data[ik] = _pdf_k_object[ik]->value();// A
+       data[ik] = _pdf_k_object[ik]->value();// A,beta,Ea,....
      }
 
      // Cf, branching ratio calculation
      for(unsigned int inode = 0; inode < _track_br_nodes[ibr].size(); inode++)
      {
-       data[0] *= _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])].value(_track_br_in_nodes[ibr][inode]);
-//std::cout << "node " << _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])] << std::endl;
-//std::cout << "values " << _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])].value(_track_br_in_nodes[ibr][inode]) << " " << inode << std::endl;
+       data[0] *= _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])]->value(_track_br_in_nodes[ibr][inode]);
      }
 
+
      if(kineticsModel == Antioch::KineticsModel::HERCOURT_ESSEN)data.push_back(300.); // DR
-     
+
      return Antioch::build_rate<CoeffType>(data,kineticsModel);
   }
 
   template <typename CoeffType>
   inline
-  const std::map<std::string,unsigned int> KineticsBranchingStructure<CoeffType>::nodes_map()    const
+  const std::map<std::string,unsigned int> & KineticsBranchingStructure<CoeffType>::nodes_map()    const
   {
      return _nodes_map;
+  }
+
+  template <typename CoeffType>
+  inline
+  const std::vector<BranchingRatioNode<CoeffType>*> & KineticsBranchingStructure<CoeffType>::nodes() const
+  {
+     return _nodes;
+  }
+
+  template <typename CoeffType>
+  inline
+  void KineticsBranchingStructure<CoeffType>::print(std::ostream &out) const
+  {
+
+     out << "Global rate constant:" << std::endl;
+     for(unsigned int k_pdf = 0; k_pdf < _pdf_k_object.size(); k_pdf++)
+     {
+        out << "\t" << *_pdf_k_object[k_pdf] << std::endl;
+     }
+
+     out << std::endl;
+
+     out << "Nodes" << std::endl;
+     for(unsigned int i = 0; i < _nodes.size(); i++)
+     {
+        out << "\t" << (*_nodes[i]) << std::endl;
+     }
+
+     out << std::endl;
+
+     out << "Pathes:" << std::endl;
+     for(unsigned int ibr = 0; ibr < _track_br_nodes.size(); ibr++)
+     {
+        out << "channel " << ibr << "  :  ";
+        for(unsigned int inode = 0; inode < _track_br_nodes[ibr].size(); inode++)
+        {
+           if(inode > 0)out << " * ";
+           out << _nodes[_nodes_map.at(_track_br_nodes[ibr][inode])]->id() << " : " 
+               << _track_br_in_nodes[ibr][inode] << "  ";
+        }
+        out << std::endl;
+     }
   }
 
 }

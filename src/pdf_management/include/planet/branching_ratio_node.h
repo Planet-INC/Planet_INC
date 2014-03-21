@@ -46,9 +46,9 @@ namespace Planet
   class BranchingRatioNode
   {
      private:
-        PDFName::PDFName _pdf;
-        std::string _id;
-        unsigned int _n_channels;
+        PDFName::PDFName     _pdf;
+        std::string          _id;
+        unsigned int         _n_channels;
         BasePdf<CoeffType> * _pdf_object;
 
      public:
@@ -57,17 +57,21 @@ namespace Planet
         BranchingRatioNode(const BranchingRatioNode<StateType> &rhs);
         ~BranchingRatioNode();
 
+//pdf methods
         void set_pdf(PDFName::PDFName pdf);
+        template <typename StateType>
+        void set_pdf_parameters(const std::vector<StateType> &pars);
+
         void set_id(const std::string &id);
         void set_n_channels(unsigned int nchannels);
 
         template <typename StateType>
         void set_pdf_object(const BasePdf<StateType> * pdf_object);
 
-        PDFName::PDFName pdf()                const;
-        const std::string id()                const;
-        unsigned int n_channels()             const;
-        BasePdf<CoeffType> * pdf_object_ptr();
+        PDFName::PDFName pdf()                      const;
+        const std::string id()                      const;
+        unsigned int n_channels()                   const;
+        const BasePdf<CoeffType> * pdf_object_ptr() const;
 
         const CoeffType value(unsigned int ip) const;
 
@@ -88,6 +92,7 @@ namespace Planet
   inline
   BranchingRatioNode<CoeffType>::BranchingRatioNode():
      _pdf(PDFName::Norm),
+     _id("undefined node"),
      _n_channels(0),
      _pdf_object(NULL)
   {
@@ -113,7 +118,12 @@ namespace Planet
        _pdf = rhs.pdf();
        _id  = rhs.id();
        _n_channels = rhs.n_channels();
+       if(_pdf_object)delete _pdf_object;
+       _pdf_object = NULL;
        _pdf_object = ManagePDF::create_pdf_pointer<CoeffType>(_pdf);
+       std::vector<CoeffType> pdf_pars;
+       rhs.pdf_object_ptr()->get_parameters(pdf_pars);
+       _pdf_object->set_parameters(pdf_pars);
      }
 
      return *this;
@@ -123,7 +133,8 @@ namespace Planet
   inline
   BranchingRatioNode<CoeffType>::~BranchingRatioNode()
   {
-     ManagePDF::delete_pdf_pointer(_pdf_object,_pdf);
+     if(_pdf_object)delete _pdf_object;
+     _pdf_object = NULL;
      return;
   }
 
@@ -131,7 +142,7 @@ namespace Planet
   inline
   void BranchingRatioNode<CoeffType>::set_pdf(PDFName::PDFName pdf)
   {
-     if(_pdf_object)ManagePDF::delete_pdf_pointer(_pdf_object,_pdf);
+     if(_pdf_object)delete _pdf_object;
 
      _pdf = pdf;
      _pdf_object = ManagePDF::create_pdf_pointer<CoeffType>(_pdf);
@@ -184,21 +195,14 @@ namespace Planet
   inline
   const CoeffType BranchingRatioNode<CoeffType>::value(unsigned int ip) const
   {
+     antioch_assert(_pdf_object);
      return _pdf_object->value(ip);
   }
 
   template <typename CoeffType>
   inline
-  BasePdf<CoeffType> * BranchingRatioNode<CoeffType>::pdf_object_ptr()
+  const BasePdf<CoeffType> * BranchingRatioNode<CoeffType>::pdf_object_ptr() const
   {
-     if(_pdf_object)
-     {
-       if(_pdf != _pdf_object->pdf())
-       {
-         std::cout << "What the hell???" << std::endl;
-//         _pdf_object->set_pdf_type(_pdf);
-       }
-     }
      return _pdf_object;
   }
 
@@ -207,9 +211,19 @@ namespace Planet
   void BranchingRatioNode<CoeffType>::print(std::ostream &out) const
   {
      out << "Node " << _id << std::endl;
-     (_pdf_object)?out << "Distribution " << *_pdf_object:out << "No distribution associated";
+     (_pdf_object)?out << "Distribution " << *_pdf_object:
+                   out << "No distribution associated";
      out << std::endl;
      out << _n_channels << " channels" << std::endl;
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void BranchingRatioNode<CoeffType>::set_pdf_parameters(const std::vector<StateType> &pars)
+  {
+      antioch_assert(_pdf_object);
+      _pdf_object->set_parameters(pars);
   }
 }
 

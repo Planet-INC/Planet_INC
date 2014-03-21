@@ -31,6 +31,9 @@ namespace Planet
         void set_parameters(const std::vector<StateType> &pars);
 
         template <typename StateType>
+        void get_parameters(std::vector<StateType> &pars) const;
+
+        template <typename StateType>
         void set_min(const StateType &min);
 
         template <typename StateType>
@@ -117,6 +120,16 @@ namespace Planet
       antioch_assert_equal_to(pars.size(),2);
       _min = pars[0];
       _max = pars[1];
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void UnifPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(2,0.L);
+     pars[0] = _min;
+     pars[1] = _max;
   }
 
   template <typename CoeffType>

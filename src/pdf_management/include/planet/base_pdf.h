@@ -75,10 +75,13 @@ class DiOrPdf;
   class BasePdf
   {
       public:
-        BasePdf(PDFName::PDFName pdf = PDFName::Norm);
-        ~BasePdf();
 
-      void set_pdf_type(PDFName::PDFName pdf);
+      BasePdf(PDFName::PDFName pdf);
+
+      template <typename StateType>
+      BasePdf(const BasePdf<StateType> &rhs);
+
+      virtual ~BasePdf();
 
       PDFName::PDFName pdf() const;
 
@@ -86,6 +89,9 @@ class DiOrPdf;
 
       template <typename StateType>
       void set_parameters(const std::vector<StateType> &pars);
+
+      template <typename StateType>
+      void get_parameters(std::vector<StateType> &pars) const;
 
       void print(std::ostream &out = std::cout) const;
 
@@ -96,7 +102,10 @@ class DiOrPdf;
       }
 
       protected:
-      PDFName::PDFName _my_pdf;
+      const PDFName::PDFName _my_pdf;
+
+      private:
+        BasePdf();
 
   };
 
@@ -109,17 +118,19 @@ class DiOrPdf;
   }
 
   template <typename CoeffType>
+  template <typename StateType>
   inline
-  BasePdf<CoeffType>::~BasePdf()
+  BasePdf<CoeffType>::BasePdf(const BasePdf<StateType> &rhs):
+    _my_pdf(rhs.pdf())
   {
-     return;
+    return;
   }
 
   template <typename CoeffType>
   inline
-  void BasePdf<CoeffType>::set_pdf_type(PDFName::PDFName pdf)
+  BasePdf<CoeffType>::~BasePdf()
   {
-     _my_pdf = pdf;
+     return;
   }
 
   template <typename CoeffType>
@@ -193,43 +204,96 @@ class DiOrPdf;
        switch(_my_pdf)
        {
         case PDFName::Norm:
-          static_cast<NormPdf<CoeffType>*>(this)->set_parameters(pars);
+          (static_cast<NormPdf<CoeffType>*>(this))->set_parameters(pars);
           break;
 
         case PDFName::NorT:
-          static_cast<NorTPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<NorTPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::Unif:
-          static_cast<UnifPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<UnifPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::LogN:
-          static_cast<LogNPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<LogNPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::LogU:
-          static_cast<LogUPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<LogUPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::Diri:
-          static_cast<DiriPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<DiriPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::DiUn:
-          static_cast<DiUnPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<DiUnPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::DiUT:
-          static_cast<DiUTPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<DiUTPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::DiOr:
-          static_cast<DiOrPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<DiOrPdf<CoeffType>* >(this))->set_parameters(pars);
           break;
 
         case PDFName::DirG:
-          static_cast<DirGPdf<CoeffType>* >(this)->set_parameters(pars);
+          (static_cast<DirGPdf<CoeffType>* >(this))->set_parameters(pars);
+          break;
+
+        default: //WAT?
+          antioch_error();
+          break;
+       }
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void BasePdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+       switch(_my_pdf)
+       {
+        case PDFName::Norm:
+          static_cast<NormPdf<CoeffType>*>(this)->get_parameters(pars);
+          break;
+
+        case PDFName::NorT:
+          static_cast<NorTPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::Unif:
+          static_cast<UnifPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::LogN:
+          static_cast<LogNPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::LogU:
+          static_cast<LogUPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::Diri:
+          static_cast<DiriPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::DiUn:
+          static_cast<DiUnPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::DiUT:
+          static_cast<DiUTPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::DiOr:
+          static_cast<DiOrPdf<CoeffType>* >(this)->get_parameters(pars);
+          break;
+
+        case PDFName::DirG:
+          static_cast<DirGPdf<CoeffType>* >(this)->get_parameters(pars);
           break;
 
         default: //WAT?

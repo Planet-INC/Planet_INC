@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_DIOR_PDF_H
-#define PLANET_DIOR_PDF_H
+#ifndef PLANET_DIUN_PDF_H
+#define PLANET_DIUN_PDF_H
 
 //Antioch
 #include "antioch/antioch_asserts.h"
@@ -36,22 +36,25 @@
 namespace Planet
 {
   template <typename CoeffType>
-  class DiOrPdf: public BasePdf<CoeffType>
+  class DiUnPdf: public BasePdf<CoeffType>
   {
       private:
-        std::vector<unsigned int> _n;
+        unsigned int _n;
 
       public:
-        DiOrPdf();
-        DiOrPdf(const std::vector<unsigned int> &n);
-        ~DiOrPdf();
+        DiUnPdf();
+        DiUnPdf(unsigned int n);
+        ~DiUnPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
 
-        void set_n(std::vector<unsigned int> n);
+        template <typename StateType>
+        void get_parameters(std::vector<StateType> &pars) const;
 
-        std::vector<unsigned int> n() const;
+        void set_n(unsigned int n);
+
+        unsigned int n() const;
 
         const CoeffType value(unsigned int ip = 0) const;
 
@@ -60,16 +63,17 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  DiOrPdf<CoeffType>::DiOrPdf():
-      BasePdf<CoeffType>(PDFName::DiOr)
+  DiUnPdf<CoeffType>::DiUnPdf():
+      BasePdf<CoeffType>(PDFName::DiUn),
+      _n(0)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  DiOrPdf<CoeffType>::DiOrPdf(const std::vector<unsigned int> &n):
-      BasePdf<CoeffType>(PDFName::DiOr),
+  DiUnPdf<CoeffType>::DiUnPdf(unsigned int n):
+      BasePdf<CoeffType>(PDFName::DiUn),
       _n(n)
   {
      return;
@@ -77,62 +81,57 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  DiOrPdf<CoeffType>::~DiOrPdf()
+  DiUnPdf<CoeffType>::~DiUnPdf()
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  void DiOrPdf<CoeffType>::set_n(std::vector<unsigned int> n)
+  void DiUnPdf<CoeffType>::set_n(unsigned int n)
   {
-     _n.resize(n.size(),0.L);
-     for(unsigned int i = 0; i < n.size(); i++)
-     {
-       _n[i] = n[i];
-     }
+     _n = n;
   }
 
   template <typename CoeffType>
   inline
-  std::vector<unsigned int> DiOrPdf<CoeffType>::n() const
+  unsigned int DiUnPdf<CoeffType>::n() const
   {
       return _n;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType DiOrPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType DiUnPdf<CoeffType>::value(unsigned int ip) const
   {
-      return CoeffType(2.) * (CoeffType(_n.size()) + CoeffType(1.) - CoeffType(_n[ip])) /
-                             (CoeffType(_n.size()) * CoeffType(_n.size() + 1));
+      return CoeffType(1.L)/(CoeffType)_n;
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void DiOrPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  void DiUnPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
   {
+      antioch_assert_equal_to(pars.size(),1);
+      _n = (unsigned int)(pars[0]);
+  }
 
-     _n.resize(pars.size(),0);
-     for(unsigned int i = 0; i < pars.size(); i++)
-     {
-       _n[i] = (unsigned int)pars[i];
-     }
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void DiUnPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(1,0.);
+     pars[0] = (StateType)_n;
   }
 
   template <typename CoeffType>
   inline
-  void DiOrPdf<CoeffType>::print(std::ostream &out)  const
+  void DiUnPdf<CoeffType>::print(std::ostream &out)  const
   {
-     out << "DiOr("
-         << _n[0];
-
-     for(unsigned int ibr = 1; ibr < _n.size(); ibr++)
-     {
-        out << "," << _n[ibr];
-     }
-     out << ")";
+     out << "DiUn(" 
+         << _n
+         << ")";
   }
 }
 

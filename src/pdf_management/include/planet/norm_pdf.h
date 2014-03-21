@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_DIRI_PDF_H
-#define PLANET_DIRI_PDF_H
+#ifndef PLANET_NORM_PDF_H
+#define PLANET_NORM_PDF_H
 
 //Antioch
 #include "antioch/antioch_asserts.h"
@@ -31,62 +31,66 @@
 #include "planet/base_pdf.h"
 
 //C++
-#include <vector>
 
 namespace Planet
 {
   template <typename CoeffType>
-  class DiriPdf: public  BasePdf<CoeffType>
+  class NormPdf: public BasePdf<CoeffType>
   {
       private:
-        std::vector<CoeffType> _v;
-        CoeffType _r;
+        CoeffType _mu;
+        CoeffType _sigma;
 
       public:
-        DiriPdf();
-        DiriPdf(const std::vector<CoeffType> &v, const CoeffType &r);
-        ~DiriPdf();
+        NormPdf();
+        NormPdf(const CoeffType &mu, const CoeffType &sigma);
+        ~NormPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
 
         template <typename StateType>
-        void set_v(const std::vector<StateType> &v);
+        void get_parameters(std::vector<StateType> &pars) const;
 
         template <typename StateType>
-        void set_r(const StateType &r);
+        void set_mu(const StateType &mu);
 
-        const std::vector<CoeffType> v()   const;
+        template <typename StateType>
+        void set_sigma(const StateType &sigma);
 
-        const CoeffType r()   const;
+        const CoeffType mu() const;
+
+        const CoeffType sigma() const;
 
         const CoeffType value(unsigned int ip = 0) const;
 
         void print(std::ostream &out = std::cout)  const;
+
   };
 
   template <typename CoeffType>
   inline
-  DiriPdf<CoeffType>::DiriPdf():
-      BasePdf<CoeffType>(PDFName::Diri),
-      _r(0.L)
+  NormPdf<CoeffType>::NormPdf():
+      BasePdf<CoeffType>(PDFName::Norm),
+      _mu(0.L),
+      _sigma(0.L)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  DiriPdf<CoeffType>::DiriPdf(const std::vector<CoeffType> &v, const CoeffType &r):
-      BasePdf<CoeffType>(PDFName::Diri),
-      _v(v),
-      _r(r)
+  NormPdf<CoeffType>::NormPdf(const CoeffType &mu, const CoeffType &sigma):
+      BasePdf<CoeffType>(PDFName::Norm),
+      _mu(mu),
+      _sigma(sigma)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  DiriPdf<CoeffType>::~DiriPdf()
+  NormPdf<CoeffType>::~NormPdf()
   {
      return;
   }
@@ -94,70 +98,67 @@ namespace Planet
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void DiriPdf<CoeffType>::set_v(const std::vector<StateType> &v)
+  void NormPdf<CoeffType>::set_mu(const StateType &mu)
   {
-     _v.resize(v.size(),0.L);
-     for(unsigned int i = 0; i < v.size(); i++)
-     {
-       _v[i] = v[i];
-     }
+     _mu = mu;
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void DiriPdf<CoeffType>::set_r(const StateType &r)
+  void NormPdf<CoeffType>::set_sigma(const StateType &sigma)
   {
-     _r = r;
+     _sigma = sigma;
   }
 
   template <typename CoeffType>
   inline
-  const std::vector<CoeffType> DiriPdf<CoeffType>::v() const
+  const CoeffType NormPdf<CoeffType>::mu() const
   {
-      return _v;
+      return _mu;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType DiriPdf<CoeffType>::r() const
+  const CoeffType NormPdf<CoeffType>::sigma() const
   {
-      return _r;
+      return _sigma;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType DiriPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType NormPdf<CoeffType>::value(unsigned int ip) const
   {
-      return _v[ip];
+      return this->mu();
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void DiriPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  void NormPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
   {
-     _v.resize(pars.size() - 1,0.L);
-     for(unsigned int i = 0; i < pars.size() - 1; i++)
-     {
-       _v[i] = pars[i];
-     }
-      _r = pars.back();
+      antioch_assert_equal_to(pars.size(),2);
+      _mu    = pars[0];
+      _sigma = pars[1];
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void NormPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(2,0.L);
+     pars[0] = _mu;
+     pars[1] = _sigma;
   }
 
   template <typename CoeffType>
   inline
-  void DiriPdf<CoeffType>::print(std::ostream &out)  const
+  void NormPdf<CoeffType>::print(std::ostream &out)  const
   {
-     out << "Diri(" ;
-
-     for(unsigned int ibr = 0; ibr < _v.size(); ibr++)
-     {
-        out << _v[ibr]  << ",";
-     }
-
-     out << _r << ")";
+     out << "Norm(" << _mu << "," << _sigma << ")";
   }
-}
+
+}//end namespace
 
 #endif

@@ -21,45 +21,40 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_LOGU_PDF_H
-#define PLANET_LOGU_PDF_H
+#ifndef PLANET_DIOR_PDF_H
+#define PLANET_DIOR_PDF_H
 
 //Antioch
 #include "antioch/antioch_asserts.h"
-#include "antioch/cmath_shims.h"
 
 //Planet
 #include "planet/base_pdf.h"
 
 //C++
-#include <cmath>
+#include <vector>
 
 namespace Planet
 {
   template <typename CoeffType>
-  class LogUPdf: public  BasePdf<CoeffType>
+  class DiOrPdf: public BasePdf<CoeffType>
   {
       private:
-        CoeffType _min;
-        CoeffType _max;
+        std::vector<unsigned int> _n;
 
       public:
-        LogUPdf();
-        LogUPdf(const CoeffType &min, const CoeffType &max);
-        ~LogUPdf();
+        DiOrPdf();
+        DiOrPdf(const std::vector<unsigned int> &n);
+        ~DiOrPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
 
         template <typename StateType>
-        void set_min(const StateType &min);
+        void get_parameters(std::vector<StateType> &pars) const;
 
-        template <typename StateType>
-        void set_max(const StateType &max);
+        void set_n(std::vector<unsigned int> n);
 
-        const CoeffType min()   const;
-
-        const CoeffType max()   const;
+        std::vector<unsigned int> n() const;
 
         const CoeffType value(unsigned int ip = 0) const;
 
@@ -68,85 +63,91 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  LogUPdf<CoeffType>::LogUPdf():
-      BasePdf<CoeffType>(PDFName::LogU),
-      _min(0.L),
-      _max(0.L)
+  DiOrPdf<CoeffType>::DiOrPdf():
+      BasePdf<CoeffType>(PDFName::DiOr)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  LogUPdf<CoeffType>::LogUPdf(const CoeffType &min, const CoeffType &max):
-      BasePdf<CoeffType>(PDFName::LogU),
-      _min(min),
-      _max(max)
+  DiOrPdf<CoeffType>::DiOrPdf(const std::vector<unsigned int> &n):
+      BasePdf<CoeffType>(PDFName::DiOr),
+      _n(n)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  LogUPdf<CoeffType>::~LogUPdf()
+  DiOrPdf<CoeffType>::~DiOrPdf()
   {
      return;
   }
 
   template <typename CoeffType>
-  template <typename StateType>
   inline
-  void LogUPdf<CoeffType>::set_min(const StateType &min)
+  void DiOrPdf<CoeffType>::set_n(std::vector<unsigned int> n)
   {
-     _min = min;
+     _n.resize(n.size(),0.L);
+     for(unsigned int i = 0; i < n.size(); i++)
+     {
+       _n[i] = n[i];
+     }
+  }
+
+  template <typename CoeffType>
+  inline
+  std::vector<unsigned int> DiOrPdf<CoeffType>::n() const
+  {
+      return _n;
+  }
+
+  template <typename CoeffType>
+  inline
+  const CoeffType DiOrPdf<CoeffType>::value(unsigned int ip) const
+  {
+      return CoeffType(2.) * (CoeffType(_n.size()) + CoeffType(1.) - CoeffType(_n[ip])) /
+                             (CoeffType(_n.size()) * CoeffType(_n.size() + 1));
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void LogUPdf<CoeffType>::set_max(const StateType &max)
+  void DiOrPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
   {
-     _max = max;
-  }
 
-  template <typename CoeffType>
-  inline
-  const CoeffType LogUPdf<CoeffType>::min() const
-  {
-      return _min;
-  }
-
-  template <typename CoeffType>
-  inline
-  const CoeffType LogUPdf<CoeffType>::max() const
-  {
-      return _max;
-  }
-
-  template <typename CoeffType>
-  inline
-  const CoeffType LogUPdf<CoeffType>::value(unsigned int ip) const
-  {
-      return Antioch::ant_pow(this->min() * this->max(),0.5L);
+     _n.resize(pars.size(),0);
+     for(unsigned int i = 0; i < pars.size(); i++)
+     {
+       _n[i] = (unsigned int)pars[i];
+     }
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void LogUPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  void DiOrPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
   {
-      antioch_assert_equal_to(pars.size(),2);
-      _min = pars[0];
-      _max = pars[1];
+     pars.resize(_n.size(),0.L);
+     for(unsigned int i = 0; i < _n.size(); i++)
+     {
+       pars[i] = (StateType)_n[i];
+     }
   }
 
   template <typename CoeffType>
   inline
-  void LogUPdf<CoeffType>::print(std::ostream &out)  const
+  void DiOrPdf<CoeffType>::print(std::ostream &out)  const
   {
-     out << "LogU(" 
-         << _min  << "," << _max
-         << ")";
+     out << "DiOr("
+         << _n[0];
+
+     for(unsigned int ibr = 1; ibr < _n.size(); ibr++)
+     {
+        out << "," << _n[ibr];
+     }
+     out << ")";
   }
 }
 

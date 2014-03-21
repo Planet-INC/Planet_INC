@@ -46,65 +46,9 @@ namespace Planet
   namespace ManagePDF
   {
      template <typename CoeffType>
-     void delete_pdf_pointer(BasePdf<CoeffType> *pdf, PDFName::PDFName type_pdf);
-
-     template <typename CoeffType>
      BasePdf<CoeffType> *  create_pdf_pointer(PDFName::PDFName type_pdf);
 
 //
-
-     template <typename CoeffType>
-     inline
-     void delete_pdf_pointer(BasePdf<CoeffType> *pdf, PDFName::PDFName type_pdf)
-     {
-       switch(type_pdf)
-       {
-        case PDFName::Norm:
-          delete static_cast<NormPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::NorT:
-          delete static_cast<NorTPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::Unif:
-          delete static_cast<UnifPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::LogN:
-          delete static_cast<LogNPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::LogU:
-          delete static_cast<LogUPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::Diri:
-          delete static_cast<DiriPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::DiUn:
-          delete static_cast<DiUnPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::DiUT:
-          delete static_cast<DiUTPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::DiOr:
-          delete static_cast<DiOrPdf<CoeffType>*> (pdf);
-          break;
-
-        case PDFName::DirG:
-          delete static_cast<DirGPdf<CoeffType>*> (pdf);
-          break;
-
-        default: //WAT?
-          antioch_error();
-          break;
-       }
-       pdf = NULL;
-     }
 
      template <typename CoeffType>
      inline

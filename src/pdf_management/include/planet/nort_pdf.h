@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_NORM_PDF_H
-#define PLANET_NORM_PDF_H
+#ifndef PLANET_NORT_PDF_H
+#define PLANET_NORT_PDF_H
 
 //Antioch
 #include "antioch/antioch_asserts.h"
@@ -35,19 +35,24 @@
 namespace Planet
 {
   template <typename CoeffType>
-  class NormPdf: public BasePdf<CoeffType>
+  class NorTPdf: public  BasePdf<CoeffType>
   {
       private:
         CoeffType _mu;
         CoeffType _sigma;
+        CoeffType _min;
+        CoeffType _max;
 
       public:
-        NormPdf();
-        NormPdf(const CoeffType &mu, const CoeffType &sigma);
-        ~NormPdf();
+        NorTPdf();
+        NorTPdf(const CoeffType &mu, const CoeffType &sigma, const CoeffType &min, const CoeffType &max);
+        ~NorTPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
+
+        template <typename StateType>
+        void get_parameters(std::vector<StateType> &pars) const;
 
         template <typename StateType>
         void set_mu(const StateType &mu);
@@ -55,39 +60,52 @@ namespace Planet
         template <typename StateType>
         void set_sigma(const StateType &sigma);
 
-        const CoeffType mu() const;
+        template <typename StateType>
+        void set_min(const StateType &min);
+
+        template <typename StateType>
+        void set_max(const StateType &max);
+
+        const CoeffType mu()    const;
 
         const CoeffType sigma() const;
+
+        const CoeffType min()   const;
+
+        const CoeffType max()   const;
 
         const CoeffType value(unsigned int ip = 0) const;
 
         void print(std::ostream &out = std::cout)  const;
-
   };
 
   template <typename CoeffType>
   inline
-  NormPdf<CoeffType>::NormPdf():
-      BasePdf<CoeffType>(PDFName::Norm),
+  NorTPdf<CoeffType>::NorTPdf():
+      BasePdf<CoeffType>(PDFName::NorT),
       _mu(0.L),
-      _sigma(0.L)
+      _sigma(0.L),
+      _min(0.L),
+      _max(0.L)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  NormPdf<CoeffType>::NormPdf(const CoeffType &mu, const CoeffType &sigma):
-      BasePdf<CoeffType>(PDFName::Norm),
+  NorTPdf<CoeffType>::NorTPdf(const CoeffType &mu, const CoeffType &sigma, const CoeffType &min, const CoeffType &max):
+      BasePdf<CoeffType>(PDFName::NorT),
       _mu(mu),
-      _sigma(sigma)
+      _sigma(sigma),
+      _min(min),
+      _max(max)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  NormPdf<CoeffType>::~NormPdf()
+  NorTPdf<CoeffType>::~NorTPdf()
   {
      return;
   }
@@ -95,7 +113,7 @@ namespace Planet
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void NormPdf<CoeffType>::set_mu(const StateType &mu)
+  void NorTPdf<CoeffType>::set_mu(const StateType &mu)
   {
      _mu = mu;
   }
@@ -103,28 +121,58 @@ namespace Planet
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void NormPdf<CoeffType>::set_sigma(const StateType &sigma)
+  void NorTPdf<CoeffType>::set_sigma(const StateType &sigma)
   {
      _sigma = sigma;
   }
 
   template <typename CoeffType>
+  template <typename StateType>
   inline
-  const CoeffType NormPdf<CoeffType>::mu() const
+  void NorTPdf<CoeffType>::set_min(const StateType &min)
+  {
+     _min = min;
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void NorTPdf<CoeffType>::set_max(const StateType &max)
+  {
+     _max = max;
+  }
+
+  template <typename CoeffType>
+  inline
+  const CoeffType NorTPdf<CoeffType>::mu() const
   {
       return _mu;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType NormPdf<CoeffType>::sigma() const
+  const CoeffType NorTPdf<CoeffType>::sigma() const
   {
       return _sigma;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType NormPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType NorTPdf<CoeffType>::min() const
+  {
+      return _min;
+  }
+
+  template <typename CoeffType>
+  inline
+  const CoeffType NorTPdf<CoeffType>::max() const
+  {
+      return _max;
+  }
+
+  template <typename CoeffType>
+  inline
+  const CoeffType NorTPdf<CoeffType>::value(unsigned int ip) const
   {
       return this->mu();
   }
@@ -132,20 +180,35 @@ namespace Planet
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void NormPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  void NorTPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
   {
-      antioch_assert_equal_to(pars.size(),2);
+      antioch_assert_equal_to(pars.size(),4);
       _mu    = pars[0];
       _sigma = pars[1];
+      _min   = pars[2];
+      _max   = pars[3];
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void NorTPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(4,0.L);
+     pars[0] = _mu;
+     pars[1] = _sigma;
+     pars[2] = _min;
+     pars[3] = _max;
   }
 
   template <typename CoeffType>
   inline
-  void NormPdf<CoeffType>::print(std::ostream &out)  const
+  void NorTPdf<CoeffType>::print(std::ostream &out)  const
   {
-     out << "Norm(" << _mu << "," << _sigma << ")";
+     out << "NorT(" << _mu  << "," << _sigma 
+                    << _min << "," << _max 
+                    << ")";
   }
-
-}//end namespace
+}
 
 #endif

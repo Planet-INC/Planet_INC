@@ -21,8 +21,8 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef PLANET_LOGN_PDF_H
-#define PLANET_LOGN_PDF_H
+#ifndef PLANET_DIRI_PDF_H
+#define PLANET_DIRI_PDF_H
 
 //Antioch
 #include "antioch/antioch_asserts.h"
@@ -31,33 +31,37 @@
 #include "planet/base_pdf.h"
 
 //C++
+#include <vector>
 
 namespace Planet
 {
   template <typename CoeffType>
-  class LogNPdf: public  BasePdf<CoeffType>
+  class DiriPdf: public  BasePdf<CoeffType>
   {
       private:
-        CoeffType _mu;
-        CoeffType _f;
+        std::vector<CoeffType> _v;
+        CoeffType _r;
 
       public:
-        LogNPdf();
-        LogNPdf(const CoeffType &mu, const CoeffType &f);
-        ~LogNPdf();
+        DiriPdf();
+        DiriPdf(const std::vector<CoeffType> &v, const CoeffType &r);
+        ~DiriPdf();
 
         template <typename StateType>
         void set_parameters(const std::vector<StateType> &pars);
 
         template <typename StateType>
-        void set_mu(const StateType &mu);
+        void get_parameters(std::vector<StateType> &pars) const;
 
         template <typename StateType>
-        void set_f(const StateType &f);
+        void set_v(const std::vector<StateType> &v);
 
-        const CoeffType mu() const;
+        template <typename StateType>
+        void set_r(const StateType &r);
 
-        const CoeffType f() const;
+        const std::vector<CoeffType> v()   const;
+
+        const CoeffType r()   const;
 
         const CoeffType value(unsigned int ip = 0) const;
 
@@ -66,27 +70,26 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  LogNPdf<CoeffType>::LogNPdf():
-      BasePdf<CoeffType>(PDFName::LogN),
-      _mu(0.L),
-      _f(0.L)
+  DiriPdf<CoeffType>::DiriPdf():
+      BasePdf<CoeffType>(PDFName::Diri),
+      _r(0.L)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  LogNPdf<CoeffType>::LogNPdf(const CoeffType &mu, const CoeffType &f):
-      BasePdf<CoeffType>(PDFName::LogN),
-      _mu(mu),
-      _f(f)
+  DiriPdf<CoeffType>::DiriPdf(const std::vector<CoeffType> &v, const CoeffType &r):
+      BasePdf<CoeffType>(PDFName::Diri),
+      _v(v),
+      _r(r)
   {
      return;
   }
 
   template <typename CoeffType>
   inline
-  LogNPdf<CoeffType>::~LogNPdf()
+  DiriPdf<CoeffType>::~DiriPdf()
   {
      return;
   }
@@ -94,56 +97,82 @@ namespace Planet
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void LogNPdf<CoeffType>::set_mu(const StateType &mu)
+  void DiriPdf<CoeffType>::set_v(const std::vector<StateType> &v)
   {
-     _mu = mu;
+     _v.resize(v.size(),0.L);
+     for(unsigned int i = 0; i < v.size(); i++)
+     {
+       _v[i] = v[i];
+     }
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void LogNPdf<CoeffType>::set_f(const StateType &f)
+  void DiriPdf<CoeffType>::set_r(const StateType &r)
   {
-     _f = f;
+     _r = r;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType LogNPdf<CoeffType>::mu() const
+  const std::vector<CoeffType> DiriPdf<CoeffType>::v() const
   {
-      return _mu;
+      return _v;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType LogNPdf<CoeffType>::f() const
+  const CoeffType DiriPdf<CoeffType>::r() const
   {
-      return _f;
+      return _r;
   }
 
   template <typename CoeffType>
   inline
-  const CoeffType LogNPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType DiriPdf<CoeffType>::value(unsigned int ip) const
   {
-      return this->mu();
+      return _v[ip];
   }
 
   template <typename CoeffType>
   template <typename StateType>
   inline
-  void LogNPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
+  void DiriPdf<CoeffType>::set_parameters(const std::vector<StateType> &pars)
   {
-      antioch_assert_equal_to(pars.size(),2);
-      _mu = pars[0];
-      _f  = pars[1];
+     _v.resize(pars.size() - 1,0.L);
+     for(unsigned int i = 0; i < pars.size() - 1; i++)
+     {
+       _v[i] = pars[i];
+     }
+      _r = pars.back();
+  }
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  void DiriPdf<CoeffType>::get_parameters(std::vector<StateType> &pars) const
+  {
+     pars.resize(_v.size() + 1,0.L);
+     for(unsigned int i = 0; i < _v.size(); i++)
+     {
+       pars[i] = _v[i];
+     }
+     pars.back() = _r;
   }
 
   template <typename CoeffType>
   inline
-  void LogNPdf<CoeffType>::print(std::ostream &out)  const
+  void DiriPdf<CoeffType>::print(std::ostream &out)  const
   {
-     out << "LogN(" << _mu  << "," << _f
-                    << ")";
+     out << "Diri(" ;
+
+     for(unsigned int ibr = 0; ibr < _v.size(); ibr++)
+     {
+        out << _v[ibr]  << ",";
+     }
+
+     out << _r << ")";
   }
 }
 
