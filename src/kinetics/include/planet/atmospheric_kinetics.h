@@ -152,6 +152,7 @@ namespace Planet
      VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
+     _neutral_reactions_set.update_particle_flux_chemistry();
      _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
                                              molar_concentrations,dummy,kin_rates);
 
