@@ -529,7 +529,7 @@ namespace Planet
         spec.push_back(_neutral_species->species_name_map().at(neutrals[s]));
       }
 
-    for(unsigned int n = 0; n < 2; n++)
+    for(unsigned int n = 0; n < _medium.size(); n++)
       {
         _bin_diff_coeff[n].resize(neutrals.size());
 
@@ -857,15 +857,17 @@ namespace Planet
         neu >> name >> mass >> AN2 >> sN2 >> ACH4 >> sCH4 >> alpha >> enth >> hsr >> mr;
         for(unsigned int s = 0; s < neutrals.size(); s++)
           {
+            bin_diff_data[0][s].resize(2,0.);
+            bin_diff_data[1][s].resize(2,0.);
             if(name == neutrals[s])
               {
                 tc[s] = alpha; // no unit
                 bin_diff_model[0][s] = Planet::DiffusionType::Wilson; //N2
                 bin_diff_model[1][s] = Planet::DiffusionType::Wilson; //CH4
-                bin_diff_data[0][s].push_back(AN2 * 1e-4);  //N2 - A  -- cm2/s -> m2/s
-                bin_diff_data[0][s].push_back(sN2);  //N2 - s  -- no unit
-                bin_diff_data[1][s].push_back(ACH4 * 1e-4); //CH4 - A  -- cm2/s -> m2/s
-                bin_diff_data[1][s].push_back(sCH4); //CH4 - s  -- no unit
+                bin_diff_data[0][s][0] = AN2 * 1e-4;  //N2 - A  -- cm2/s -> m2/s
+                bin_diff_data[0][s][1] = sN2;  //N2 - s  -- no unit
+                bin_diff_data[1][s][0] = ACH4 * 1e-4; //CH4 - A  -- cm2/s -> m2/s
+                bin_diff_data[1][s][1] = sCH4; //CH4 - s  -- no unit
                 break;
               }
           }

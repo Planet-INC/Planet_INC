@@ -186,7 +186,7 @@ namespace Planet
         for(unsigned int i = 0; i < _n_medium; i++)
         {
           if(_i_medium[i] == s)continue;
-          n_D += molar_concentrations[_i_medium[i]] / this->binary_coefficient(_i_medium[i],s,T,p);
+          n_D += molar_concentrations[_i_medium[i]] / this->binary_coefficient(i,s,T,p);
         }
 //Dtilde = Ds numerator (ntot - n_s) / Ds denom ...
         Dtilde[s] = (nTot - molar_concentrations[s])
