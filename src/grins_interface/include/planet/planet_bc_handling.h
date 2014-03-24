@@ -157,7 +157,7 @@ namespace Planet
     // Now setup upper boundary Neumann bc
     /*! \todo GRINS needs an init_neumann_bc or something to take care of this */
     for( std::map<GRINS::BoundaryID,GRINS::BCType>::const_iterator it = _neumann_bc_map.begin();
-         it != _neumann_bc_map.begin(); ++ it)
+         it != _neumann_bc_map.end(); ++ it)
       {
         GRINS::BCType bc_type = it->second;
         switch(bc_type)
