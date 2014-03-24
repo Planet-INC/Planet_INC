@@ -53,7 +53,7 @@ element_type = EDGE2
 domain_x1_min = ${Planet/zmin}
 domain_x1_max = ${Planet/zmax}
 
-mesh_nx1 = 100
+mesh_nx1 = 5 
 
 []
 
