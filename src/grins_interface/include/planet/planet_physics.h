@@ -200,6 +200,8 @@ namespace Planet
     // but just getting this going for now.
     PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> evaluator(_helper);
 
+    std::cout << "Element #" << context.get_elem().id() << std::endl;
+
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
@@ -227,6 +229,8 @@ namespace Planet
             libMesh::Real omega = evaluator.diffusion_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
+
+            std::cout << "omega = " << omega << ", omega_dot " << omega_dot << std::endl;
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
