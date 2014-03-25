@@ -216,15 +216,15 @@ namespace Planet
             dmolar_concentrations_dz[s] = context.interior_gradient(this->_species_vars[s],qp)(0);
           }
 
+        evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
+                              r - Constants::Titan::radius<double>() ) ; // z
+
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
-            const libMesh::Real n_s = context.interior_value(this->_species_vars[s],qp);
-
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
-                              r - Constants::Titan::radius<double>() ) ; // z
+            libMesh::Number n_s = molar_concentrations[s];
 
             libMesh::Real omega = evaluator.diffusion_term(s);
 
