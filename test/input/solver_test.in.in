@@ -27,6 +27,8 @@ input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
 zmin = '600.0'
 zmax = '1400.0'
 
+#for infos more than anything else at the moment
+radius = '2575.5'
 []
 
 # Physics options
@@ -50,8 +52,9 @@ species_bc_types = 'lower_boundary_dirichlet upper_boundary_neumann'
 mesh_option = create_1D_mesh
 element_type = EDGE2
 
-domain_x1_min = ${Planet/zmin}
-domain_x1_max = ${Planet/zmax}
+# x are r = z + radius
+domain_x1_min = '3175.5'
+domain_x1_max = '3975.5'
 
 mesh_nx1 = 5 
 
