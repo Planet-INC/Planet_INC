@@ -129,22 +129,23 @@ namespace Planet{
 // eddy diff
      CoeffType eddy_K = _eddy_diffusion.K(nTot);
 
+// in km-2.s-1
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
-            omegas[s] =  //omega = Dtilde * [
+            omegas[s] = Antioch::constant_clone(T,1e-10) * (//omega = - ns * Dtilde * [
             - molecular[s] * 
             (
-                dmolar_concentrations_dz[s]/molar_concentrations[s] // 1/ns * dns_dz
-              + CoeffType(1.L)/Hs[s]  // + 1/Hs
-              + dT_dz/T // + 1/T * dT_dz * (
-                * (CoeffType(1.L) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) ]
+                dmolar_concentrations_dz[s] // 1/ns * dns_dz
+              + molar_concentrations[s]/Hs[s]  // + 1/Hs
+              + molar_concentrations[s] * dT_dz/T // + 1/T * dT_dz * (
+                * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) ]
             )
-             - eddy_K * // - K * (
+             - eddy_K * // - ns * K * (
             ( 
-                dmolar_concentrations_dz[s]/molar_concentrations[s] // 1/ns * dns_dz
-              + CoeffType(1.L)/Ha // + 1/Ha
-              + dT_dz/T //+1/T * dT_dz )
-            );
+                dmolar_concentrations_dz[s] // 1/ns * dns_dz
+              + molar_concentrations[s]/Ha // + 1/Ha
+              + molar_concentrations[s] * dT_dz/T //+1/T * dT_dz )
+            ));
      }
      return;
   }

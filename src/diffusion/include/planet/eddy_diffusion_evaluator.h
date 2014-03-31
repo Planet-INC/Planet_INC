@@ -56,10 +56,11 @@ namespace Planet{
          template<typename StateType>
          void set_K0(const StateType &K0);
 
+         //! \return eddy coefficient in cm2.s-1
          template<typename StateType>
          ANTIOCH_AUTO(StateType)
          K(const StateType &ntot) const
-         ANTIOCH_AUTOFUNC(StateType,_K0 * Antioch::ant_sqrt(_mixture.total_bottom_density()/ntot))
+         ANTIOCH_AUTOFUNC(StateType,_K0 * Antioch::ant_sqrt(Antioch::ant_abs(_mixture.total_bottom_density()/ntot)))
 
          //!
          EddyDiffusionEvaluator(const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 

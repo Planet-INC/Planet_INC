@@ -93,6 +93,8 @@ namespace Planet
 
     CoeffType K0() const;
 
+    CoeffType scaling_factor() const;
+
   private:
 
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
@@ -120,6 +122,8 @@ namespace Planet
 
     std::vector<std::string> _medium;
 
+    CoeffType _scaling_factor;
+
     /*! Convenience method to hide all the construction code for
         composition, kinetics, and diffusion */
     void build( const GetPot& input );
@@ -138,7 +142,7 @@ namespace Planet
 
     /*! Convenience method within a convenience method */
     void build_composition( const GetPot& input, VectorCoeffType& molar_frac,
-                            CoeffType dens_tot, VectorCoeffType& tc);
+                            CoeffType dens_tot, VectorCoeffType& tc, VectorCoeffType& hard_sphere_radius);
 
     void build_diffusion( std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                           std::vector<std::vector<DiffusionType> >& bin_diff_model,
@@ -161,13 +165,13 @@ namespace Planet
                           const std::string& file_flyby,
                           const std::string& root_input) const;
 
-    void read_crossSection( const std::string &file, unsigned int nbr,
+    void read_crossSection( const std::string &file,
                             VectorCoeffType &lambda, VectorCoeffType &sigma ) const;
 
     void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file) const;
 
     void read_neutral_characteristics(const std::vector<std::string>& neutrals,
-                                      VectorCoeffType& tc,
+                                      VectorCoeffType& tc,VectorCoeffType& hard_sphere_radius,
                                       std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                                       std::vector<std::vector<DiffusionType> >& bin_diff_model,
                                       const std::string & file_neutral_charac) const;
@@ -199,7 +203,8 @@ namespace Planet
       _neutral_reaction_set(NULL),
       _ionic_reaction_set(NULL),
       _chapman(NULL),
-      _tau(NULL)
+      _tau(NULL),
+      _scaling_factor(1e13) // sensible default
   {
     this->build(input);
 
@@ -226,6 +231,10 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
   {
       _composition->first_guess_densities(z,molar_concentrations_first_guess);
+      for(unsigned int i = 0; i < molar_concentrations_first_guess.size(); i++)
+      {
+         molar_concentrations_first_guess[i] /= _scaling_factor;
+      }
       return;
   }
 
@@ -233,7 +242,7 @@ namespace Planet
   template<typename StateType>
   StateType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(unsigned int s, const StateType z) const
   {
-    return _composition->first_guess_density(z,s);
+    return _composition->first_guess_density(z,s) / _scaling_factor;
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -241,6 +250,10 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::lower_boundary_dirichlet(VectorStateType & lower_boundary) const
   {
       _composition->lower_boundary_concentrations(lower_boundary);
+      for(unsigned int i = 0; i < lower_boundary.size(); i++)
+      {
+         lower_boundary[i] /= _scaling_factor;
+      }
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -319,8 +332,9 @@ namespace Planet
     _bin_diff_coeff.resize(_medium.size());
 
     VectorCoeffType tc;
+    VectorCoeffType hard_sphere_radius;
 
-    this->read_neutral_characteristics( neutrals, tc, bin_diff_data, bin_diff_model,
+    this->read_neutral_characteristics( neutrals, tc, hard_sphere_radius, bin_diff_data, bin_diff_model,
                                         file_neutral_charac);
 
     _chapman = new Chapman<CoeffType>(chi);
@@ -336,7 +350,7 @@ namespace Planet
     this->build_reaction_sets(input);
 
     // Must be called after: build_temperature, build_species
-    this->build_composition(input, molar_frac, dens_tot, tc);
+    this->build_composition(input, molar_frac, dens_tot, tc, hard_sphere_radius);
 
     return;
   }
@@ -385,7 +399,7 @@ namespace Planet
         neutrals[s] = input("Planet/neutral_species", "DIE!", s);
       }
 
-    for( unsigned int s = 0; s < n_neutral; s++ )
+    for( unsigned int s = 0; s < n_ionic; s++ )
       {
         ions[s] = input("Planet/ionic_species", "DIE!", s);
       }
@@ -428,9 +442,8 @@ namespace Planet
 
     this->read_hv_flux(_lambda_hv, _phy1AU, input_hv);
 
-    /*! \todo What are these magic numbers? */
-    this->read_crossSection(input_N2,  3, lambda_N2,  sigma_N2);
-    this->read_crossSection(input_CH4, 9, lambda_CH4, sigma_CH4);
+    this->read_crossSection(input_N2,  lambda_N2,  sigma_N2);
+    this->read_crossSection(input_CH4, lambda_CH4, sigma_CH4);
 
     /* here only N2 and CH4 absorb */
     _tau->add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
@@ -490,7 +503,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, VectorCoeffType& molar_frac, CoeffType dens_tot, VectorCoeffType& tc )
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_composition( const GetPot& input, VectorCoeffType& molar_frac, CoeffType dens_tot, VectorCoeffType& tc, VectorCoeffType& hard_sphere_radius)
   {
 
     // Build AtmosphericMixture
@@ -513,6 +526,9 @@ namespace Planet
 
     _composition->init_composition(molar_frac, dens_tot, zmin, zmax);
     _composition->set_thermal_coefficient(tc);
+    _composition->set_hard_sphere_radius(hard_sphere_radius);
+
+    _scaling_factor = dens_tot;
 
     return;
   }
@@ -614,17 +630,22 @@ namespace Planet
 
         dataf.push_back(std::atof(str_data[0].c_str())); //Cf
         CoeffType temp = std::atof(str_data[1].c_str());
-        if(temp == 0) //Arrhenius
+        CoeffType temp2 = std::atof(str_data[2].c_str());
+        if(temp == 0 && temp2 == 0) //constant
+          {
+            kineticsModel = Antioch::KineticsModel::CONSTANT;
+          }else if(temp == 0)
           {
             kineticsModel = Antioch::KineticsModel::ARRHENIUS;
+            dataf.push_back(std::atof(str_data[2].c_str()));//Ea
+            dataf.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
           }else
           {
             dataf.push_back(std::atof(str_data[1].c_str())); //beta
+            dataf.push_back(std::atof(str_data[2].c_str()));//Ea
+            dataf.push_back(1.); //Tref
+            dataf.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
           }
-        dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-
-        if(kineticsModel == Antioch::KineticsModel::KOOIJ)dataf.push_back(1.); //Tref
-        dataf.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
 
 
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf,kineticsModel); //kinetics rate
@@ -739,6 +760,7 @@ namespace Planet
                                                                                         const std::string& file_flyby,
                                                                                         const std::string& root_input) const
   {
+//to do, change to a GetPot
     std::ifstream flyby(file_flyby.c_str());
     if( !flyby )
       {
@@ -766,7 +788,7 @@ namespace Planet
             line = line.substr(line.find(':') + 1,std::string::npos);
             line = line.substr(0,line.rfind(' '));
             shave_string(line);
-            K0 = std::atof(line.c_str()) * 1e-4; //cm2/s -> m2/s
+            K0 = std::atof(line.c_str()); //cm2/s
           }else if(line.substr(0,line.find(':')) == "file mix")
           {
             line = line.substr(line.find(':') + 1,std::string::npos);
@@ -779,7 +801,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_crossSection( const std::string &file, unsigned int nbr,
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_crossSection( const std::string &file,
                             VectorCoeffType &lambda, VectorCoeffType &sigma ) const
   {
     std::string line;
@@ -794,7 +816,7 @@ namespace Planet
       {
         CoeffType wv,sigt,sigbr;
         sig_f >> wv >> sigt;
-        for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
+        if(!getline(sig_f,line))break;
         lambda.push_back(wv);//A
         sigma.push_back(sigt);//cm-2/A
       }
@@ -830,17 +852,23 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_neutral_characteristics(const std::vector<std::string>& neutrals,
                                       VectorCoeffType& tc,
+                                      VectorCoeffType& hard_sphere_radius,
                                       std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                                       std::vector<std::vector<DiffusionType> >& bin_diff_model,
                                       const std::string & file_neutral_charac) const
   {
-    for(unsigned int m = 0; m < bin_diff_data.size(); m++) //N2, then CH4
+    for(unsigned int m = 0; m < bin_diff_data.size(); m++) //medium species
       {
         bin_diff_data[m].resize(neutrals.size());
+        for(unsigned int s = 0; s < neutrals.size(); s++)
+        {
+            bin_diff_data[m][s].resize(2,0.);
+        }
         bin_diff_model[m].resize(neutrals.size(),Planet::DiffusionType::NoData); // no data by default
       }
 
     tc.resize(neutrals.size(),0.L);
+    hard_sphere_radius.resize(neutrals.size(),0.L);
 
     std::ifstream neu(file_neutral_charac.c_str());
     if( !neu)
@@ -857,17 +885,16 @@ namespace Planet
         neu >> name >> mass >> AN2 >> sN2 >> ACH4 >> sCH4 >> alpha >> enth >> hsr >> mr;
         for(unsigned int s = 0; s < neutrals.size(); s++)
           {
-            bin_diff_data[0][s].resize(2,0.);
-            bin_diff_data[1][s].resize(2,0.);
             if(name == neutrals[s])
               {
                 tc[s] = alpha; // no unit
                 bin_diff_model[0][s] = Planet::DiffusionType::Wilson; //N2
                 bin_diff_model[1][s] = Planet::DiffusionType::Wilson; //CH4
-                bin_diff_data[0][s][0] = AN2 * 1e-4;  //N2 - A  -- cm2/s -> m2/s
+                bin_diff_data[0][s][0] = AN2;  //N2 - A  -- cm2/s
                 bin_diff_data[0][s][1] = sN2;  //N2 - s  -- no unit
-                bin_diff_data[1][s][0] = ACH4 * 1e-4; //CH4 - A  -- cm2/s -> m2/s
+                bin_diff_data[1][s][0] = ACH4; //CH4 - A  -- cm2/s
                 bin_diff_data[1][s][1] = sCH4; //CH4 - s  -- no unit
+                hard_sphere_radius[s] = hsr;
                 break;
               }
           }
@@ -926,7 +953,9 @@ namespace Planet
     if(molecules.size() != 2)antioch_error();
 
     Antioch::SplitString(molecules[0],"+",reactants,false);
+    if(reactants.empty())reactants.push_back(molecules[0]);
     Antioch::SplitString(molecules[1],"+",products,false);
+    if(products.empty())products.push_back(molecules[1]);
     this->shave_strings(reactants);
     this->shave_strings(products);
     stoi_reac.resize(reactants.size(),1);
@@ -1147,6 +1176,12 @@ namespace Planet
   CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::K0() const
   {
     return _K0;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::scaling_factor() const
+  {
+    return _scaling_factor;
   }
 
 } // end namespace Planet

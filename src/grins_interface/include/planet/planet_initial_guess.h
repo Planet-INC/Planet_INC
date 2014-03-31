@@ -91,7 +91,7 @@ namespace Planet
   {
     CoeffType value = 0.0;
 
-    CoeffType z = p(0);
+    CoeffType z = p(0) - Constants::Titan::radius<CoeffType>();
 
     value = _physics_helper.first_guess(i,z);
 
@@ -102,7 +102,7 @@ namespace Planet
   void PlanetInitialGuess<CoeffType,VectorCoeffType,MatrixCoeffType>::operator()(const libMesh::Point& p, const libMesh::Real /*time*/,
                                                                                  libMesh::DenseVector<CoeffType>& output)
   {
-    CoeffType z = p(0);
+    CoeffType z = p(0) - Constants::Titan::radius<CoeffType>();
     
     unsigned int n_species = _physics_helper.composition().neutral_composition().n_species();
 

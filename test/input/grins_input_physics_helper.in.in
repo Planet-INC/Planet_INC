@@ -14,7 +14,7 @@ root_input = '@abs_top_srcdir@/test/input/'
 file_neutral_charac = '@abs_top_srcdir@/test/input/neutrals.dat'
 input_N2 = '@abs_top_srcdir@/test/input/N2_hv_cross-sections.dat'
 input_CH4 = '@abs_top_srcdir@/test/input/CH4_hv_cross-sections.dat'
-input_hv = '@abs_top_srcdir@/test/input/hv_SSI.dat'
+input_hv = '@abs_top_srcdir@/test/input/hv_SwRI.dat'
 input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
 input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
 
