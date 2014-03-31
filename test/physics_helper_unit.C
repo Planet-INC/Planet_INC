@@ -115,7 +115,9 @@ void parse_equation(std::vector<std::string> &reactants, std::vector<std::string
    if(molecules.size() != 2)antioch_error();
 
    Antioch::SplitString(molecules[0],"+",reactants,false);
+   if(reactants.empty())reactants.push_back(molecules[0]);
    Antioch::SplitString(molecules[1],"+",products,false);
+   if(products.empty())products.push_back(molecules[1]);
    shave_strings(reactants);
    shave_strings(products);
    stoi_reac.resize(reactants.size(),1);
