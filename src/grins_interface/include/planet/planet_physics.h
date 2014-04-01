@@ -201,7 +201,6 @@ namespace Planet
     PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> evaluator(_helper);
 
 //    std::cout << "Element #" << context.get_elem().id() << std::endl;
-
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
@@ -211,10 +210,12 @@ namespace Planet
 
         std::vector<libMesh::Number> molar_concentrations(this->_n_species, 0);
         std::vector<libMesh::Number> dmolar_concentrations_dz(this->_n_species, 0);
+
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
             molar_concentrations[s] = context.interior_value(this->_species_vars[s],qp);
             dmolar_concentrations_dz[s] = context.interior_gradient(this->_species_vars[s],qp)(0);
+
           }
 
         evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
@@ -230,13 +231,13 @@ namespace Planet
             libMesh::Real omega = evaluator.diffusion_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
-//std::cout <<"z = " << z << ", omega = " << omega << ", omega_dot = " << omega_dot << std::endl;
+//std::cout << "omega = " << omega << ", omega_dot = " << omega_dot << std::endl;
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
-                Fs(i) += (  omega_dot*s_phi[i][qp] 
- //                         + 2*omega*s_phi[i][qp] 
-                            - omega*s_grad_phi[i][qp](0) )*jac;
+                Fs(i) += (  omega_dot * s_phi[i][qp]  // chemistry
+                          + omega * s_grad_phi[i][qp](0) //diffusion
+                          )*jac;
 
                 if( compute_jacobian )
                   {

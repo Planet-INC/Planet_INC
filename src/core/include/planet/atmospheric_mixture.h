@@ -470,8 +470,8 @@ namespace Planet
       antioch_assert_equal_to(upper_fluxes.size(),molar_concentrations.size());
       for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
       {
-          CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
-          upper_fluxes[s] = this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax); // km-2/s
+          CoeffType ms = _neutral_composition.M(s) * Antioch::constant_clone(ms,1e-3) / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
+          upper_fluxes[s] = - this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // cm-3.km/s, escaping flux, term < 0
       }
   }
 
@@ -483,7 +483,7 @@ namespace Planet
       antioch_assert_less(s,molar_concentrations.size());
 
       CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
-      CoeffType value = this->Jeans_flux(ms, molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * 1e12; // to km-3
+      CoeffType value = - this->Jeans_flux(ms, molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0
       return value;
   }
 
