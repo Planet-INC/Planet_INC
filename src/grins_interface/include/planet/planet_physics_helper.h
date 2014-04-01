@@ -165,7 +165,7 @@ namespace Planet
                           const std::string& file_flyby,
                           const std::string& root_input) const;
 
-    void read_crossSection( const std::string &file,
+    void read_cross_section( const std::string &file,
                             VectorCoeffType &lambda, VectorCoeffType &sigma ) const;
 
     void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file) const;
@@ -442,8 +442,8 @@ namespace Planet
 
     this->read_hv_flux(_lambda_hv, _phy1AU, input_hv);
 
-    this->read_crossSection(input_N2,  lambda_N2,  sigma_N2);
-    this->read_crossSection(input_CH4, lambda_CH4, sigma_CH4);
+    this->read_cross_section(input_N2,  lambda_N2,  sigma_N2);
+    this->read_cross_section(input_CH4, lambda_CH4, sigma_CH4);
 
     /* here only N2 and CH4 absorb */
     _tau->add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
@@ -760,7 +760,7 @@ namespace Planet
                                                                                         const std::string& file_flyby,
                                                                                         const std::string& root_input) const
   {
-//to do, change to a GetPot
+//TODO, change to a GetPot
     std::ifstream flyby(file_flyby.c_str());
     if( !flyby )
       {
@@ -801,7 +801,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_crossSection( const std::string &file,
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_cross_section( const std::string &file,
                             VectorCoeffType &lambda, VectorCoeffType &sigma ) const
   {
     std::string line;
