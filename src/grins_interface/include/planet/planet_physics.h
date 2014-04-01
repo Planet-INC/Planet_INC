@@ -200,13 +200,14 @@ namespace Planet
     // but just getting this going for now.
     PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> evaluator(_helper);
 
-    std::cout << "Element #" << context.get_elem().id() << std::endl;
+//    std::cout << "Element #" << context.get_elem().id() << std::endl;
 
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
+        const libMesh::Number z = r - Constants::Titan::radius<double>();
         
-        libMesh::Real jac = r*r*JxW[qp];
+        libMesh::Real jac = r  * r * JxW[qp];
 
         std::vector<libMesh::Number> molar_concentrations(this->_n_species, 0);
         std::vector<libMesh::Number> dmolar_concentrations_dz(this->_n_species, 0);
@@ -217,26 +218,25 @@ namespace Planet
           }
 
         evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
-                              r - Constants::Titan::radius<double>() ) ; // z
+                              z );//- Constants::Titan::radius<double>() ) ; // z
 
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            libMesh::Number n_s = molar_concentrations[s];
+ //           libMesh::Number n_s = molar_concentrations[s];
 
             libMesh::Real omega = evaluator.diffusion_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
-
-            std::cout << "omega = " << omega << ", omega_dot " << omega_dot << std::endl;
+//std::cout <<"z = " << z << ", omega = " << omega << ", omega_dot = " << omega_dot << std::endl;
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
                 Fs(i) += (  omega_dot*s_phi[i][qp] 
- //                         + 2*omega*n_s*s_phi[i][qp] 
-                            - omega*n_s*s_grad_phi[i][qp](0) )*jac;
+ //                         + 2*omega*s_phi[i][qp] 
+                            - omega*s_grad_phi[i][qp](0) )*jac;
 
                 if( compute_jacobian )
                   {

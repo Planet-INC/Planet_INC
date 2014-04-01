@@ -48,7 +48,7 @@ namespace Planet
         unsigned int _n_medium;
         std::vector<unsigned int> _i_medium;
 
-        std::vector<std::vector<BinaryDiffusion<CoeffType> > > _diffusion;
+        const std::vector<std::vector<BinaryDiffusion<CoeffType> > > & _diffusion;
     //dependencies
         const AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>     &_mixture;
         const AtmosphericTemperature<CoeffType, VectorCoeffType>                 &_temperature;
@@ -166,8 +166,9 @@ namespace Planet
      {
         nTot += molar_concentrations[s];
      }
+// p = n * kb * T  (Pa)
      CoeffType T = _temperature.neutral_temperature(z);
-     CoeffType p = nTot * 1e6 //cm-3 -> m-3
+     CoeffType p = nTot * Antioch::constant_clone(nTot,1e6) //cm-3 -> m-3
                    * Constants::Universal::kb<CoeffType>() * T;
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
@@ -188,7 +189,8 @@ namespace Planet
           if(_i_medium[i] == s)continue;
           n_D += molar_concentrations[_i_medium[i]] / this->binary_coefficient(i,s,T,p);
         }
-//Dtilde = Ds numerator (ntot - n_s) / Ds denom ...
+//Dtilde = Ds numerator (ntot - n_s) / Ds denom ... 
+// cm2.s-1
         Dtilde[s] = (nTot - molar_concentrations[s])
                             / ( n_D * (CoeffType(1.L) - molar_concentrations[s]/nTot * 
                                       (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM))

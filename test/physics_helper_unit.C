@@ -395,16 +395,22 @@ void fill_neutral_reactions(const std::string &neutral_reactions_elem,
       }
       dataf.push_back(std::atof(str_data[0].c_str())); //Cf
       Scalar temp = std::atof(str_data[1].c_str());
-      if(temp == 0) //Arrhenius
+      Scalar temp2 = std::atof(str_data[2].c_str());
+      if(temp == 0 && temp2 == 0) //constant
+      {
+         kineticsModel = Antioch::KineticsModel::CONSTANT;
+      }else if(temp == 0) //Arrhenius
       {
          kineticsModel = Antioch::KineticsModel::ARRHENIUS;
+         dataf.push_back(std::atof(str_data[2].c_str()));//Ea
+         dataf.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
       }else
       {
         dataf.push_back(std::atof(str_data[1].c_str())); //beta
+        dataf.push_back(std::atof(str_data[2].c_str()));//Ea
+        dataf.push_back(1.); //Tref
+        dataf.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
       }
-      dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-      if(kineticsModel == Antioch::KineticsModel::KOOIJ)dataf.push_back(1.); //Tref
-      dataf.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
 
       Antioch::KineticsType<Scalar, VectorScalar>* rate = Antioch::build_rate<Scalar,VectorScalar>(dataf,kineticsModel); //kinetics rate
       Antioch::Reaction<Scalar> * reaction = Antioch::build_reaction<Scalar>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
@@ -484,7 +490,7 @@ void read_hv_flux(VectorScalar &lambda, VectorScalar &phy1AU, const std::string 
 }
 
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
-void read_crossSection(const std::string &file, unsigned int nbr, VectorScalar &lambda, VectorScalar &sigma)
+void read_crossSection(const std::string &file, VectorScalar &lambda, VectorScalar &sigma)
 {
   std::string line;
   std::ifstream sig_f(file);
@@ -498,7 +504,7 @@ void read_crossSection(const std::string &file, unsigned int nbr, VectorScalar &
   {
      Scalar wv,sigt,sigbr;
      sig_f >> wv >> sigt;
-     for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
+     if(!getline(sig_f,line))break;
      lambda.push_back(wv);//A
      sigma.push_back(sigt);//cm-2/A
   }
@@ -512,7 +518,7 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
 {
    return botdens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<Scalar>() + z) * (Planet::Constants::Titan::radius<Scalar>() + zmin) * 1e3 *
                                              Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T / 
-                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm))
+                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm * 1e-3))
                               );
 }
 
@@ -521,7 +527,7 @@ Scalar dbarometry_dz(const Scalar &zmin, const Scalar &z, const Scalar &T, const
 {
    return barometry(zmin, z, T, Mm, botdens) / ((Planet::Constants::Titan::radius<Scalar>() + z) * (Planet::Constants::Titan::radius<Scalar>() + zmin) * 1e6 *
                                              Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T / 
-                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm))
+                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm * 1e-3))
           * (Scalar(1.L) - Scalar(2.L) * (z - zmin)/(Planet::Constants::Titan::radius<Scalar>() + zmin));
 }
 
@@ -652,10 +658,10 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
        M_diff /= totdens_diff;
 
        Dt_theo[s] = Ds / (Scalar(1.L) - molar_frac[s] * 
-                            (Scalar(1.L) - Mm[s] / M_diff)
-                            );
+                           (Scalar(1.L) - Mm[s] / M_diff)
+                         );
 //
-       Scalar Hs = scale_height(T,z,Mm[s] * Scalar(1e-3));
+       Scalar Hs = scale_height(T,z,Mm[s]);
 
        omega_theo[s] = - Dt_theo[s] * ( dns_dz[s] /densities[s]
                                     + Scalar(1.L)/Hs 
@@ -663,6 +669,7 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
                        - K      * ( dns_dz[s] /densities[s]
                                     + Scalar(1.L)/Ha
                                     + dT_dz/T);
+       omega_theo[s] *= Scalar(1e-10) * densities[s];
     }
 
     return;
@@ -670,7 +677,9 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
 
 
 template <typename Scalar>
-int tester(const std::string &input_T,const std::string & input_hv, const std::string &input_reactions_elem, const std::string &input_reactions_fall, const std::string &input_N2,const std::string &input_CH4, const std::string& input_filename )
+int tester(const std::string &input_T,const std::string & input_hv, 
+           const std::string &input_reactions_elem, const std::string &input_reactions_fall, 
+           const std::string &input_N2,const std::string &input_CH4, const std::string& input_filename )
 {
 
 //description
@@ -727,8 +736,8 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 ////cross-section
   std::vector<Scalar> lambda_N2,sigma_N2;
   std::vector<Scalar> lambda_CH4, sigma_CH4;
-  read_crossSection<Scalar>(input_N2,3,lambda_N2,sigma_N2);
-  read_crossSection<Scalar>(input_CH4,9,lambda_CH4,sigma_CH4);
+  read_crossSection<Scalar>(input_N2,lambda_N2,sigma_N2);
+  read_crossSection<Scalar>(input_CH4,lambda_CH4,sigma_CH4);
 
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
@@ -753,39 +762,39 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 //N2 with ...
   bin_diff_data.resize(medium.size());
   bin_diff_data[0].resize(Mm.size());
-  bin_diff_data[0][0].push_back(5.9e16 * 1e-4);   // N2, A
+  bin_diff_data[0][0].push_back(5.9e16);   // N2, A
   bin_diff_data[0][0].push_back(0.81);             // N2, s
-  bin_diff_data[0][1].push_back(7.34e16 * 1e-4);  // CH4, A
+  bin_diff_data[0][1].push_back(7.34e16);  // CH4, A
   bin_diff_data[0][1].push_back(0.75);            // CH4, s
-  bin_diff_data[0][2].push_back(6.234e16 * 1e-4); // N, A
+  bin_diff_data[0][2].push_back(6.234e16); // N, A
   bin_diff_data[0][2].push_back(0.81);            // N, s
-  bin_diff_data[0][3].push_back(6.094e16 * 1e-4); // CH3, A
+  bin_diff_data[0][3].push_back(6.094e16); // CH3, A
   bin_diff_data[0][3].push_back(0.81);            // CH3, s
-  bin_diff_data[0][4].push_back(6.234e16 * 1e-4); // (1)CH2, A
+  bin_diff_data[0][4].push_back(6.234e16); // (1)CH2, A
   bin_diff_data[0][4].push_back(0.81);            // (1)CH2, s
-  bin_diff_data[0][5].push_back(6.234e16 * 1e-4); // (3)CH2, A
+  bin_diff_data[0][5].push_back(6.234e16); // (3)CH2, A
   bin_diff_data[0][5].push_back(0.81);            // (3)CH2, s
-  bin_diff_data[0][6].push_back(4.87e17 * 1e-4);  // H, A
+  bin_diff_data[0][6].push_back(4.87e17);  // H, A
   bin_diff_data[0][6].push_back(0.698);           // H, s
-  bin_diff_data[0][7].push_back(1.88e17 * 1e-4);  // H2, A
+  bin_diff_data[0][7].push_back(1.88e17);  // H2, A
   bin_diff_data[0][7].push_back(0.82);            // H2, s
 //CH4 with..
   bin_diff_data[1].resize(Mm.size());
-  bin_diff_data[1][0].push_back(7.34e16 * 1e-4);   // N2, A
+  bin_diff_data[1][0].push_back(7.34e16);   // N2, A
   bin_diff_data[1][0].push_back(0.75);             // N2, s
-  bin_diff_data[1][1].push_back(5.73e16 * 1e-4);   // CH4, A
+  bin_diff_data[1][1].push_back(5.73e16);   // CH4, A
   bin_diff_data[1][1].push_back(0.5);              // CH4, s
-  bin_diff_data[1][2].push_back(5.9311e16 * 1e-4); // N, A
+  bin_diff_data[1][2].push_back(5.9311e16); // N, A
   bin_diff_data[1][2].push_back(0.5);              // N, s
-  bin_diff_data[1][3].push_back(5.8247e16 * 1e-4); // CH3, A
+  bin_diff_data[1][3].push_back(5.8247e16); // CH3, A
   bin_diff_data[1][3].push_back(0.5);              // CH3, s
-  bin_diff_data[1][4].push_back(5.9311e16 * 1e-4); // (1)CH2, A
+  bin_diff_data[1][4].push_back(5.9311e16); // (1)CH2, A
   bin_diff_data[1][4].push_back(0.5);              // (1)CH2, s
-  bin_diff_data[1][5].push_back(5.9311e16 * 1e-4); // (3)CH2, A
+  bin_diff_data[1][5].push_back(5.9311e16); // (3)CH2, A
   bin_diff_data[1][5].push_back(0.5);              // (3)CH2, s
-  bin_diff_data[1][6].push_back(1.6706e17 * 1e-4); // H, A
+  bin_diff_data[1][6].push_back(1.6706e17); // H, A
   bin_diff_data[1][6].push_back(0.5);              // H, s
-  bin_diff_data[1][7].push_back(2.3e17 * 1e-4);    // H2, A
+  bin_diff_data[1][7].push_back(2.3e17);    // H2, A
   bin_diff_data[1][7].push_back(0.765);            // H2, s
 
 /// models
@@ -833,7 +842,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   tc.push_back(-0.38L); // H2
 
 //eddy
-  Scalar K0(4.3e6L * 1e-4);//cm2 -> m2
+  Scalar K0(4.3e6L);//cm2.s-1
 
 
 /************************
@@ -891,7 +900,7 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 //photon evaluator
   Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
   photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
-  
+
   //neutral_reaction_set.set_particle_flux(photon.photon_flux_ptr());
   //neut_reac_theo.set_particle_flux(photon.photon_flux_ptr());
 
@@ -934,9 +943,10 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
   {
     mean_M += molar_frac[s] * Mm[s];
   }
-  mean_M *= 1e-3;//to kg
 
   int return_flag(0);
+  const Scalar nTot_virtual(dens_tot);
+
   for(Scalar z = zmax; z >= zmin; z -= zstep)
   {
 
@@ -962,11 +972,20 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
      std::vector<Scalar> omega_theo;
      std::vector<Scalar> chemical_theo;
      std::vector<Scalar> dummy;
+     std::vector<Scalar> virtual_densities;
+     std::vector<Scalar> virtual_dns_dz;
 
      dummy.resize(densities.size());
+     virtual_densities.resize(densities.size());
+     virtual_dns_dz.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
 
-     evaluator.compute(densities, dns_dz, z); //update phy for everyone
+     for(unsigned int s = 0; s < molar_frac.size(); s++)
+     {
+         virtual_densities[s] = densities[s] / nTot_virtual;
+         virtual_dns_dz[s]    = dns_dz[s] / nTot_virtual;
+     }
+     evaluator.compute(virtual_densities, virtual_dns_dz, z); //update phy for everyone
 
      std::vector<Scalar> Dt_theo;
      Dt_theo.resize(densities.size(),0.L);
@@ -981,6 +1000,8 @@ int tester(const std::string &input_T,const std::string & input_hv, const std::s
 
      for(unsigned int s = 0; s < molar_frac.size(); s++)
      {
+       omega_theo[s] /= nTot_virtual;
+       chemical_theo[s] /= nTot_virtual;
        Scalar diff = evaluator.diffusion_term(s);
        Scalar chem = evaluator.chemical_term(s);
        return_flag =  check_test(omega_theo[s],   diff,"diffusion term of species at altitude") ||

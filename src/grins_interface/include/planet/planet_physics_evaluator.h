@@ -79,10 +79,10 @@ namespace Planet
     PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _photon;
 
     MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _molecular_diffusion;
-    EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _eddy_diffusion;
+    EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      _eddy_diffusion;
 
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
-    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _diffusion;
+    DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>  _diffusion;
 
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
@@ -91,9 +91,13 @@ namespace Planet
     VectorCoeffType _cache_altitudes;
     std::map<CoeffType,VectorCoeffType> _cache;
 
+    CoeffType scaling_factor() const;
+
   private:
 
     PlanetPhysicsEvaluator();
+
+    CoeffType _scaling_factor;
 
   };
 
@@ -106,7 +110,8 @@ namespace Planet
       _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature()),
       _eddy_diffusion(_composition,helper.K0()),
       _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition),
-      _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature())
+      _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
+      _scaling_factor(helper.scaling_factor())
   {
     _omegas.resize(_kinetics.neutral_kinetics().reaction_set().n_species());
     _omegas_dots.resize(_kinetics.neutral_kinetics().reaction_set().n_species());
@@ -135,10 +140,18 @@ namespace Planet
                                                                                   const VectorStateType & dmolar_concentrations_dz,
                                                                                   const StateType & z)
   {
-   _diffusion.diffusion(molar_concentrations,dmolar_concentrations_dz,z,_omegas);
-   _kinetics.chemical_rate(molar_concentrations,this->get_cache(z),z,_omegas_dots);
+   VectorStateType  molar = Antioch::zero_clone(molar_concentrations);
+   VectorStateType dmolar = Antioch::zero_clone(dmolar_concentrations_dz);
+   for(unsigned int i = 0; i < molar_concentrations.size(); i++)
+   {
+      molar[i]  = molar_concentrations[i]     * _scaling_factor;
+      dmolar[i] = dmolar_concentrations_dz[i] * _scaling_factor;
+   }
+   _diffusion.diffusion(molar,dmolar,z,_omegas);
+   _kinetics.chemical_rate(molar,this->get_cache(z),z,_omegas_dots);
 
-   this->update_cache(molar_concentrations,z);
+
+   this->update_cache(molar,z);
 
     return;
   }
@@ -206,13 +219,13 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_term(unsigned int s) const
   {
-    return _omegas[s];
+    return _omegas[s] / _scaling_factor;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
   {
-    return _omegas_dots[s];
+    return _omegas_dots[s] / _scaling_factor;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -255,6 +268,12 @@ namespace Planet
   const PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon() const
   {
      return _photon;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  CoeffType PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::scaling_factor() const
+  {
+     return _scaling_factor;
   }
 
 } // end namespace Planet

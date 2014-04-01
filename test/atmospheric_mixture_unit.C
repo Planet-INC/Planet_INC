@@ -91,8 +91,8 @@ Scalar Jeans(const Scalar &m, const Scalar &n, const Scalar &T, const Scalar &z)
   Scalar lambda =  Planet::Constants::Universal::G<Scalar>()  * Planet::Constants::Titan::mass<Scalar>() * m / 
                   (Planet::Constants::Universal::kb<Scalar>() * T * (z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
 
-  return n * Antioch::ant_sqrt(Planet::Constants::Universal::kb<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
-           * Antioch::ant_exp(-lambda) * (Scalar(1.) + lambda);
+  return 1e-3 * n * Antioch::ant_sqrt(Planet::Constants::Universal::kb<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
+              * Antioch::ant_exp(-lambda) * (Scalar(1.) + lambda);
 }
 
 template <typename Scalar>
@@ -168,38 +168,38 @@ int tester(const std::string & input_T)
 
     for(unsigned int s = 0; s < neutrals.size(); s++)
     {
-       Scalar scale_height = Planet::Constants::Universal::kb<Scalar>() * T / 
+       Scalar scale_height = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T / 
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
                         Mm[s]/Antioch::Constants::Avogadro<Scalar>() * 1e-3L);
 
-       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //m (kg)
+       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //mass (kg)
                                  neutral_molar_concentration[s], //n
                                  T,z); //T,alt
 
-       return_flag = return_flag ||
-                     check_test(Jeans_flux,composition.Jeans_flux(
+       return_flag = check_test(Jeans_flux,composition.Jeans_flux(
                                         composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //g/mol -> kg/mol
                                         neutral_molar_concentration[s], //n, cm-3
                                         T,// T (K)
                                         z), //km -> m
                                 "Jeans escape flux of species " + 
                                 composition.neutral_composition().species_inverse_name_map().at(composition.neutral_composition().species_list()[s]) + 
-                                " at altitude");
+                                " at altitude") ||
+                     return_flag;
                                         
-       return_flag = return_flag ||
-                     check_test(scale_height, scale_heights[s], "scale height of species at altitude");
+       return_flag = check_test(scale_height, scale_heights[s], "scale height of species at altitude") ||
+                     return_flag;
        M_the += Mm[s] * molar_frac[s];
     }
 
-    Scalar H_the = Planet::Constants::Universal::kb<Scalar>() * T /
+    Scalar H_the = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T /
                    (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                    M_the * 1e-3L / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
+                   M_the * 1e-3L / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
 
-    Scalar a_the = (Planet::Constants::Titan::radius<Scalar>() + z) / H_the * Scalar(1e3); // to m
+    Scalar a_the = (Planet::Constants::Titan::radius<Scalar>() + z) / H_the;
 
-    return_flag = return_flag ||
-                  check_test(H_the, composition.atmospheric_scale_height(neutral_molar_concentration, z), "atmospheric scale height at altitude");
-                  check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude");
+    return_flag = check_test(H_the, composition.atmospheric_scale_height(neutral_molar_concentration, z), "atmospheric scale height at altitude") ||
+                  check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude") ||
+                  return_flag;
 
   }
 

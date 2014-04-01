@@ -1,0 +1,4 @@
+reactants -> products; A beta Ea_R Hr (cm^3/s - K kJ/mol), Kooij rate constant: k(T) = A (T/Tref)^beta - exp(-Ea_R/T), Tref = 1 K
+H + N2       -> CH4  ; 1e-10 0 0 0
+N2 + CH4     -> H    ; 2e-10 0 0 0
+H + CH4      -> N2   ; 4e-10 0. 0. 0.
