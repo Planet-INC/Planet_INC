@@ -228,7 +228,7 @@ namespace Planet
 
  //           libMesh::Number n_s = molar_concentrations[s];
 
-            libMesh::Real omega = evaluator.diffusion_term(s);
+            libMesh::Real ns_times_omega = evaluator.diffusion_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
 //std::cout << "omega = " << omega << ", omega_dot = " << omega_dot << std::endl;
@@ -236,7 +236,7 @@ namespace Planet
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
                 Fs(i) += (  omega_dot * s_phi[i][qp]  // chemistry
-                          + omega * s_grad_phi[i][qp](0) //diffusion
+                          + ns_times_omega * s_grad_phi[i][qp](0) //diffusion
                           )*jac;
 
                 if( compute_jacobian )
