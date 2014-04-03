@@ -175,7 +175,7 @@ namespace Planet{
 //params
      StateType nTot;
      Antioch::set_zero(nTot);
-     for(unsigned int s = 0; s < molar_concentrations.size();)
+     for(unsigned int s = 0; s < molar_concentrations.size();s++)
      {
         nTot += molar_concentrations[s];
      }
