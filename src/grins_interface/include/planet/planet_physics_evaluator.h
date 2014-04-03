@@ -41,15 +41,17 @@ namespace Planet
                  const VectorStateType & dmolar_concentrations_dz,
                  const StateType & z);
 
-    libMesh::Real diffusion_term(unsigned int s) const;
+    libMesh::Real diffusion_A_term(unsigned int s) const;
+
+    libMesh::Real diffusion_B_term(unsigned int s) const;
 
     libMesh::Real chemical_term(unsigned int s)  const;
 
-    //! domega_s_dn_i = A_TERM + B_TERM * d(dn_s_dz)_dn_i
-    libMesh::Real ddiffusion_term_s_d_n_i_A_TERM(unsigned int s, unsigned int i) const;
+    //! 
+    libMesh::Real ddiffusion_A_term_dn(unsigned int s, unsigned int i) const;
 
-    //! domega_s_dn_i = A_TERM + B_TERM * d(dn_s_dz)_dn_i
-    libMesh::Real ddiffusion_term_s_d_n_i_B_TERM(unsigned int s, unsigned int i) const;
+    //! 
+    libMesh::Real ddiffusion_B_term_dn(unsigned int s, unsigned int i) const;
 
     //! domega_dot_s_dn_i
     libMesh::Real dchemical_term_dn_i(unsigned int s, unsigned int i)  const;
@@ -93,7 +95,8 @@ namespace Planet
     AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType> _kinetics;
     DiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>  _diffusion;
 
-    VectorCoeffType _omegas;
+    VectorCoeffType _omegas_A_term;
+    VectorCoeffType _omegas_B_term;
     VectorCoeffType _omegas_dots;
 
     MatrixCoeffType _domegas_dn_A_TERM;
@@ -126,7 +129,8 @@ namespace Planet
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
       _scaling_factor(helper.scaling_factor())
   {
-    _omegas.resize(_kinetics.neutral_kinetics().n_species(),0.);
+    _omegas_A_term.resize(_kinetics.neutral_kinetics().n_species(),0.);
+    _omegas_B_term.resize(_kinetics.neutral_kinetics().n_species(),0.);
     _omegas_dots.resize(_kinetics.neutral_kinetics().n_species(),0.);
 
     _domegas_dots_dn.resize(_kinetics.neutral_kinetics().n_species());
@@ -170,7 +174,7 @@ namespace Planet
       molar[i]  = molar_concentrations[i]     * _scaling_factor;
       dmolar[i] = dmolar_concentrations_dz[i] * _scaling_factor;
    }
-   _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
+   _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
    _kinetics.chemical_rate_and_derivs(molar,this->get_cache(z),z,_omegas_dots,_domegas_dots_dn);
 
    this->update_cache(molar,z);
@@ -239,9 +243,15 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_term(unsigned int s) const
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_A_term(unsigned int s) const
   {
-    return _omegas[s] / _scaling_factor;
+    return _omegas_A_term[s] / _scaling_factor;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_B_term(unsigned int s) const
+  {
+    return _omegas_B_term[s] / _scaling_factor;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -250,16 +260,14 @@ namespace Planet
     return _omegas_dots[s] / _scaling_factor;
   }
 
-  // this is dw_s / dn_i
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_term_s_d_n_i_A_TERM(unsigned int s, unsigned int i) const
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_A_term_dn(unsigned int s, unsigned int i) const
   {
     return _domegas_dn_A_TERM[s][i] / _scaling_factor;
   }
 
-  // this is factor such that factor * d(dn_s / dz) / dn_i
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_term_s_d_n_i_B_TERM(unsigned int s, unsigned int i) const
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_B_term_dn(unsigned int s, unsigned int i) const
   {
     return _domegas_dn_B_TERM[s][i] / _scaling_factor;
   }
