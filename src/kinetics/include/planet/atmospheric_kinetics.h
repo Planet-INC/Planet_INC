@@ -174,6 +174,7 @@ namespace Planet
      VectorStateType ddummy_dT;
      VectorStateType dkin_dT;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
+     ddummy_dT.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      dkin_dT.resize(_composition.neutral_composition().n_species(),0.L); //no temp
      _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
      _neutral_reactions.compute_mole_sources_and_derivs(_temperature.neutral_temperature(z),molar_concentrations,dummy,ddummy_dT,
