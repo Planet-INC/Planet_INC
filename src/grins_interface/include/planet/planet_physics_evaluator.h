@@ -45,6 +45,15 @@ namespace Planet
 
     libMesh::Real chemical_term(unsigned int s)  const;
 
+    //! domega_s_dn_i = A_TERM + B_TERM * d(dn_s_dz)_dn_i
+    libMesh::Real ddiffusion_term_s_d_n_i_A_TERM(unsigned int s, unsigned int i) const;
+
+    //! domega_s_dn_i = A_TERM + B_TERM * d(dn_s_dz)_dn_i
+    libMesh::Real ddiffusion_term_s_d_n_i_B_TERM(unsigned int s, unsigned int i) const;
+
+    //! domega_dot_s_dn_i
+    libMesh::Real dchemical_term_dn_i(unsigned int s, unsigned int i)  const;
+
     const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& eddy_diffusion() const;
 
     const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& molecular_diffusion() const;
@@ -87,6 +96,10 @@ namespace Planet
     VectorCoeffType _omegas;
     VectorCoeffType _omegas_dots;
 
+    MatrixCoeffType _domegas_dn_A_TERM;
+    MatrixCoeffType _domegas_dn_B_TERM;
+    MatrixCoeffType _domegas_dots_dn;
+
     MatrixCoeffType _cache_composition;
     VectorCoeffType _cache_altitudes;
     std::map<CoeffType,VectorCoeffType> _cache;
@@ -113,8 +126,18 @@ namespace Planet
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
       _scaling_factor(helper.scaling_factor())
   {
-    _omegas.resize(_kinetics.neutral_kinetics().reaction_set().n_species());
-    _omegas_dots.resize(_kinetics.neutral_kinetics().reaction_set().n_species());
+    _omegas.resize(_kinetics.neutral_kinetics().n_species());
+    _omegas_dots.resize(_kinetics.neutral_kinetics().n_species());
+
+    _domegas_dots_dn.resize(_kinetics.neutral_kinetics().n_species());
+    _domegas_dn_A_TERM.resize(_kinetics.neutral_kinetics().n_species());
+    _domegas_dn_B_TERM.resize(_kinetics.neutral_kinetics().n_species());
+    for(unsigned int s = 0; s < _kinetics.neutral_kinetics().n_species(); s++)
+    {
+      _domegas_dots_dn[s].resize(_kinetics.neutral_kinetics().n_species());
+      _domegas_dn_A_TERM[s].resize(_kinetics.neutral_kinetics().n_species());
+      _domegas_dn_B_TERM[s].resize(_kinetics.neutral_kinetics().n_species());
+    }
 
     _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Constants::Saturn::d_Sun<CoeffType>());
 
@@ -147,9 +170,8 @@ namespace Planet
       molar[i]  = molar_concentrations[i]     * _scaling_factor;
       dmolar[i] = dmolar_concentrations_dz[i] * _scaling_factor;
    }
-   _diffusion.diffusion(molar,dmolar,z,_omegas);
-   _kinetics.chemical_rate(molar,this->get_cache(z),z,_omegas_dots);
-
+   _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
+   _kinetics.chemical_rate_and_derivs(molar,this->get_cache(z),z,_omegas_dots,_domegas_dots_dn);
 
    this->update_cache(molar,z);
 
@@ -226,6 +248,26 @@ namespace Planet
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_term(unsigned int s) const
   {
     return _omegas_dots[s] / _scaling_factor;
+  }
+
+  // this is dw_s / dn_i
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_term_s_d_n_i_A_TERM(unsigned int s, unsigned int i) const
+  {
+    return _domegas_dn_A_TERM[s][i] / _scaling_factor;
+  }
+
+  // this is factor such that factor * d(dn_s / dz) / dn_i
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_term_s_d_n_i_B_TERM(unsigned int s, unsigned int i) const
+  {
+    return _domegas_dn_B_TERM[s][i] / _scaling_factor;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::dchemical_term_dn_i(unsigned int s, unsigned int i)  const
+  {
+    return _domegas_dots_dn[s][i] / _scaling_factor;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>

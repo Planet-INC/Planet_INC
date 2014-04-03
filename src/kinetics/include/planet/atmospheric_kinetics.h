@@ -77,6 +77,10 @@ namespace Planet
         void chemical_rate(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
                            const StateType &z, VectorStateType &kin_rates) const;
 
+        template<typename StateType, typename VectorStateType, typename MatrixStateType>
+        void chemical_rate_and_derivs(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
+                                      const StateType &z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn) const;
+
         //! Newton solver for the ionic system
         template<typename StateType, typename VectorStateType>
         void add_ionic_contribution(const VectorStateType &molar_concentrations, const StateType &z, VectorStateType &kin_rates) const;
@@ -139,8 +143,8 @@ namespace Planet
                                                                      const StateType &z,
                                                                      VectorStateType &kin_rates) const
   {
-     kin_rates.resize(_composition.neutral_composition().n_species(),0.L);
-     VectorCoeffType dummy;
+     antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
+     VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
      _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
@@ -149,6 +153,33 @@ namespace Planet
      this->add_ionic_contribution(molar_concentrations,z,kin_rates);
 
      return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  inline
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate_and_derivs(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
+                                      const StateType &z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn) const
+  {
+     antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
+     antioch_assert_equal_to(dkin_rates_dn.size(),_composition.neutral_composition().n_species());
+#ifdef NDEBUG
+#else
+     for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
+     {
+       antioch_assert_equal_to(dkin_rates_dn[s].size(),_composition.neutral_composition().n_species());
+     }
+#endif
+     VectorStateType dummy;
+     VectorStateType ddummy_dT;
+     VectorStateType dkin_dT;
+     dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
+     dkin_dT.resize(_composition.neutral_composition().n_species(),0.L); //no temp
+     _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
+     _neutral_reactions.compute_mole_sources_and_derivs(_temperature.neutral_temperature(z),molar_concentrations,dummy,ddummy_dT,
+                                                        kin_rates,dkin_dT,dkin_rates_dn);
+
+     this->add_ionic_contribution(molar_concentrations,z,kin_rates);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
