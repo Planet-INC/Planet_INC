@@ -102,6 +102,14 @@ namespace Planet
 
         void set_medium_species(const std::vector<std::string> &medium_species);
 
+        template<typename StateType, typename VectorStateType, typename MatrixStateType>
+        void Dtilde_and_derivs_dn(const VectorStateType &molar_concentrations, const StateType &T, const StateType &nTot, 
+                                  VectorStateType &Dtilde, MatrixStateType &dD_dns) const;
+
+        template<typename StateType, typename VectorStateType>
+        void Dtilde_s_dn_i(unsigned int s, const VectorStateType &molar_concentrations, const StateType &T,const StateType &nTot,
+                                                                                        StateType & Dtilde_s, VectorStateType &dDtilde_s_dn_i) const;
+
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -161,7 +169,8 @@ namespace Planet
      antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
 
      Dtilde.resize(molar_concentrations.size(),0.L);
-     CoeffType nTot(0.L);
+     CoeffType nTot;
+     Antioch::set_zero(nTot);
      for(unsigned int s = 0; s < molar_concentrations.size(); s++)
      {
         nTot += molar_concentrations[s];
@@ -197,6 +206,99 @@ namespace Planet
                               );
        }
        return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  inline
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::Dtilde_and_derivs_dn(const VectorStateType &molar_concentrations, const StateType &T, const StateType &nTot, 
+                                                                                                VectorStateType &Dtilde, MatrixStateType &dD_dns) const
+  {
+     antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(Dtilde.size(),_mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(dD_ns.size(),_mixture.neutral_composition().n_species());
+#ifdef NDEBUG
+#else
+     for(unsigned int s = 0; s < dD_dns.size(); s++)
+     {
+        antioch_assert_equal_to(dD_dns[s].size(),_mixture.neutral_composition().n_species());
+     }
+#endif
+
+     for(unsigned int s = 0; s < dD_dns.size(); s++)
+     {
+        this->Dtilde_s_dn_i(s,molar_concentrations,T,nTot,Dtilde[s],dD_dns[s]);
+     }
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::Dtilde_s_dn_i(unsigned int s,
+                                                                                                   const VectorStateType &molar_concentrations,
+                                                                                                   const StateType &T,const StateType &nTot,
+                                                                                                   StateType & Dtilde_s, VectorStateType &dDtilde_s_dn) const
+  {
+
+        antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
+        antioch_assert_equal_to(dDtilde_s_dn_i.size(),_mixture.neutral_composition().n_species());
+
+        //D_s = (nT - ns) / (sum_{medium} n_{medium}/D_{medium,s})
+        CoeffType Ds = (nTot - molar_concentrations[s]); //cm-3
+//Ds denominator : sum_{j_m} n_{j_m}/D_{s,j_m}
+        CoeffType n_D;
+        Antioch::set_zero(n_D);
+        CoeffType p = nTot * Antioch::constant_clone(nTot,1e6) //cm-3 -> m-3
+                           * Constants::Universal::kb<CoeffType>() * T;
+
+        for(unsigned int m = 0; m < _n_medium; m++)
+        {
+          if(_i_medium[m] == s)continue;
+          n_D += molar_concentrations[_i_medium[m]] / this->binary_coefficient(m,s,T,p);
+        }
+        Ds /= n_D;
+
+        CoeffType meanM;
+        Antioch::set_zero(meanM);
+        CoeffType ntot_s = nTot - molar_concentrations[s]; //ntot - ns
+        for(unsigned int j = 0; j < _mixture.neutral_composition().n_species(); j++)
+        {
+          if(j == s)continue;
+          meanM += _mixture.neutral_composition().M(j) * molar_concentrations[j] / ntot_s; //x_i without s: ni/(ntot - ns)
+        }
+
+        CoeffType sum = (Antioch::constant_clone(nTot,1) - molar_concentrations[s]/nTot * 
+                        (Antioch::constant_clone(nTot,1) - _mixture.neutral_composition().M(s)/meanM));
+
+        Dtilde_s = Ds / sum;
+
+        for(unsigned int i = 0; i < molar_concentrations.size(); i++)
+        {
+
+          CoeffType first = (i == s)?Antioch::constant_clone(nTot,1.):Antioch::zero_clone(nTot);
+
+          CoeffType second;
+          Antioch::set_zero(second);
+          for(unsigned int m = 0; m < _n_medium; m++)
+          {
+            if(_i_medium[m] == s)continue;
+            if(_i_medium[m] == i)second = Antioch::constant_clone(nTot,1)/ this->binary_coefficient(m,s,T,p);
+          }
+
+          CoeffType dDs_dn_i = Ds * ( first - (second + n_D/nTot)/n_D);
+
+          CoeffType third = _mixture.neutral_composition().M(i) * molar_concentrations[i];
+          if(i == s)Antioch::set_zero(third);
+          CoeffType dmeanM_dn_i = (third - meanM * first) / (nTot - molar_concentrations[s]);
+
+          CoeffType dsum_dn_i = molar_concentrations[s]/(nTot * nTot) + _mixture.neutral_composition().M(s)/(meanM * meanM) * dmeanM_dn_i;
+          if(i == s)dsum_dn_i -= Antioch::constant_clone(nTot,1) / nTot;
+
+
+          dDtilde_s_dn[i] = Dtilde_s * (dDs_dn_i/Ds - dsum_dn_i/sum);
+        }
+
+        return;
   }
 
 }
