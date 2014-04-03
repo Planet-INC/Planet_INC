@@ -216,7 +216,7 @@ namespace Planet
   {
      antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
      antioch_assert_equal_to(Dtilde.size(),_mixture.neutral_composition().n_species());
-     antioch_assert_equal_to(dD_ns.size(),_mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(dD_dns.size(),_mixture.neutral_composition().n_species());
 #ifdef NDEBUG
 #else
      for(unsigned int s = 0; s < dD_dns.size(); s++)
@@ -241,7 +241,7 @@ namespace Planet
   {
 
         antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
-        antioch_assert_equal_to(dDtilde_s_dn_i.size(),_mixture.neutral_composition().n_species());
+        antioch_assert_equal_to(dDtilde_s_dn.size(),_mixture.neutral_composition().n_species());
 
         //D_s = (nT - ns) / (sum_{medium} n_{medium}/D_{medium,s})
         CoeffType Ds = (nTot - molar_concentrations[s]); //cm-3

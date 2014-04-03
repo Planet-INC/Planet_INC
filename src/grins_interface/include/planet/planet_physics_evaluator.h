@@ -126,17 +126,17 @@ namespace Planet
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
       _scaling_factor(helper.scaling_factor())
   {
-    _omegas.resize(_kinetics.neutral_kinetics().n_species());
-    _omegas_dots.resize(_kinetics.neutral_kinetics().n_species());
+    _omegas.resize(_kinetics.neutral_kinetics().n_species(),0.);
+    _omegas_dots.resize(_kinetics.neutral_kinetics().n_species(),0.);
 
     _domegas_dots_dn.resize(_kinetics.neutral_kinetics().n_species());
     _domegas_dn_A_TERM.resize(_kinetics.neutral_kinetics().n_species());
     _domegas_dn_B_TERM.resize(_kinetics.neutral_kinetics().n_species());
     for(unsigned int s = 0; s < _kinetics.neutral_kinetics().n_species(); s++)
     {
-      _domegas_dots_dn[s].resize(_kinetics.neutral_kinetics().n_species());
-      _domegas_dn_A_TERM[s].resize(_kinetics.neutral_kinetics().n_species());
-      _domegas_dn_B_TERM[s].resize(_kinetics.neutral_kinetics().n_species());
+      _domegas_dots_dn[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
+      _domegas_dn_A_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
+      _domegas_dn_B_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
     }
 
     _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Constants::Saturn::d_Sun<CoeffType>());
