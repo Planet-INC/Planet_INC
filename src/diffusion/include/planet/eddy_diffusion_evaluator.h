@@ -62,6 +62,19 @@ namespace Planet{
          K(const StateType &ntot) const
          ANTIOCH_AUTOFUNC(StateType,_K0 * Antioch::ant_sqrt(Antioch::ant_abs(_mixture.total_bottom_density()/ntot)))
 
+         //! \return deddy_dT coefficient in cm2.s-1.K-1
+         template<typename StateType>
+         ANTIOCH_AUTO(StateType)
+         K_deriv_T(const StateType &T) const
+         ANTIOCH_AUTOFUNC(StateType,Antioch::zero_clone(T))
+
+         //! \return deddy_dn coefficient in cm2.s-1.K-1.(cm-3)-1
+         template<typename StateType>
+         ANTIOCH_AUTO(StateType)
+         K_deriv_ns(const StateType &ntot) const
+         ANTIOCH_AUTOFUNC(StateType,- this->K(ntot) / (ntot * Antioch::constant_clone(ntot,2)))
+
+
          //!
          EddyDiffusionEvaluator(const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                 const CoeffType &K0 = -1.);

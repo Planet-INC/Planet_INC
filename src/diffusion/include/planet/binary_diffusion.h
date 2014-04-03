@@ -98,12 +98,12 @@ class BinaryDiffusion{
         //!
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
-        binary_coefficient_deriv_P(const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,this->binary_coefficient(T,P) / P)
+        binary_coefficient_deriv_n(const StateType &T, const StateType &P, const StateType &nTot) const
+        ANTIOCH_AUTOFUNC(StateType, - this->binary_coefficient(T,P) / nTot)
 
         //!
         template<typename StateType>
-        void binary_coefficient_and_derivatives(const StateType &T, const StateType &P,
+        void binary_coefficient_and_derivatives(const StateType &T, const StateType &P, const StateType &nTot,
                                                 StateType &Dij, StateType &Dij_dT, StateType &Dij_dP) const;
        
         //!
@@ -274,12 +274,12 @@ void BinaryDiffusion<CoeffType>::set_binary_diffusion(const Antioch::Species &mo
 template<typename CoeffType>
 template<typename StateType>
 inline
-void BinaryDiffusion<CoeffType>::binary_coefficient_and_derivatives(const StateType &T, const StateType &P,
-                                                StateType &Dij, StateType &Dij_dT, StateType &Dij_dP) const
+void BinaryDiffusion<CoeffType>::binary_coefficient_and_derivatives(const StateType &T, const StateType &P, const StateType &nTot,
+                                                StateType &Dij, StateType &Dij_dT, StateType &Dij_dns) const
 {
   Dij = this->binary_coefficient(T,P);
-  Dij_dT = this->binary_coefficient_deriv_T(T,P);
-  Dij_dP = this->binary_coefficient_deriv_P(T,P);
+  Dij_dT  = this->binary_coefficient_deriv_T(T,P);
+  Dij_dns = this->binary_coefficient_deriv_P(T,P,nTot);
   return;
 }
 

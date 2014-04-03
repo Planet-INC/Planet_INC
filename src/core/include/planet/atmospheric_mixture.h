@@ -190,6 +190,10 @@ namespace Planet
         const CoeffType atmospheric_scale_height(const VectorStateType &molar_densities,const StateType &z) const;
 
         //!
+        template<typename StateType, typename VectorStateType>
+        void datmospheric_scale_height_dn_i(const VectorStateType &molar_densities, const StateType &z, StateType & Ha, VectorStateType & dHa_dn_i) const;
+
+        //!
         const CoeffType total_bottom_density() const;
 
         //!
@@ -321,6 +325,33 @@ namespace Planet
     Mm /= nTot;
 
     return (this->H(Mm,_temperature.neutral_temperature(z),z)); 
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::datmospheric_scale_height_dn_i(const VectorStateType &molar_densities, 
+                                                                                                    const StateType &z,
+                                                                                                    StateType & Ha, VectorStateType & dHa_dn_i) const
+  {
+    antioch_assert_equal_to(molar_densities.size(),_neutral_composition.n_species());
+
+    CoeffType Mm;
+    Antioch::set_zero(Mm);
+    CoeffType nTot;
+    Antioch::set_zero(nTot);
+    for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+    {
+      Mm   += molar_densities[s] * _neutral_composition.M(s);
+      nTot += molar_densities[s];
+    }
+    Mm /= nTot;
+
+    Ha = this->H(Mm,_temperature.neutral_temperature(z),z); 
+    for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
+    {
+      dHa_dn_i[s] = (_neutral_composition.M(s) - Ha) / nTot;
+    }
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
