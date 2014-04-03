@@ -226,9 +226,13 @@ namespace Planet
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
- //           libMesh::Number n_s = molar_concentrations[s];
+            libMesh::Number n_s = molar_concentrations[s];
 
-            libMesh::Real omega = evaluator.diffusion_term(s);
+            libMesh::Number dns_dz = dmolar_concentrations_dz[s];
+
+            libMesh::Real omega_A_term = evaluator.diffusion_A_term(s);
+
+            libMesh::Real omega_B_term = evaluator.diffusion_B_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
 //std::cout << "omega = " << omega << ", omega_dot = " << omega_dot << std::endl;
@@ -236,7 +240,7 @@ namespace Planet
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
                 Fs(i) += (  omega_dot * s_phi[i][qp]  // chemistry
-                          + omega * s_grad_phi[i][qp](0) //diffusion
+                          + (n_s * omega_B_term + dns_dz * omega_A_term) * s_grad_phi[i][qp](0) //diffusion
                           )*jac;
 
                 if( compute_jacobian )

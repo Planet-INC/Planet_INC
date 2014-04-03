@@ -814,7 +814,7 @@ namespace Planet
     getline(sig_f,line);
     while(!sig_f.eof())
       {
-        CoeffType wv,sigt,sigbr;
+        CoeffType wv,sigt;
         sig_f >> wv >> sigt;
         if(!getline(sig_f,line))break;
         lambda.push_back(wv);//A

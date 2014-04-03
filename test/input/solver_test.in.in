@@ -77,7 +77,7 @@ use_numerical_jacobians_only = 'true'
 
 # Options for time solvers
 [unsteady-solver]
-transient = 'true' 
+transient = 'false' 
 theta = 1.0
 n_timesteps = 100
 deltat = 1000000

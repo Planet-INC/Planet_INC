@@ -74,7 +74,8 @@ namespace Planet{
        void diffusion_and_derivs(const VectorStateType &molar_concentrations,
                                  const VectorStateType &dmolar_concentrations_dz,
                                  const StateType &z, 
-                                 VectorStateType &omegas,
+                                 VectorStateType &omegas_A_term,
+                                 VectorStateType &omegas_B_term,
                                  MatrixStateType &domegas_dn_i_A_TERM,
                                  MatrixStateType &domegas_dn_i_B_TERM) const;
 
@@ -165,7 +166,8 @@ namespace Planet{
   void DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::diffusion_and_derivs(const VectorStateType &molar_concentrations,
                                                                                             const VectorStateType &dmolar_concentrations_dz,
                                                                                             const StateType &z, 
-                                                                                            VectorStateType &omegas,
+                                                                                            VectorStateType &omegas_A_TERM,
+                                                                                            VectorStateType &omegas_B_TERM,
                                                                                             MatrixStateType &domegas_dn_i_A_TERM,
                                                                                             MatrixStateType &domegas_dn_i_B_TERM) const
   {
@@ -211,39 +213,33 @@ namespace Planet{
 
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
-        omegas[s] = //omega = - ns * Dtilde * [
-        - Dtilde[s] * 
-        (
-           dmolar_concentrations_dz[s] // 1/ns * dns_dz
-         + molar_concentrations[s]/Hs[s]  // + 1/Hs
-         + molar_concentrations[s] * dT_dz_T // + 1/T * dT_dz * (
+        omegas_A_TERM[s] = - Dtilde[s] - K ;
+        omegas_B_TERM[s] = 
+         - Dtilde[s]/Hs[s]  // + D/Hs
+         - Dtilde[s] * dT_dz_T // + 1/T * dT_dz * (
                 * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) ]
-        )
-        - K * // - ns * K * (
-        ( 
-           dmolar_concentrations_dz[s] // 1/ns * dns_dz
-          + molar_concentrations[s]/Ha // + 1/Ha
-          + molar_concentrations[s] * dT_dz_T //+1/T * dT_dz )
-       );
-       domegas_dn_i_B_TERM[s].clear();
-       domegas_dn_i_B_TERM[s].resize(_mixture.neutral_composition().n_species(),- (Dtilde[s] + K) * Antioch::constant_clone(T,1e-10)); //to cm-3.km.s-1
+        - K/Ha // + 1/Ha
+        - K  * dT_dz_T; //+1/T * dT_dz )
+
+       domegas_dn_i_A_TERM[s].clear();
+       domegas_dn_i_A_TERM[s].resize(_mixture.neutral_composition().n_species());
        for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
        {
-          domegas_dn_i_A_TERM[s][i] = - dmolar_concentrations_dz[s] * (dDtilde_dn[s][i] + dK_dn)
-                                      - omegas[s] / molar_concentrations[s]
-                                      - molar_concentrations[s] * (
-                                                                    dDtilde_dn[s][i] * (   Antioch::constant_clone(Hs[s],1.)/Hs[s]
-                                                                                         + dT_dz_T * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s])
-                                                                                        )
-                                                                  + dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz / T)
-                                                                  + Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] /nTot * (Antioch::constant_clone(nTot,1) - molar_concentrations[s] / nTot)
-                                                                  - K * dHa_dn_i[i] / (Ha * Ha)
-                                                                 );
+          domegas_dn_i_A_TERM[s][i] = - (dDtilde_dn[s][i] + dK_dn) * Antioch::constant_clone(T,1e-10); //to cm-3.km.s-1
+          domegas_dn_i_B_TERM[s][i] = -  dDtilde_dn[s][i] * (   Antioch::constant_clone(Hs[s],1.)/Hs[s]
+                                                              + dT_dz_T * (Antioch::constant_clone(T,1.) + 
+                                                                             ( (nTot - molar_concentrations[s]) / nTot ) * _mixture.thermal_coefficient()[s]
+                                                                          )
+                                                            )
+                                      - Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] /nTot * (Antioch::constant_clone(nTot,1) - molar_concentrations[s] / nTot)
+                                      - dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz / T)
+                                      - K * dHa_dn_i[i] / (Ha * Ha);
 // in cm-3.km.s-1
          domegas_dn_i_A_TERM[s][i] *= Antioch::constant_clone(T,1e-10);
        }
 // in cm-3.km.s-1
-       omegas[s] *= Antioch::constant_clone(T,1e-10);
+       omegas_A_TERM[s] *= Antioch::constant_clone(T,1e-10);
+       omegas_B_TERM[s] *= Antioch::constant_clone(T,1e-10);
      }
 
      return;

@@ -1004,7 +1004,9 @@ int tester(const std::string &input_T,const std::string & input_hv,
      {
        omega_theo[s] /= nTot_virtual;
        chemical_theo[s] /= nTot_virtual;
-       Scalar diff = evaluator.diffusion_term(s);
+       Scalar diff_A = evaluator.diffusion_A_term(s);
+       Scalar diff_B = evaluator.diffusion_B_term(s);
+       Scalar diff = diff_A * dns_dz[s] + diff_B * densities[s];
        Scalar chem = evaluator.chemical_term(s);
        return_flag =  check_test(omega_theo[s],   diff,"diffusion term of species at altitude") ||
          return_flag;
