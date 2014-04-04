@@ -17,10 +17,6 @@ neutral_species = 'N2 CH4 H H2 C CH (1)CH2 (3)CH2 CH3 C2H2 C2H4 C2H6 N(4S) NH CN
                    C2H3CN CH2NH CHCN CH3CN H2C3N HC5N C2N2 HC2N2 C4N2
                    [15]N HC[15]N H2C[15]N C[15]N [15]NH'
 
-#neutral_species = 'N2 CH4 H'
-
-sparse_neutral_species = 'N2 CH4 H'
-
 # This example, the ionic species and neutral species are the same.
 # If ionic species were different, would just list them here
 ionic_species = '${Planet/neutral_species}'
@@ -33,7 +29,6 @@ input_N2 = '@abs_top_srcdir@/test/input/N2_hv_cross-sections.dat'
 input_CH4 = '@abs_top_srcdir@/test/input/CH4_hv_cross-sections.dat'
 input_hv = '@abs_top_srcdir@/test/input/hv_SSI.dat'
 input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
-sparse_input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.solv_test'
 input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
 
 zmin = '600.0'
@@ -68,7 +63,7 @@ element_type = EDGE2
 domain_x1_min = '3175.5'
 domain_x1_max = '3975.5'
 
-mesh_nx1 = 5 
+mesh_nx1 = 500
 
 []
 

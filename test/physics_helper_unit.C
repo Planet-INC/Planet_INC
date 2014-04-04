@@ -504,7 +504,7 @@ void read_crossSection(const std::string &file, VectorScalar &lambda, VectorScal
   getline(sig_f,line);
   while(!sig_f.eof())
   {
-     Scalar wv,sigt,sigbr;
+     Scalar wv,sigt;
      sig_f >> wv >> sigt;
      if(!getline(sig_f,line))break;
      lambda.push_back(wv);//A
@@ -621,7 +621,7 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
                        const TensorScalar &bin_coeff_data,
                        const std::vector<std::vector<Planet::DiffusionType> > &bin_coeff_model,
                        const VectorScalar &tc, const Scalar &Ha,
-                       VectorScalar &omega_theo, VectorScalar &Dt_theo)
+                       VectorScalar &omega_theo)
 {
 
     omega_theo.resize(molar_frac.size(),0.L);
@@ -659,13 +659,13 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
        }
        M_diff /= totdens_diff;
 
-       Dt_theo[s] = Ds / (Scalar(1.L) - molar_frac[s] * 
+       Scalar Dt_theo = Ds / (Scalar(1.L) - molar_frac[s] * 
                            (Scalar(1.L) - Mm[s] / M_diff)
                          );
 //
        Scalar Hs = scale_height(T,z,Mm[s]);
 
-       omega_theo[s] = - Dt_theo[s] * ( dns_dz[s] /densities[s]
+       omega_theo[s] = - Dt_theo * ( dns_dz[s] /densities[s]
                                     + Scalar(1.L)/Hs 
                                     + dT_dz /T * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s]))
                        - K      * ( dns_dz[s] /densities[s]
@@ -903,29 +903,18 @@ int tester(const std::string &input_T,const std::string & input_hv,
   Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
   photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
 
-  //neutral_reaction_set.set_particle_flux(photon.photon_flux_ptr());
-  //neut_reac_theo.set_particle_flux(photon.photon_flux_ptr());
-
-  neutral_kinetics.set_photon_flux(photon.photon_flux_ptr());
   neutral_theo.set_photon_flux(photon.photon_flux_ptr());
-
-//molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
-  molecular_diffusion.set_medium_species(medium);
-
-//eddy diffusion
-  Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diffusion(composition,K0);
 
 /************************
  * fourth level
  ************************/
-
+/*
 //full diffusion
   Planet::DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
 
 //full chemistry
   Planet::AtmosphericKinetics<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > kinetics(neutral_kinetics, ionic_kinetics, temperature, photon, composition);
-
+*/
 /**************************
  * fifth level
  **************************/
@@ -978,36 +967,36 @@ int tester(const std::string &input_T,const std::string & input_hv,
      std::vector<Scalar> virtual_dns_dz;
 
      dummy.resize(densities.size());
-     virtual_densities.resize(densities.size());
-     virtual_dns_dz.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
 
-     for(unsigned int s = 0; s < molar_frac.size(); s++)
-     {
-         virtual_densities[s] = densities[s] / nTot_virtual;
-         virtual_dns_dz[s]    = dns_dz[s] / nTot_virtual;
-     }
-     evaluator.compute(virtual_densities, virtual_dns_dz, z); //update phy for everyone
+     neutral_theo.compute_mole_sources(T, densities, dummy, chemical_theo);
 
-     std::vector<Scalar> Dt_theo;
-     Dt_theo.resize(densities.size(),0.L);
      Scalar K = K0 * Antioch::ant_sqrt(dens_tot/nTot);
 
      compute_diffusion(K, densities,
                        dns_dz, nTot, molar_frac, Mm, T, dT_dz, P, z, 
                        bin_diff_data, bin_diff_model, 
-                       tc, Ha, omega_theo, Dt_theo);
+                       tc, Ha, omega_theo);
 
-     neutral_theo.compute_mole_sources(T, densities, dummy, chemical_theo);
+     virtual_densities.resize(densities.size());
+     virtual_dns_dz.resize(densities.size());
+//
+// The solver use rescaled densities, so we
+// descale here before giving it to the evaluator
+// who's rescaling
+     for(unsigned int s = 0; s < molar_frac.size(); s++)
+     {
+         virtual_densities[s] = densities[s] / nTot_virtual;
+         virtual_dns_dz[s]    = dns_dz[s] / nTot_virtual;
+     }
+     evaluator.compute(virtual_densities, virtual_dns_dz, z);//compute with real densities
 
      for(unsigned int s = 0; s < molar_frac.size(); s++)
      {
-       omega_theo[s] /= nTot_virtual;
-       chemical_theo[s] /= nTot_virtual;
        Scalar diff_A = evaluator.diffusion_A_term(s);
        Scalar diff_B = evaluator.diffusion_B_term(s);
-       Scalar diff = diff_A * dns_dz[s] + diff_B * densities[s];
-       Scalar chem = evaluator.chemical_term(s);
+       const Scalar diff(diff_A * dns_dz[s] + diff_B * densities[s]); 
+       Scalar chem = evaluator.chemical_term(s) * nTot_virtual;
        return_flag =  check_test(omega_theo[s],   diff,"diffusion term of species at altitude") ||
          return_flag;
        return_flag =  check_test(chemical_theo[s],chem,"chemical term of species at altitude")  ||

@@ -56,6 +56,9 @@ namespace Planet
     //! domega_dot_s_dn_i
     libMesh::Real dchemical_term_dn_i(unsigned int s, unsigned int i)  const;
 
+    //!
+    CoeffType scaling_factor() const;
+
     const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& eddy_diffusion() const;
 
     const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& molecular_diffusion() const;
@@ -107,13 +110,13 @@ namespace Planet
     VectorCoeffType _cache_altitudes;
     std::map<CoeffType,VectorCoeffType> _cache;
 
-    CoeffType scaling_factor() const;
+//    CoeffType scaling_factor() const;
 
   private:
 
     PlanetPhysicsEvaluator();
 
-    CoeffType _scaling_factor;
+    const CoeffType _scaling_factor;
 
   };
 
@@ -245,13 +248,13 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_A_term(unsigned int s) const
   {
-    return _omegas_A_term[s] / _scaling_factor;
+    return _omegas_A_term[s];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::diffusion_B_term(unsigned int s) const
   {
-    return _omegas_B_term[s] / _scaling_factor;
+    return _omegas_B_term[s];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -263,13 +266,13 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_A_term_dn(unsigned int s, unsigned int i) const
   {
-    return _domegas_dn_A_TERM[s][i] / _scaling_factor;
+    return _domegas_dn_A_TERM[s][i];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_B_term_dn(unsigned int s, unsigned int i) const
   {
-    return _domegas_dn_B_TERM[s][i] / _scaling_factor;
+    return _domegas_dn_B_TERM[s][i];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
