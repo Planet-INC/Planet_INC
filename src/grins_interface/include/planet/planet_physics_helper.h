@@ -69,6 +69,9 @@ namespace Planet
     template<typename VectorStateType>
     void upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const;
 
+    //!return upper boundary derivatives of s with respect to i
+    CoeffType dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i) const;
+
     CoeffType upper_boundary_neumann(const VectorCoeffType &molar_densities, unsigned int s) const;
 
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& composition() const;
@@ -1182,6 +1185,12 @@ namespace Planet
   CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::scaling_factor() const
   {
     return _scaling_factor;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i) const
+  {
+    return (i == s)?_composition->upper_boundary_velocity(s):Antioch::zero_clone(_K0);
   }
 
 } // end namespace Planet
