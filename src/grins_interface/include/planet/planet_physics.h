@@ -237,7 +237,9 @@ namespace Planet
             libMesh::Real omega_B_term = evaluator.diffusion_B_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
-//std::cout << "omega = " << omega << ", omega_dot = " << omega_dot << std::endl;
+/*std::cout << "omega A = " << omega_A_term 
+          << ", omega B = " << omega_B_term 
+          << ", omega_dot = " << omega_dot << std::endl;*/
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {

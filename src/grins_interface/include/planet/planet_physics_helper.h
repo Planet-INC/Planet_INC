@@ -443,10 +443,10 @@ namespace Planet
     std::string input_N2  = input("Planet/input_N2", "DIE!" );
     std::string input_CH4 = input("Planet/input_CH4", "DIE!" );
 
-    this->read_hv_flux(_lambda_hv, _phy1AU, input_hv);
+    this->read_hv_flux(_lambda_hv, _phy1AU, input_hv); //photon.angstrom-1.s-1
 
     this->read_cross_section(input_N2,  lambda_N2,  sigma_N2);
-    this->read_cross_section(input_CH4, lambda_CH4, sigma_CH4);
+    this->read_cross_section(input_CH4, lambda_CH4, sigma_CH4); //cm2.angstrom-1
 
     /* here only N2 and CH4 absorb */
     _tau->add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
@@ -1080,9 +1080,9 @@ namespace Planet
         sigmas.resize(nbr - 2,0.L);
         data >> lambda >> total;
         if(lambda < 0.)break;
-        for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr];
+        for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr]; //only br here
         datas[0].push_back(lambda);
-        for(unsigned int ibr = 1; ibr < nbr - 2; ibr++)datas[ibr].push_back(sigmas[ibr]);
+        for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)datas[ibr + 1].push_back(sigmas[ibr]); // + \lambda
       }
     data.close();
 
@@ -1113,23 +1113,23 @@ namespace Planet
            start = datas[0].size() - 1;
         }
         unsigned int j(0);
-        for(int i = start; i < datas[0].size() && i > -1; i += istep)
+        for(int i = start; i < datas[0].size() && i > -1; i += istep) //cs first
         {
-          dataf[j] = datas[ibr][i];
+          dataf[j] = datas[ibr + 1][i];
           j++;
         }
-        for(int i = start; i < datas[0].size() && i > -1; i += istep)
+        for(int i = start; i < datas[0].size() && i > -1; i += istep) //\lambda then
         {
            dataf[j] = datas[0][i];
            j++;
         }
-
 
         Antioch::KineticsType<CoeffType,VectorCoeffType> * rate  = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf,kineticsModel); //kinetics rate
         reaction->add_forward_rate(rate);
 
         neutral_reaction_set.add_reaction(reaction);
       }
+
     return;
   }
 

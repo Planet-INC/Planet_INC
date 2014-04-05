@@ -111,7 +111,7 @@ namespace Planet
      flux.resize(hv.size());
      for(unsigned int i = 0; i < hv.size(); i++)
      {
-        flux[i] = hv[i]/(d * d);
+        flux[i] = hv[i]/(d * d); //s-1.cm-2
      }
      _phy_at_top.set_flux(flux);
 
@@ -163,7 +163,7 @@ namespace Planet
      flux.resize(_phy_at_top.abscissa().size());
      for(unsigned int ilambda = 0; ilambda < _phy_at_top.abscissa().size(); ilambda++)
      {
-       flux[ilambda] = _phy_at_top.flux()[ilambda] * Antioch::ant_exp(- tau[ilambda]);
+       flux[ilambda] = _phy_at_top.flux()[ilambda] * Antioch::ant_exp(- tau[ilambda]); //photons.s-1.angstrom-1
      }
 
      _phy->set_flux(flux);

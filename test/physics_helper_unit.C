@@ -206,9 +206,9 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
       sigmas.resize(nbr - 2,0.L);
       data >> lambda >> total;
       if(lambda < 0.)break;
-      for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr];
+      for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr]; //only br here
       datas[0].push_back(lambda);
-      for(unsigned int ibr = 1; ibr < nbr - 2; ibr++)datas[ibr].push_back(sigmas[ibr]);
+      for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)datas[ibr + 1].push_back(sigmas[ibr]);// + \lambda
    }
    data.close();
 
@@ -244,7 +244,7 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
      unsigned int j(0);
      for(int i = start; i < datas[0].size() && i > -1; i += istep)
      {
-       dataf[j] = datas[ibr][i];
+       dataf[j] = datas[ibr + 1][i];
        j++;
      }
      for(int i = start; i < datas[0].size() && i > -1; i += istep)

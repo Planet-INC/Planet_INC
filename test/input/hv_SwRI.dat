@@ -1,4 +1,4 @@
-#Wavelength (angstrom)  Photon_flux dPhoton_flux (photons s^-1 cm^-2)  ABSORPTION_CROSS_SECTIONS (10^-18cm2)
+#Wavelength (angstrom)  Photon_flux dPhoton_flux (photons s^-1 cm^-2) 
 2275 2.80E+13 0
 2225 3.10E+13 0
 2175 2.21E+13 0
