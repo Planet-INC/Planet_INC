@@ -817,9 +817,10 @@ namespace Planet
     getline(sig_f,line);
     while(!sig_f.eof())
       {
-        CoeffType wv,sigt;
+        CoeffType wv(-1.),sigt(-1.);
         sig_f >> wv >> sigt;
         if(!getline(sig_f,line))break;
+        if(wv < 0.)break;
         lambda.push_back(wv);//A
         sigma.push_back(sigt);//cm-2/A
       }
@@ -841,14 +842,30 @@ namespace Planet
     getline(flux_1AU,line);
     while(!flux_1AU.eof())
       {
-        CoeffType wv,ir,dirr;
+        CoeffType wv(-1),ir(-1),dirr(-1);
         flux_1AU >> wv >> ir >> dirr;
-        if(!lambda.empty() && wv == lambda.back())continue;
+        if(wv < 0.)break;
         lambda.push_back(wv);// * 10.L);//nm -> A
         phy1AU.push_back(ir);/* * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
                                                    Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A*/
       }
     flux_1AU.close();
+
+//if in reverse order
+   if(lambda.back() < lambda.front())
+   {
+      VectorCoeffType tmp_l(lambda.size());
+      VectorCoeffType tmp_p(phy1AU.size());
+      for(unsigned int i = 0; i < lambda.size(); i++)
+      {
+         tmp_l[lambda.size() - 1 - i] = lambda[i];
+         tmp_p[lambda.size() - 1 - i] = phy1AU[i];
+      }
+      lambda.clear();
+      phy1AU.clear();
+      lambda = tmp_l;
+      phy1AU = tmp_p;
+   }
     return;
   }
 
@@ -1058,13 +1075,14 @@ namespace Planet
     datas.resize(nbr - 1);
     while(!data.eof())
       {
-        CoeffType lambda, total;
+        CoeffType lambda(-1), total(-1);
         VectorCoeffType sigmas;
         sigmas.resize(nbr - 2,0.L);
         data >> lambda >> total;
+        if(lambda < 0.)break;
         for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr];
         datas[0].push_back(lambda);
-        for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)datas[ibr].push_back(sigmas[ibr]);
+        for(unsigned int ibr = 1; ibr < nbr - 2; ibr++)datas[ibr].push_back(sigmas[ibr]);
       }
     data.close();
 
@@ -1085,11 +1103,28 @@ namespace Planet
             reaction->add_product( produc[ibr][ip],chem_mixture.active_species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
           }
 
-        VectorCoeffType dataf = datas[0];
-        for(unsigned int i = 0; i < datas[ibr].size(); i++)
-          {
-            dataf.push_back(datas[ibr][i]);
-          }
+        VectorCoeffType dataf;
+        dataf.resize(datas[0].size() + datas[ibr].size(),0.);
+        int istep(1);
+        int start(0);
+        if(datas[0].back() < datas[0].front())
+        {
+           istep = -1;
+           start = datas[0].size() - 1;
+        }
+        unsigned int j(0);
+        for(int i = start; i < datas[0].size() && i > -1; i += istep)
+        {
+          dataf[j] = datas[ibr][i];
+          j++;
+        }
+        for(int i = start; i < datas[0].size() && i > -1; i += istep)
+        {
+           dataf[j] = datas[0][i];
+           j++;
+        }
+
+
         Antioch::KineticsType<CoeffType,VectorCoeffType> * rate  = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf,kineticsModel); //kinetics rate
         reaction->add_forward_rate(rate);
 
