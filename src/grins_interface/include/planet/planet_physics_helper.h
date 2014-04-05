@@ -329,7 +329,6 @@ namespace Planet
     std::vector<std::vector<std::vector<CoeffType> > > bin_diff_data;    // (medium,species)[]
     std::vector<std::vector<DiffusionType> > bin_diff_model; // (medium,species)
 
-    /*! \todo What are these magic numbers? */
     bin_diff_data.resize(_medium.size());
     bin_diff_model.resize(_medium.size());
     _bin_diff_coeff.resize(_medium.size());
