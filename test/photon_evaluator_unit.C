@@ -109,16 +109,17 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
 }
 
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
-void read_crossSection(const std::string &file, unsigned int nbr, VectorScalar &lambda, VectorScalar &sigma)
+void read_crossSection(const std::string &file, VectorScalar &lambda, VectorScalar &sigma)
 {
   std::string line;
   std::ifstream sig_f(file);
   getline(sig_f,line);
   while(!sig_f.eof())
   {
-     Scalar wv,sigt,sigbr;
+     Scalar wv(-1.),sigt;
      sig_f >> wv >> sigt;
-     for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
+     if(!getline(sig_f,line))break;
+     if(wv < 0.)break;
      lambda.push_back(wv);//A
      sigma.push_back(sigt);//cm-2/A
   }
@@ -191,7 +192,7 @@ Scalar a(const Scalar &T, const Scalar &Mmean, const Scalar &z)
 template<typename Scalar, typename VectorScalar>
 void calculate_tau(VectorScalar &opacity, const Planet::Chapman<Scalar> &chapman, 
                    const std::vector<VectorScalar*> &cs, const VectorScalar &lambda_ref,
-                   const VectorScalar &sum_dens, const Scalar &z, const Scalar &a)
+                   const VectorScalar &sum_dens, const Scalar &a)
 {
   opacity.resize(lambda_ref.size());
   Antioch::SigmaBinConverter<VectorScalar> bin_converter;
@@ -207,7 +208,7 @@ void calculate_tau(VectorScalar &opacity, const Planet::Chapman<Scalar> &chapman
   }
   for(unsigned int il = 0; il < lambda_ref.size(); il++)
   {
-      opacity[il] *= chapman(a) * 1e3; //to m
+      opacity[il] *= chapman(a) * 1e5; //cm-1.km to no unit
   }
 
 }
@@ -254,8 +255,8 @@ int tester(const std::string &input_T, const std::string &input_hv,
 ////cross-section
   std::vector<Scalar> lambda_N2,sigma_N2;
   std::vector<Scalar> lambda_CH4, sigma_CH4;
-  read_crossSection<Scalar>(input_N2,3,lambda_N2,sigma_N2);
-  read_crossSection<Scalar>(input_CH4,9,lambda_CH4,sigma_CH4);
+  read_crossSection<Scalar>(input_N2,lambda_N2,sigma_N2);
+  read_crossSection<Scalar>(input_CH4,lambda_CH4,sigma_CH4);
 
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
@@ -343,7 +344,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
     Scalar T = temperature.neutral_temperature(z);
     Scalar x = a(T,Mmean,z);
     std::vector<Scalar> opacity;
-    calculate_tau(opacity,chapman,cs,lambda_hv,sum_dens,z,x);
+    calculate_tau(opacity,chapman,cs,lambda_hv,sum_dens,x);
 
 
     photon.update_photon_flux(densities,sum_dens,z);

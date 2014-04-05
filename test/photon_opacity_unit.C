@@ -59,16 +59,17 @@ int check(const Scalar &test, const Scalar &ref, const Scalar &tol, const std::s
 }
 
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
-void read_crossSection(VectorScalar & lambda, const std::string &file, unsigned int nbr, VectorScalar &sigma)
+void read_crossSection(VectorScalar & lambda, const std::string &file, VectorScalar &sigma)
 {
   std::string line;
   std::ifstream sig_f(file);
   getline(sig_f,line);
   while(!sig_f.eof())
   {
-     Scalar wv,sigt,sigbr;
+     Scalar wv(-1),sigt;
      sig_f >> wv >> sigt;
-     for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
+     if(!getline(sig_f,line))break;
+     if(wv < 0.)break;
      lambda.push_back(wv/10.);//A -> nm
      sigma.push_back(sigt*10.);//cm-2/A -> m-2/nm
   }
@@ -168,8 +169,8 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
   std::vector<std::vector<Scalar> > lambdas;
   sigmas.resize(2);
   lambdas.resize(2);
-  read_crossSection<Scalar>(lambdas[0],input_N2,3,sigmas[0]);
-  read_crossSection<Scalar>(lambdas[1],input_CH4,9,sigmas[1]);
+  read_crossSection<Scalar>(lambdas[0],input_N2,sigmas[0]);
+  read_crossSection<Scalar>(lambdas[1],input_CH4,sigmas[1]);
   std::vector<std::vector<Scalar> > sigma_ref;
   sigma_ref.resize(2);
   Antioch::SigmaBinConverter<std::vector<Scalar> > binconv;
@@ -214,13 +215,13 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
         Scalar tau_exact(0.L);
         for(unsigned int s = 0; s < 2; s++)
         {
-           tau_exact += sigma_ref[s][il] * sum_dens[s];
+           tau_exact += sigma_ref[s][il] * sum_dens[s]; // cm-3.km
            
            return_flag = check(tau.absorbing_species_cs()[s].cross_section_on_custom_grid()[il],
                                sigma_ref[s][il],tol,"sigma ref of species at altitude and wavelength") ||
                          return_flag;
         }
-        tau_exact *= chapman(x) * 1e3; //to m
+        tau_exact *= chapman(x) * 1e5; //cm-1.km to no unit
         return_flag = check(tau_cal[il],tau_exact,tol,"tau at altitude and wavelength") ||
                       return_flag;
                       

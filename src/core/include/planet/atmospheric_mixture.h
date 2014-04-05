@@ -85,7 +85,8 @@ namespace Planet
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         barometry_density(const StateType &z, const StateType &zmin, const StateType &zmin_dens, const StateType &T, const StateType &Mm) const
-        ANTIOCH_AUTOFUNC(StateType, zmin_dens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<StateType>() + z) * (Planet::Constants::Titan::radius<StateType>() + zmin) * 1e3 *
+        ANTIOCH_AUTOFUNC(StateType, zmin_dens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<StateType>() + z) * (Planet::Constants::Titan::radius<StateType>() + zmin) * 
+                                                                 Antioch::constant_clone(z,1e3) * //to SI (km -> m)
                                              Antioch::Constants::Avogadro<StateType>() * Planet::Constants::Universal::kb<StateType>() * T / 
                                                         (Planet::Constants::Universal::G<StateType>() * Planet::Constants::Titan::mass<StateType>() * Mm))
                                                                )

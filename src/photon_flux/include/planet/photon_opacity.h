@@ -158,9 +158,9 @@ namespace Planet
       {
           for(unsigned int s = 0; s < _absorbing_species_cs.size(); s++) // neutrals
           {
-             tau[il] += _absorbing_species_cs[s].cross_section_on_custom_grid()[il] * sum_dens[_absorbing_species_id[s]];
+             tau[il] += _absorbing_species_cs[s].cross_section_on_custom_grid()[il] * sum_dens[_absorbing_species_id[s]]; //cm2 * cm-3.km
           }
-          tau[il] *= _chapman(a) * 1e3; //km -> m
+          tau[il] *= _chapman(a) * Antioch::constant_clone(a,1e5); //cm-1.km  -> no unit
       }
       return;
   }
