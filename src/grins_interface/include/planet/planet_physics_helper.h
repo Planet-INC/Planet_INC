@@ -155,8 +155,6 @@ namespace Planet
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
 
     void fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
-                                           const std::string &N2_hv_file,
-                                           const std::string &CH4_hv_file,
                                            Antioch::ReactionSet<CoeffType>& neutral_reaction_set ) const;
 
     void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
@@ -417,21 +415,8 @@ namespace Planet
   {
     _tau = new PhotonOpacity<CoeffType,VectorCoeffType>(*_chapman);
 
-    std::vector<CoeffType> lambda_N2, sigma_N2;
-    std::vector<CoeffType> lambda_CH4, sigma_CH4;
 
-    if( !input.have_variable("Planet/input_N2") )
-      {
-        std::cerr << "Error: input_N2 not found in input file!" << std::endl;
-        antioch_error();
-      }
-
-    if( !input.have_variable("Planet/input_CH4") )
-      {
-        std::cerr << "Error: input_CH4 not found in input file!" << std::endl;
-        antioch_error();
-      }
-
+//hv
     if( !input.have_variable("Planet/input_hv") )
       {
         std::cerr << "Error: input_hv not found in input file!" << std::endl;
@@ -439,20 +424,54 @@ namespace Planet
       }
 
     std::string input_hv  = input("Planet/input_hv", "DIE!" );
-    std::string input_N2  = input("Planet/input_N2", "DIE!" );
-    std::string input_CH4 = input("Planet/input_CH4", "DIE!" );
 
     this->read_hv_flux(_lambda_hv, _phy1AU, input_hv); //photon.angstrom-1.s-1
 
-    this->read_cross_section(input_N2,  lambda_N2,  sigma_N2);
-    this->read_cross_section(input_CH4, lambda_CH4, sigma_CH4); //cm2.angstrom-1
 
-    /* here only N2 and CH4 absorb */
-    _tau->add_cross_section( lambda_N2, sigma_N2, Antioch::Species::N2,
-                             _neutral_species->active_species_name_map().at("N2") );
+//cross-section
 
-    _tau->add_cross_section( lambda_CH4, sigma_CH4, Antioch::Species::CH4,
-                             _neutral_species->active_species_name_map().at("CH4") );
+    if( !input.have_variable("Planet/input_cross_section_root") )
+      {
+        std::cerr << "Error: input_cross_section_root not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+    if( !input.have_variable("Planet/absorbing_species") )
+      {
+        std::cerr << "Error: absorbing_species not found in input file!" << std::endl;
+        antioch_error();
+      }
+
+
+    unsigned int n_absorbing = input.vector_variable_size("Planet/absorbing_species");
+
+    std::vector<std::string> abs_file(n_absorbing);
+
+    for( unsigned int s = 0; s < n_absorbing; s++ )
+      {
+        abs_file[s] = std::string(input("Planet/input_cross_section_root","DIE!")) + std::string(input("Planet/absorbing_species", "DIE!", s));
+      }
+
+
+   for(unsigned int s = 0; s < n_absorbing; s++)
+   {
+
+      std::string species = input("Planet/absorbing_species", "DIE!", s);
+
+      if(!_neutral_species->active_species_name_map().count(species))
+      {
+         std::cerr << "Unknown species \"" << species << "\".  Forgot to add it to the neutral_species entry?" << std::endl;
+         antioch_error();
+      }
+
+      std::vector<CoeffType> lambda, sigma;
+
+      this->read_cross_section(abs_file[s], lambda, sigma); //cm2.angstrom-1
+
+      _tau->add_cross_section( lambda, sigma, _neutral_species->species_name_map().at(species),          // Antioch::Species
+                                              _neutral_species->active_species_name_map().at(species) ); // id
+
+    }
 
     _tau->update_cross_section(_lambda_hv);
 
@@ -478,28 +497,54 @@ namespace Planet
         antioch_error();
       }
 
-    if( !input.have_variable("Planet/input_N2") )
+    if( !input.have_variable("Planet/input_photoreactions_root") )
       {
-        std::cerr << "Error: could not find input_N2 filename!" << std::endl;
+        std::cerr << "Error: could not find input_photoreactions_root path name!" << std::endl;
         antioch_error();
       }
 
-    if( !input.have_variable("Planet/input_CH4") )
+    if( !input.have_variable("Planet/photo_reacting_species") )
       {
-        std::cerr << "Error: could not find input_CH4 filename!" << std::endl;
+        std::cerr << "Error: photo_reacting_species not found!" << std::endl;
         antioch_error();
       }
 
     std::string input_reactions_elem = input( "Planet/input_reactions_elem", "DIE!" );
     std::string input_reactions_fall = input( "Planet/input_reactions_fall", "DIE!" );
-    std::string input_N2  = input( "Planet/input_N2", "DIE!" );
-    std::string input_CH4 = input( "Planet/input_CH4", "DIE!" );
 
     // here read the reactions, Antioch will take care of it once hdf5, no ionic reactions there
     //Kooij / Arrhenius + photochem
-    this->fill_neutral_reactions_elementary(input_reactions_elem, input_N2, input_CH4, *_neutral_reaction_set);
+    this->fill_neutral_reactions_elementary(input_reactions_elem, *_neutral_reaction_set);
 
     this->fill_neutral_reactions_falloff(input_reactions_fall, *_neutral_reaction_set);
+
+    //now the photochemical ones
+    unsigned int n_hv_reacting = input.vector_variable_size("Planet/photo_reacting_species");
+
+    std::vector<std::string> hv_file(n_hv_reacting);
+
+    for( unsigned int s = 0; s < n_hv_reacting; s++ )
+      {
+        hv_file[s] = std::string(input("Planet/input_photoreactions_root","DIE!")) + std::string(input("Planet/photo_reacting_species", "DIE!", s));
+      }
+
+
+   for(unsigned int s = 0; s < n_hv_reacting; s++)
+   {
+
+      std::string species = input("Planet/photo_reacting_species", "DIE!", s);
+
+      if(!_neutral_species->active_species_name_map().count(species))
+      {
+         std::cerr << "Unknown species \"" << species << "\".  Forgot to add it to the neutral_species entry?" << std::endl;
+         antioch_error();
+      }
+
+      this->read_photochemistry_reac(hv_file[s], species, *_neutral_reaction_set);
+
+    }
+
+
 
     return;
   }
@@ -588,8 +633,6 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
-                                                                                                         const std::string &N2_hv_file,
-                                                                                                         const std::string &CH4_hv_file,
                                                                                                          Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const
   {
     //here only simple ones: bimol Kooij/Arrhenius model
@@ -665,9 +708,6 @@ namespace Planet
         neutral_reaction_set.add_reaction(reaction);
       }
     data.close();
-    //now the photochemical ones
-    read_photochemistry_reac(N2_hv_file, "N2", neutral_reaction_set);
-    read_photochemistry_reac(CH4_hv_file, "CH4", neutral_reaction_set);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -1112,12 +1152,12 @@ namespace Planet
            start = datas[0].size() - 1;
         }
         unsigned int j(0);
-        for(int i = start; i < datas[0].size() && i > -1; i += istep) //cs first
+        for(int i = start; i < (int)datas[0].size() && i > -1; i += istep) //cs first
         {
           dataf[j] = datas[ibr + 1][i];
           j++;
         }
-        for(int i = start; i < datas[0].size() && i > -1; i += istep) //\lambda then
+        for(int i = start; i < (int)datas[0].size() && i > -1; i += istep) //\lambda then
         {
            dataf[j] = datas[0][i];
            j++;

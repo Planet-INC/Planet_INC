@@ -10,12 +10,13 @@ medium = 'N2 CH4'
 #                   C2H3CN CH2NH CHCN CH3CN H2C3N HC5N C2N2 HC2N2 C4N2 [14]N[15]N
 #                   [15]N HC[15]N H2C[15]N C[15]N [15]NH [15]N(2D)'
 
-neutral_species = 'N2 CH4 H H2 C CH (1)CH2 (3)CH2 CH3 C2H2 C2H4 C2H6 N(4S) NH CN
-                   HCN H2CN C2N NCCN HC3N N(2D) N(2P) C2H2** HC3N* Ar C2 C2H
-                   CH2C2H2 CH3C2H C4H2 C2H5 C3H2 C3H3 C3H5 C3H6 C3H7 C3H8 C4H3
-                   C4H4 C4H6 C4H10 C6H2 C6H5 cC6H6 nC6H6 C6H6 nC6H7 cC6H7 C2H3
-                   C2H3CN CH2NH CHCN CH3CN H2C3N HC5N C2N2 HC2N2 C4N2
-                   [15]N HC[15]N H2C[15]N C[15]N [15]NH'
+neutral_species = 'N2 CH4 H H2'
+
+# files ${input_cross_section_root}${absorbing_species} are what is searched for
+absorbing_species = 'N2 CH4 H2 H'
+
+# files ${input_photoreactions_root}${photo_reacting_species} are what is searched for
+photo_reacting_species = 'N2 CH4'
 
 # This example, the ionic species and neutral species are the same.
 # If ionic species were different, would just list them here
@@ -25,11 +26,11 @@ temperature_file = '@abs_top_srcdir@/test/input/temperature.dat'
 file_flyby = '@abs_top_srcdir@/test/input/T40_Flyby'
 root_input = '@abs_top_srcdir@/test/input/'
 file_neutral_charac = '@abs_top_srcdir@/test/input/neutrals.dat'
-input_N2 = '@abs_top_srcdir@/test/input/N2_hv_cross-sections.dat'
-input_CH4 = '@abs_top_srcdir@/test/input/CH4_hv_cross-sections.dat'
-input_hv = '@abs_top_srcdir@/test/input/hv_SSI.dat'
+input_cross_section_root = '@abs_top_srcdir@/test/input/hv_cross_section_low_res.'
+input_hv = '@abs_top_srcdir@/test/input/hv_SwRI_low_res.dat'
 input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
 input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
+input_photoreactions_root = '@abs_top_srcdir@/test/input/neutral_reactions_photochem.'
 
 zmin = '600.0'
 zmax = '1400.0'

@@ -242,12 +242,12 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
        start = datas[0].size() - 1;
      }
      unsigned int j(0);
-     for(int i = start; i < datas[0].size() && i > -1; i += istep)
+     for(int i = start; i < (int)datas[0].size() && i > -1; i += istep)
      {
        dataf[j] = datas[ibr + 1][i];
        j++;
      }
-     for(int i = start; i < datas[0].size() && i > -1; i += istep)
+     for(int i = start; i < (int)datas[0].size() && i > -1; i += istep)
      {
        dataf[j] = datas[0][i];
        j++;
@@ -716,6 +716,7 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
 template <typename Scalar>
 int tester(const std::string &input_T,const std::string & input_hv, 
            const std::string &input_reactions_elem, const std::string &input_reactions_fall, 
+           const std::string &input_reactions_photochem_N2, const std::string &input_reactions_photochem_CH4, 
            const std::string &input_N2,const std::string &input_CH4, const std::string& input_filename )
 {
 
@@ -917,7 +918,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
   Antioch::ReactionSet<Scalar> neut_reac_theo(neutral_species);
 
   fill_neutral_reactions<Scalar,std::vector<Scalar> >
-                (input_reactions_elem,input_reactions_fall,input_N2,input_CH4,neutral_reaction_set,neut_reac_theo); //here only simple ones
+                (input_reactions_elem,input_reactions_fall,input_reactions_photochem_N2,input_reactions_photochem_CH4,neutral_reaction_set,neut_reac_theo); //here only simple ones
 
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
@@ -1046,14 +1047,14 @@ int tester(const std::string &input_T,const std::string & input_hv,
 int main(int argc, char** argv)
 {
   // Check command line count.
-  if( argc < 8 )
+  if( argc < 10 )
     {
       // TODO: Need more consistent error handling.
       std::cerr << "Error: Must specify input files." << std::endl;
       antioch_error();
     }
 
-  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),std::string(argv[6]),std::string(argv[7])) ||
-          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),std::string(argv[6]),std::string(argv[7])));//||
+  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9])) ||
+          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9])));//||
           //tester<long double>(std::string(argv[1])));
 }
