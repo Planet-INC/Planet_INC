@@ -114,9 +114,9 @@ class BinaryDiffusion{
         //!
         DiffusionType diffusion_model() const;
         //!
-        const Antioch::Species mol1() const {return _mol1;}
+        Antioch::Species mol1() const {return _mol1;}
         //!
-        const Antioch::Species mol2() const {return _mol2;}
+        Antioch::Species mol2() const {return _mol2;}
 
 };
 
