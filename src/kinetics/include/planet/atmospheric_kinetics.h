@@ -53,7 +53,6 @@ namespace Planet
 
         bool _ionic_coupling;
         std::vector<Antioch::Species>                     _ions_species;
-        VectorCoeffType                                   _cache_concentrations;
         AtmosphericSteadyState<CoeffType,VectorCoeffType> _newton_solver;
         
 //
@@ -114,7 +113,6 @@ namespace Planet
     _ionic_coupling = !ionic_species.empty();
     if(_ionic_coupling)
     {
-      _cache_concentrations.resize(_composition.ionic_composition().n_species(),-1.L); //full system initialized
       _newton_solver.build_map();        //ionospheric solver maps
     }
     
@@ -196,20 +194,21 @@ namespace Planet
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution(const VectorStateType &neutral_concentrations, const StateType &z, 
                                                                                               VectorStateType &kin_rates)
   {
-    antioch_assert(!_cache_concentrations.empty());
 
- // update neutrals
+ // neutrals resized
+    VectorStateType full_concentrations;
+    full_concentrations.resize(_composition.ionic_composition().n_species(),0.L);
     for(unsigned int s = 0; s < neutral_concentrations.size(); s++)
     {
        unsigned int i = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
-       _cache_concentrations[i] = neutral_concentrations[s];
+       full_concentrations[i] = neutral_concentrations[s];
     }
 
 //solve for ions
     VectorCoeffType source_ions;
     source_ions.resize(_ionic_reactions.n_species(),0.L);
 //all temperature conditions, solver deal with it
-    _newton_solver.precompute_rates(_cache_concentrations,_temperature.neutral_temperature(z), _temperature.ionic_temperature(z), _temperature.electronic_temperature(z)); 
+    _newton_solver.precompute_rates(full_concentrations,_temperature.neutral_temperature(z), _temperature.ionic_temperature(z), _temperature.electronic_temperature(z)); 
     _newton_solver.steady_state(source_ions);
 
 // update sources
