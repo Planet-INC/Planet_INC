@@ -61,13 +61,13 @@ namespace Planet
         const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
       public:
         //!
-        AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                         &neu,
-                            Antioch::ReactionSet<CoeffType>                               &neu_set,
-                            Antioch::KineticsEvaluator<CoeffType>                         &ion,
+        AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                               &neu,
+                            Antioch::ReactionSet<CoeffType>                                     &neu_set,
+                            Antioch::KineticsEvaluator<CoeffType>                               &ion,
                             const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
-                            PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
+                            PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>          &photon,
                             const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition,
-                            std::vector<Antioch::Species>                                 ionic_species = std::vector<Antioch::Species>());
+                            std::vector<Antioch::Species>                                       ionic_species = std::vector<Antioch::Species>());
         //!
         ~AtmosphericKinetics();
 
@@ -94,13 +94,13 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>         &neu,
-                                                                      Antioch::ReactionSet<CoeffType>                               &neu_set,
-                                                                      Antioch::KineticsEvaluator<CoeffType>                         &ion,
+  AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>               &neu,
+                                                                      Antioch::ReactionSet<CoeffType>                                     &neu_set,
+                                                                      Antioch::KineticsEvaluator<CoeffType>                               &ion,
                                                                       const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
-                                                                      PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
+                                                                      PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>          &photon,
                                                                       const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition,
-                                                                      std::vector<Antioch::Species>                                  ionic_species ):
+                                                                      std::vector<Antioch::Species>                                       ionic_species ):
    _neutral_reactions(neu),
    _neutral_reactions_set(neu_set),
    _ionic_reactions(ion),
@@ -152,7 +152,6 @@ namespace Planet
      VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
-     _neutral_reactions_set.update_particle_flux_chemistry();
      _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
                                              molar_concentrations,dummy,kin_rates);
 
@@ -209,6 +208,7 @@ namespace Planet
     VectorCoeffType source_ions;
     source_ions.resize(_ionic_reactions.n_species(),0.L);
 //all temperature conditions, solver deal with it
+
     _newton_solver.precompute_rates(full_concentrations,_temperature.neutral_temperature(z), _temperature.ionic_temperature(z), _temperature.electronic_temperature(z)); 
     _newton_solver.steady_state(source_ions);
 

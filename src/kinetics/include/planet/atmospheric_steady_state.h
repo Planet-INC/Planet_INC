@@ -393,14 +393,6 @@ namespace Planet
 
    if(_molar_concentrations[0] < 0.L)first_approximation();
 
-    for(unsigned int s = 0; s < ss_species.size(); s++)
-    {
-std::cout << mixture.species_inverse_name_map().at(ss_species[s]) << " " 
-          << std::setprecision(15) << molar_concentrations[mixture.species_list_map().at(ss_species[s])] << std::endl;
-    }
-for(unsigned int i = 0; i < 20; i++)std::cout << "*";
-std::cout << std::endl;
-
 // Newton solver here
 // Ax + b = 0
 // A is jacobian, b is molar sources
@@ -460,6 +452,7 @@ std::cout << std::endl;
         if(_molar_concentrations[s] < 0.)Antioch::set_zero(_molar_concentrations[s]);
         lim += Antioch::ant_abs(x(s));
       }
+
       nloop++;
       if(nloop > loop_max)
       {

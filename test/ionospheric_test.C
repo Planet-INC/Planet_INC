@@ -109,7 +109,6 @@ void get_the_ions(const Antioch::ChemicalMixture<Scalar> &mixture, std::vector<A
           mixture.species_list()[s] != Antioch::Species::CxHyNzp)
                         ss_species.push_back(mixture.species_list()[s]);
   }
-  ss_species.push_back(mixture.species_name_map().at("e"));
 }
 
 void condense_molecule(std::vector<std::string> &molecule, std::vector<unsigned int> &stoi)
@@ -487,7 +486,6 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
        }
       
        reaction_set.add_reaction(my_rxn);     
-std::cout << (*my_rxn) << std::endl;
    }
 }
 
@@ -600,7 +598,7 @@ void prepare_the_ionosphere(const std::string &file_neu_conc, std::vector<Scalar
 template <typename Scalar>
 int tester(const std::string & file_spec, const std::string &file_reac, const std::string &file_neu_conc)
 {
- // first, the species
+// first, the species
   std::vector<std::string> all_species;
   read_the_species(file_spec,all_species);
 
@@ -680,7 +678,7 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
   return return_flag;
   out.close();
 */
-  return 1;//return_flag;
+  return return_flag;
 
 }
 
@@ -694,7 +692,7 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (//tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
+  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
           tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
           tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])));
 
