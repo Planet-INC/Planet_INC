@@ -105,10 +105,10 @@ void get_the_ions(const Antioch::ChemicalMixture<Scalar> &mixture, std::vector<A
   ss_species.clear();
   for(unsigned int s = 0; s < mixture.n_species(); s++)
   {
-      if( mixture.species_inverse_name_map().at(mixture.species_list()[s]).find('+') != std::string::npos)
+      if( mixture.species_inverse_name_map().at(mixture.species_list()[s]).find('+') != std::string::npos &&
+          mixture.species_list()[s] != Antioch::Species::CxHyNzp)
                         ss_species.push_back(mixture.species_list()[s]);
   }
-  ss_species.push_back(mixture.species_name_map().at("e"));
 }
 
 
@@ -487,7 +487,6 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
        }
       
        reaction_set.add_reaction(my_rxn);     
-std::cout << (*my_rxn) << std::endl;
    }
 }
 
@@ -533,7 +532,6 @@ void read_reactions(const std::string &file_reac, Antioch::ReactionSet<Scalar> &
 
         sanity_check_reaction(cur_reac);
 
-
         treat_reaction(cur_reac,reaction_set, n_species);
 
         cur_reac.br_path.clear();
@@ -544,15 +542,47 @@ void read_reactions(const std::string &file_reac, Antioch::ReactionSet<Scalar> &
         cur_reac.br_path.push_back(br);
      }
   }
+// last one
   treat_reaction(cur_reac,reaction_set,n_species);
+
   data.close();
+}
+
+template <typename Scalar>
+void filter_ions(const Antioch::ReactionSet<Scalar> &reac_set, std::vector<Antioch::Species> &ss_species)
+{
+  std::vector<unsigned int> reactivity(reac_set.n_species(),0);
+  std::vector<unsigned int> productivity(reac_set.n_species(),0);
+  for(unsigned int rxn = 0; rxn < reac_set.n_reactions(); rxn++)
+  {
+        const Antioch::Reaction<Scalar> & reaction = reac_set.reaction(rxn);
+        for(unsigned int ir = 0; ir < reaction.n_reactants(); ir++)
+        {
+            reactivity[reaction.reactant_id(ir)]++;
+        }
+        for(unsigned int ip = 0; ip < reaction.n_products(); ip++)
+        {
+            productivity[reaction.product_id(ip)]++;
+        }
+  }
+  std::vector<Antioch::Species> filtered_species;
+  const Antioch::ChemicalMixture<Scalar> & mix = reac_set.chemical_mixture();
+  for(unsigned int s = 0; s < ss_species.size(); s++)
+  {
+       unsigned int i_spec = mix.species_list_map().at(ss_species[s]);
+       if(reactivity[i_spec] > 0 && productivity[i_spec] > 0)
+                filtered_species.push_back(ss_species[s]);
+  }
+  ss_species.clear();
+  ss_species = filtered_species;
+  ss_species.push_back(Antioch::Species::e);
 }
 
 template <typename Scalar>
 void prepare_the_ionosphere(const std::string &file_neu_conc, std::vector<Scalar> &concentrations,
                             const Antioch::ChemicalMixture<Scalar> &mixture)
 {
-  concentrations.resize(mixture.n_species(),-1.L);
+  concentrations.resize(mixture.n_species(),0.L);
   std::ifstream data(file_neu_conc.c_str());
   Scalar ntot;
   std::string name;
@@ -569,7 +599,7 @@ void prepare_the_ionosphere(const std::string &file_neu_conc, std::vector<Scalar
 template <typename Scalar>
 int tester(const std::string & file_spec, const std::string &file_reac, const std::string &file_neu_conc)
 {
- // first, the species
+// first, the species
   std::vector<std::string> all_species;
   read_the_species(file_spec,all_species);
 
@@ -583,22 +613,35 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
 
 // then, the ionospheric reactions
   read_reactions(file_reac,reaction_set, mixture.n_species());
+  filter_ions(reaction_set,ss_species);
   Antioch::KineticsEvaluator<Scalar> reactions_system(reaction_set,0);
   std::vector<Scalar> molar_concentrations, molar_sources;
 
 // now the concentrations
   prepare_the_ionosphere(file_neu_conc,molar_concentrations,mixture);
+  molar_sources.resize(molar_concentrations.size(),0.);
 
 //solve
-  Scalar T(200.);
-  Planet::AtmosphericSteadyState solver;
-  solver.steady_state(reactions_system, ss_species, mixture, T, molar_concentrations, molar_sources);
+  Scalar T = 180.L;                                              // neutral temperature
+  Scalar Te = 180.L + (1100. - 900.L)/500.L * (1150.L - 180.L) ; // electronic temp at 1100 km
+
+
+  for(unsigned int s = 0; s < ss_species.size(); s++)
+  {
+     molar_concentrations[mixture.species_list_map().at(ss_species[s])] = -1.L;
+  }
+
+
+  Planet::AtmosphericSteadyState<Scalar,std::vector<Scalar> > solver(ss_species,reactions_system);
+  solver.precompute_rates(molar_concentrations,T,T,Te);
+  solver.steady_state(molar_sources);
 
   int return_flag(0);
 
   Scalar sum(0.L);
   for(unsigned int s = 0; s < ss_species.size(); s++)
   {
+      if(ss_species[s] == Antioch::Species::e)continue;
       sum += std::abs(molar_sources[mixture.species_list_map().at(ss_species[s])]);
   }
   Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.;
@@ -611,22 +654,7 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
       return_flag = 1;
   }
 
-/*
-  std::ofstream out("ions.dat");
-
-  for(unsigned int s = 0; s < ss_species.size(); s++)
-  {
-      out << mixture.species_inverse_name_map().at(ss_species[s]) << " ";
-  }
-  std::cout << std::endl;
-  for(unsigned int s = 0; s < ss_species.size(); s++)
-  {
-      out << std::setprecision(10) << std::scientific << molar_sources[s] << " ";
-  }
-
-  out.close();
-*/
-  return 1;//return_flag;
+  return return_flag;
 
 }
 
@@ -640,7 +668,7 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (//tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
+  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
           tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
           tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])));
 
