@@ -625,39 +625,11 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
   Scalar T = 180.L;                                              // neutral temperature
   Scalar Te = 180.L + (1100. - 900.L)/500.L * (1150.L - 180.L) ; // electronic temp at 1100 km
 
-  Scalar sum(0.L);
-  for(unsigned int s = 0; s < ss_species.size(); s++)
-  {
-     molar_concentrations[mixture.species_list_map().at(ss_species[s])] = -1.L;
-  }
-  Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.;
-  if(std::abs(sum) > tol)
-  {
-      std::cerr << std::scientific << std::setprecision(15)
-                << "Steady state not reached\n"
-                << "sum is " << sum 
-                << "\ntolerance is " << tol << std::endl;
-      return_flag = 1;
-  }
-
-/*
-  std::ofstream out("ions.dat");
-
-  for(unsigned int s = 0; s < ss_species.size(); s++)
-  {
-      out << mixture.species_inverse_name_map().at(ss_species[s]) << " ";
-  }
-  std::cout << std::endl;
-  for(unsigned int s = 0; s < ss_species.size(); s++)
-  {
-      out << std::setprecision(10) << std::scientific << molar_sources[s] << " ";
-  }
-
   Planet::AtmosphericSteadyState<Scalar,std::vector<Scalar> > solver(ss_species,reactions_system);
   solver.precompute_rates(molar_concentrations,T,T,Te);
   solver.steady_state(molar_sources);
 
-  int return_flag(1);
+  int return_flag(0);
 
   Scalar sum(0.L);
   for(unsigned int s = 0; s < ss_species.size(); s++)
@@ -676,9 +648,7 @@ int tester(const std::string & file_spec, const std::string &file_reac, const st
   }
 
   return return_flag;
-  out.close();
-*/
-  return return_flag;
+
 
 }
 

@@ -200,7 +200,6 @@ namespace Planet
     Antioch::set_zero(sum_backward);
     for(unsigned int rxn = 0; rxn < _updated_rates.size(); rxn++)
     {
-        if(ss_species[s] == Antioch::Species::e)continue;
 //prod
        const Antioch::Reaction<CoeffType>& reaction = _reactions_system.reaction_set().reaction(rxn);
        for (unsigned int p=0; p<reaction.n_products(); p++)
