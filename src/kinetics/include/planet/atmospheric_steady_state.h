@@ -425,7 +425,7 @@ namespace Planet
         // pre-fill the participating species partials with the updated rates
         for (unsigned int r=0; r< reac.n_reactants(); r++)
         {
-           dRfwd_dX_s[r] = _rates[rxn];
+           dRfwd_dX_s[reac.reactant_id(r)] = _rates[rxn];
         }
            // product of concentrations and derivatives term
         for (unsigned int ro=0; ro < reac.n_reactants(); ro++)
@@ -453,13 +453,13 @@ namespace Planet
         // reactants contributions
         for (unsigned int r = 0; r < reac.n_reactants(); r++)
           {
-            const unsigned int s_id = _ionic_map.at(reac.reactant_id(r));
+            const unsigned int s_id = reac.reactant_id(r);
             const unsigned int r_stoich = reac.reactant_stoichiometric_coefficient(r);
             
             // d/dX_s rate contributions, no need to consider other species than reactants
             for (unsigned int rr=0; rr < reac.n_reactants(); rr++)
               {
-                unsigned int s = _ionic_map.at(reac.reactant_id(rr));
+                unsigned int s = reac.reactant_id(rr);
                 dmole_dX_s[s_id][s] -= (static_cast<CoeffType>(r_stoich) * dRfwd_dX_s[s]);
               }
             // sources, loss term

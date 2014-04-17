@@ -177,6 +177,7 @@ namespace Planet
       molar[i]  = molar_concentrations[i]     * _scaling_factor;
       dmolar[i] = dmolar_concentrations_dz[i] * _scaling_factor;
    }
+
    _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
    _kinetics.chemical_rate_and_derivs(molar,this->get_cache(z),z,_omegas_dots,_domegas_dots_dn);
 
