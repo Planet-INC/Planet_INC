@@ -18,9 +18,7 @@ absorbing_species = 'N2 CH4 H2 H'
 # files ${input_photoreactions_root}${photo_reacting_species} are what is searched for
 photo_reacting_species = 'N2 CH4'
 
-# This example, the ionic species and neutral species are the same.
-# If ionic species were different, would just list them here
-ionic_species = '${Planet/neutral_species}'
+ionic_species = 'N2+ CH4+'
 
 temperature_file = '@abs_top_srcdir@/test/input/temperature.dat'
 file_flyby = '@abs_top_srcdir@/test/input/T40_Flyby'
@@ -31,6 +29,8 @@ input_hv = '@abs_top_srcdir@/test/input/hv_SwRI_low_res.dat'
 input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
 input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
 input_photoreactions_root = '@abs_top_srcdir@/test/input/neutral_reactions_photochem.'
+input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
+input_ions_reactions = '@abs_top_srcdir@/test/input/ionospheric_reactions.inp'
 
 zmin = '600.0'
 zmax = '1400.0'

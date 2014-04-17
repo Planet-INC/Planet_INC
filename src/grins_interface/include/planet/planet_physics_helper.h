@@ -36,6 +36,8 @@
 //Planet
 #include "planet/diffusion_evaluator.h"
 #include "planet/atmospheric_kinetics.h"
+#include "planet/kinetics_branching_structure.h"
+#include "planet/branching_ratio_node.h"
 
 // libMesh
 #include "libmesh/libmesh_common.h"
@@ -44,6 +46,21 @@
 
 namespace Planet
 {
+
+  //! small structure to help parsing reactions
+  struct BrPath 
+  {
+    std::vector<std::string> name;
+    std::vector<unsigned int > id_channel;
+  };
+
+  //! small structure to help parsing reactions
+  struct LocalReaction
+  {
+    std::string name;
+    std::vector<std::string> channels;
+    std::vector<std::vector<unsigned int> > br_path;
+  };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class PlanetPhysicsHelper
@@ -98,6 +115,8 @@ namespace Planet
 
     CoeffType scaling_factor() const;
 
+    const std::vector<Antioch::Species> ss_species() const;
+
   private:
 
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
@@ -123,7 +142,8 @@ namespace Planet
     VectorCoeffType _lambda_hv;
     VectorCoeffType _phy1AU;
 
-    std::vector<std::string> _medium;
+    std::vector<std::string>      _medium;
+    std::vector<Antioch::Species> _ss_species;
 
     CoeffType _scaling_factor;
 
@@ -159,6 +179,13 @@ namespace Planet
 
     void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
                                         Antioch::ReactionSet<CoeffType>& neutral_reaction_set) const;
+
+    void fill_ionic_system_reaction(const std::string &file_ions_reac,
+                                    Antioch::ReactionSet<CoeffType> &ionic_reaction_set) const;
+
+    void sanity_check_reaction(LocalReaction &cur_reac) const;
+
+    void treat_reaction(LocalReaction &cur_reac, Antioch::ReactionSet<CoeffType> &reaction_set) const;
 
     void read_flyby_infos(const std::vector<std::string>& neutrals,
                           CoeffType& dens_tot, std::vector<CoeffType>& molar_frac,
@@ -381,31 +408,37 @@ namespace Planet
         antioch_error();
       }
 
-    if( !input.have_variable("Planet/ionic_species") )
+    unsigned int n_ionic(0);
+    if( input.have_variable("Planet/ionic_species") )
       {
-        std::cerr << "Error: ionic_species not found in input file!" << std::endl;
-        antioch_error();
+        n_ionic = input.vector_variable_size("Planet/ionic_species");
       }
 
     // Read neutral and ionic species from input
     unsigned int n_neutral = input.vector_variable_size("Planet/neutral_species");
-    unsigned int n_ionic = input.vector_variable_size("Planet/ionic_species");
 
-    neutrals.resize(n_neutral);
-    ions.resize(n_ionic);
+    neutrals.resize(n_neutral);       //neutral system
+    ions.resize(n_neutral + n_ionic); //ionic system
+    _ss_species.resize(n_ionic);      //sub system to steady state
 
     for( unsigned int s = 0; s < n_neutral; s++ )
       {
         neutrals[s] = input("Planet/neutral_species", "DIE!", s);
+        ions[s]     = input("Planet/neutral_species", "DIE!", s);
       }
 
     for( unsigned int s = 0; s < n_ionic; s++ )
       {
-        ions[s] = input("Planet/ionic_species", "DIE!", s);
+        ions[n_neutral + s] = input("Planet/ionic_species", "DIE!", s);
       }
 
     _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals);
-    _ionic_species = new Antioch::ChemicalMixture<CoeffType>(ions);
+    _ionic_species   = new Antioch::ChemicalMixture<CoeffType>(ions);
+
+    for( unsigned int s = 0; s < n_ionic; s++ )
+      {
+        _ss_species[s] = _ionic_species->species_name_map().at(ions[s + n_neutral]);
+      }
 
     return;
   }
@@ -545,6 +578,11 @@ namespace Planet
     }
 
 
+    if( input.have_variable("Planet/input_ions_reactions") )
+      {
+        std::string file_ions_reac = input( "Planet/input_ions_reactions", "DIE!" );
+        this->fill_ionic_system_reaction(file_ions_reac,*_ionic_reaction_set);
+      }
 
     return;
   }
@@ -793,6 +831,458 @@ namespace Planet
 
       }
     data.close();
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_ionic_system_reaction(const std::string &file_ions_reac,
+                                                                                                  Antioch::ReactionSet<CoeffType> &ionic_reaction_set) const
+  {
+    std::ifstream data(file_ions_reac.c_str());
+    std::string line;
+    LocalReaction cur_reac;
+    while(!data.eof())
+    {
+       if(!getline(data,line))break;
+       if(line[0] == '#')continue;
+       std::vector<std::string> out;
+       Antioch::SplitString(line,";",out,false);
+       if(out.empty())antioch_error();
+       std::string name = out[0].substr(0,out[0].find(' '));
+       line.erase(0,name.size());
+       std::vector<std::string> branch;
+       Antioch::SplitString(name,".",branch,false);
+       if(branch.empty())antioch_error();
+  
+       std::vector<unsigned int> br;
+       for(unsigned int i = 3; i < branch.size(); i++)
+       {
+          if(branch[i] == "0")break;
+          std::stringstream b(branch[i]);
+          unsigned int inode;
+          b >> inode;
+          br.push_back(inode);
+       }
+       if(cur_reac.name.empty())
+       {
+          cur_reac.name = branch[1];
+          cur_reac.br_path.push_back(br);
+          cur_reac.channels.push_back(line);
+       }else if(cur_reac.name == branch[1])
+       {
+          cur_reac.channels.push_back(line);
+          cur_reac.br_path.push_back(br);
+       }else
+       {
+  
+          this->sanity_check_reaction(cur_reac);
+  
+          this->treat_reaction(cur_reac,ionic_reaction_set);
+  
+          cur_reac.br_path.clear();
+          cur_reac.channels.clear();
+  
+          cur_reac.name = branch[1];
+          cur_reac.channels.push_back(line);
+          cur_reac.br_path.push_back(br);
+       }
+    }
+// last one
+    treat_reaction(cur_reac,ionic_reaction_set);
+
+    data.close();
+
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::sanity_check_reaction(LocalReaction &cur_reac) const
+  {
+     unsigned int idmax(0);
+     for(unsigned int ibr = 0; ibr < cur_reac.channels.size(); ibr++)
+     {
+        if(cur_reac.br_path[ibr].size() > idmax)idmax = cur_reac.br_path[ibr].size();
+     }
+     
+     for(unsigned int ideep = 0; ideep < idmax; ideep++)
+     {
+       unsigned int cur_node_id(0);
+       unsigned int pre_node_id(0);
+       for(unsigned int i = 0; i < cur_reac.channels.size(); i++)
+       {
+           if(cur_reac.br_path[i].size() <= ideep)
+           {
+             if(cur_node_id != 0)pre_node_id++;
+             cur_node_id = 0;
+             continue;
+           }
+          unsigned int tmp = cur_reac.br_path[i][ideep];    
+           if(tmp != cur_node_id)
+           {
+             if(cur_node_id != 0)
+             {
+                pre_node_id++;
+             }
+             if(tmp != pre_node_id + 1)
+             {
+                 std::cerr << "duplicate node\n\t" << cur_reac.channels[i]
+                           << "\nin reaction\n\t" << cur_reac.name << std::endl;
+                 antioch_error();
+             }
+             cur_node_id = tmp;
+          }
+       }
+     }
+     return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::treat_reaction(LocalReaction &reac, Antioch::ReactionSet<CoeffType> &reaction_set) const
+  {
+     Antioch::ReactionType::ReactionType typeReaction(Antioch::ReactionType::ELEMENTARY);
+     Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::CONSTANT);
+  
+     Planet::KineticsBranchingStructure<CoeffType> prob_reac;
+     prob_reac.set_n_channels(reac.channels.size());
+  
+     std::vector<std::string> out;
+     Antioch::SplitString(reac.channels.front(),";",out,false);
+     shave_strings(out);
+  
+  
+  // k
+  // create necessary pdf objects
+     std::string line = reac.channels.front();
+     std::vector<Planet::PDFName::PDFName> k_pdf_type;
+     std::string loc_pdf = out[2].substr(0,out[2].find('('));
+     shave_string(loc_pdf);
+     k_pdf_type.push_back(prob_reac.pdf_map().at(loc_pdf));
+     if(line.find("beta") != std::string::npos) //DR then
+     {
+       if(out[1].find("RD") == std::string::npos)antioch_error();
+       kineticsModel = Antioch::KineticsModel::HERCOURT_ESSEN; //type reaction
+       std::string str = out.back().substr(0,out.back().find('('));
+       shave_string(str);
+       str = str.substr(str.find(" ") + 1);
+       shave_string(str);
+       k_pdf_type.push_back(prob_reac.pdf_map().at(str));
+  
+     }
+     prob_reac.set_k_pdf(k_pdf_type);
+  
+  
+  /// fill 'em
+     std::string str_param = out[2].substr(out[2].find('(')+1, out[2].find(')') - out[2].find('(')-1);
+     std::vector<std::string> k_pdf_params_str;
+     Antioch::SplitString(str_param,",",k_pdf_params_str,false);
+  
+     std::vector<std::vector<CoeffType> > k_pdf_params;
+     k_pdf_params.push_back(std::vector<CoeffType>());
+     for(unsigned int i = 0; i < k_pdf_params_str.size(); i++)
+     {
+       std::stringstream oss(k_pdf_params_str[i]);
+       CoeffType p;
+       oss >> p;
+       k_pdf_params[0].push_back(p);
+     }
+     if(line.find("beta") != std::string::npos)
+     {
+       k_pdf_params_str.clear();
+       str_param = out.back().substr(out.back().find('(')+1, out.back().find(')') - out.back().find('(')-1);
+       Antioch::SplitString(str_param,",",k_pdf_params_str,false);
+       k_pdf_params.push_back(std::vector<CoeffType>());
+       for(unsigned int i = 0; i < k_pdf_params_str.size(); i++)
+       {
+         std::stringstream oss(k_pdf_params_str[i]);
+         CoeffType p;
+         oss >> p;
+         k_pdf_params[1].push_back(p);
+       }
+     }
+  
+     for(unsigned int i = 0; i < prob_reac.pdf_k_object().size(); i++)
+     {
+       prob_reac.pdf_k_object()[i]->set_parameters(k_pdf_params[i]);
+     }
+  
+  //// dirichlet
+  
+     std::vector<BrPath> br_path;
+     br_path.resize(reac.channels.size());
+     out.clear();
+     Antioch::SplitString(reac.channels[0],";",out,false);
+     shave_strings(out);
+     std::vector<std::string> node_names;
+  
+  
+  /// first, fill prob_reac
+  // first br level, in out[3]
+     Planet::PDFName::PDFName pdf_type;
+     pdf_type = prob_reac.pdf_map().at(out[3].substr(0,out[3].find('(')));
+  
+     std::vector<std::vector<CoeffType> >  master_data;
+     Planet::BranchingRatioNode<CoeffType> *master_node = new Planet::BranchingRatioNode<CoeffType>();
+     master_node->set_id("master");
+     master_node->set_pdf(pdf_type);
+  
+     unsigned int master_chan(0);
+     unsigned int current_node(0);
+  
+     for(unsigned int ibr = 0; ibr < reac.channels.size(); ibr++)
+     {
+  //scan conditions to skip
+        if(!reac.br_path[ibr].empty()) 
+        {
+          if(current_node == reac.br_path[ibr].front()) //if already done this one
+          {
+             //we just add master in his path
+             br_path[ibr].name.push_back("master");
+             br_path[ibr].id_channel.push_back(master_chan - 1); //index, not size !!!
+             continue;
+          }else
+          {
+            current_node = reac.br_path[ibr].front();
+          }
+        }
+  
+        out.clear();
+        Antioch::SplitString(reac.channels[ibr],";",out,false);
+        shave_strings(out);
+        std::string data = out[3].substr(out[3].find('(') + 1, out[3].find(')') - out[3].find('(') - 1);
+        std::vector<std::string> datas;
+        master_data.push_back(std::vector<CoeffType>());
+        if(!Antioch::SplitString(data,",",datas,false))datas.push_back(data);
+        master_data.back().resize(datas.size(),0.L);
+        for(unsigned int id = 0; id < datas.size(); id++)
+        {
+          master_data.back()[id] = std::atof(datas[id].c_str());
+        }
+        br_path[ibr].name.push_back("master");
+        br_path[ibr].id_channel.push_back(master_chan);
+        master_chan++;
+     }
+     master_node->set_n_channels(master_chan);
+     std::vector<CoeffType> data;
+     for(unsigned int n = 0; n < master_data.front().size(); n++)
+     {
+       for(unsigned int i = 0; i < master_data.size(); i++)
+       {
+          data.push_back(master_data[i][n]);
+       }
+     }
+     if(pdf_type == Planet::PDFName::DiUn)
+     {
+         data[0] = data.size();
+         data.resize(1);
+     }
+     master_node->set_pdf_parameters(data);
+     prob_reac.add_node(master_node);
+  
+  
+     unsigned int nlevel_max(0); //size
+     for(unsigned int ibr = 0; ibr < reac.channels.size(); ibr++)
+     {
+         if(reac.br_path[ibr].size() > nlevel_max)nlevel_max = reac.br_path[ibr].size();
+     }
+     for(unsigned int ilevel = 0; ilevel < nlevel_max; ilevel++)//scanning levels
+     {
+       unsigned int max_node(0);
+  
+  
+  // finding the number of nodes at that deepness
+  // nodes are simply counter, 1,2,...,3
+       for(unsigned int ibr = 0; ibr < reac.channels.size(); ibr++)
+       {
+          if(reac.br_path[ibr].size()  < ilevel + 1)continue;
+          if(reac.br_path[ibr][ilevel] > max_node)max_node = reac.br_path[ibr][ilevel]; //this is a size, not an index
+       }
+  
+       for(unsigned int inode = 1; inode <= max_node; inode++) //scanning the inner br nodes by name
+       {
+         unsigned int child_node(0);
+         Planet::BranchingRatioNode<CoeffType> * node = new Planet::BranchingRatioNode<CoeffType>();
+         std::string node_id;
+         std::string node_pdf;
+         std::vector<CoeffType> node_pdf_params;
+  
+         unsigned int nchan(0);
+         std::vector<std::vector<CoeffType> > data_chan;
+  
+         for(unsigned int ibr = 0; ibr < reac.channels.size(); ibr++)
+         {
+           if(reac.br_path[ibr].size() < ilevel + 1)continue; //if current deepness is not enough
+           if(reac.br_path[ibr][ilevel] != inode)continue;    //if that deepness but not that node
+  
+          if(reac.br_path[ibr].size() > ilevel + 1) //if deeper, check we're not scanning a node
+          {
+            if(child_node == reac.br_path[ibr][ilevel + 1]) //if already done this one
+            {
+             //we just add the name in his path
+             br_path[ibr].name.push_back(node_id);
+             br_path[ibr].id_channel.push_back(nchan - 1); //index, not size !!!
+             continue;
+            }
+            child_node = reac.br_path[ibr][ilevel + 1];
+          }
+  
+           // name is simply the point-separated lineage i.e. master."node at level 0"."node at level 1".[...]."current node" 
+           if(node_id.empty())
+           {
+             std::stringstream oss;
+             oss << "master";
+             for(unsigned int il = 0; il <= ilevel;il++)oss << "." << reac.br_path[ibr][il];
+             node_id = oss.str();
+           }
+           data_chan.push_back(std::vector<CoeffType>());
+  
+           std::vector<std::string> tmp;
+           Antioch::SplitString(reac.channels[ibr],";",tmp,false);//
+           if(tmp.size() < 4)antioch_error();
+  //pdf
+           shave_strings(tmp);
+           if(node_pdf.empty())
+           {
+             node_pdf = tmp[4 + ilevel].substr(0,tmp[4 + ilevel].find('(')); //level 0 starts at 4
+             shave_string(node_pdf);
+           }
+  
+  //data
+           std::string data = tmp[4 + ilevel].substr(tmp[4 + ilevel].find('(') + 1, 
+                                                     tmp[4 + ilevel].find(')') - tmp[4 + ilevel].find('(') - 1);
+           std::vector<std::string> datas_chan;
+           if(!Antioch::SplitString(data,",",datas_chan,false))datas_chan.push_back(data);
+           data_chan.back().resize(datas_chan.size(),0.L);
+           for(unsigned int id = 0; id < datas_chan.size(); id++)
+           {
+              data_chan.back()[id] = std::atof(datas_chan[id].c_str());
+           }
+  
+           br_path[ibr].name.push_back(node_id);     //name of node
+           br_path[ibr].id_channel.push_back(nchan); //channel in node
+  
+           nchan++;
+  
+         }/// end ibr loop
+  
+  //reformatting the data in the right order
+         for(unsigned int n = 0; n < data_chan.front().size(); n++)
+         {
+           for(unsigned int i = 0; i < data_chan.size(); i++)
+           {
+             node_pdf_params.push_back(data_chan[i][n]);
+           }
+         }
+         if(prob_reac.pdf_map().at(node_pdf) == Planet::PDFName::DiUn)
+         {
+           node_pdf_params[0] = node_pdf_params.size();
+           node_pdf_params.resize(1);
+         }
+  
+         node->set_id(node_id);
+         node->set_n_channels(nchan);
+         node->set_pdf(prob_reac.pdf_map().at(node_pdf));
+         node->set_pdf_parameters(node_pdf_params);
+         prob_reac.add_node(node);
+       } //end node scan
+     } // end level scan
+  
+  //filling the reaction
+  
+     for(unsigned int ibr = 0; ibr < reac.channels.size(); ibr++)
+     {
+       for(unsigned int i = 0; i < br_path[ibr].name.size(); i++)
+       {
+         prob_reac.add_to_br_path(ibr,br_path[ibr].name[i],br_path[ibr].id_channel[i]);
+       }
+     }
+  
+  // then, create the reaction
+     const unsigned int n_species = reaction_set.n_species();
+     for(unsigned int ibr = 0; ibr < reac.channels.size(); ibr++)
+     {
+         std::string equation = reac.channels[ibr].substr(0,reac.channels[ibr].find(";"));
+         shave_string(equation);
+  //reaction
+         Antioch::Reaction<CoeffType>* my_rxn = Antioch::build_reaction<CoeffType>(n_species, equation, false, typeReaction, kineticsModel);
+  
+         Antioch::KineticsType<CoeffType>* rate = prob_reac.create_rate_constant(ibr,kineticsModel);
+         my_rxn->add_forward_rate(rate);
+  
+         std::vector<std::string> reactants;
+         size_t loc(0);
+         while(loc < equation.find("->"))
+         {
+            size_t locnext = equation.find(" ",loc);
+            if(locnext == loc)
+            {
+               loc++;
+               continue;
+            }
+            reactants.push_back(equation.substr(loc,locnext-loc));
+            loc = locnext;
+         }
+         shave_strings(reactants);
+  
+         std::vector<unsigned int> stoi;
+         stoi.resize(reactants.size(),1);
+         condense_molecule(stoi,reactants);
+  
+//checking reactants
+         bool count_reaction(true);
+         for(unsigned int ir = 0; ir < reactants.size(); ir++)
+         {
+            if(!reaction_set.chemical_mixture().active_species_name_map().count(reactants[ir]))
+                count_reaction = false;
+         }
+
+         if(!count_reaction)
+         {
+             delete my_rxn;
+             continue;
+         }
+
+         for(unsigned int ir = 0; ir < reactants.size(); ir++)
+         {
+            my_rxn->add_reactant(reactants[ir],reaction_set.chemical_mixture().active_species_name_map().find( reactants[ir] )->second,stoi[ir]);
+         }
+  
+         reactants.clear();
+         loc = equation.find("->") + 2;
+         while(loc < equation.size())
+         {
+            size_t locnext = equation.find(" ",loc);
+            if(locnext == loc)
+            {
+               loc++;
+               continue;
+            }
+            reactants.push_back(equation.substr(loc,locnext-loc));
+            loc = locnext;
+         }
+         shave_strings(reactants);
+         stoi.clear();
+         stoi.resize(reactants.size(),1);
+         condense_molecule(stoi,reactants);
+
+         for(unsigned int ip = 0; ip < reactants.size(); ip++)
+         {
+            if(!reaction_set.chemical_mixture().active_species_name_map().count( reactants[ip]))
+                      count_reaction = false;
+         }
+  
+         if(!count_reaction)
+         {
+             delete my_rxn;
+             continue;
+         }
+
+         for(unsigned int ip = 0; ip < reactants.size(); ip++)
+         {
+            my_rxn->add_product(reactants[ip],reaction_set.chemical_mixture().active_species_name_map().find( reactants[ip])->second,stoi[ip]);
+         }
+        
+         reaction_set.add_reaction(my_rxn);
+     }
+     return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -1265,6 +1755,12 @@ namespace Planet
   CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i) const
   {
     return (i == s)?_composition->upper_boundary_velocity(s):Antioch::zero_clone(_K0);
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const std::vector<Antioch::Species> PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::ss_species() const
+  {
+    return _ss_species;
   }
 
 } // end namespace Planet

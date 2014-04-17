@@ -58,6 +58,8 @@ namespace Planet
         //internal stuff
         std::map<unsigned int,unsigned int> _ionic_map;         //from n_species to ss_species
         std::map<unsigned int,unsigned int> _ionic_inverse_map; //to ss_species to n_species
+        VectorCoeffType _rates;
+        VectorCoeffType _mole_concentrations;
         VectorCoeffType _updated_rates;
         VectorCoeffType _molar_concentrations;
 
@@ -82,6 +84,14 @@ namespace Planet
         template <typename VectorStateType>
         void compute_full_sources(VectorStateType & mole_sources) const;
 
+        //! final calculations for output, sources and derivs here
+        // not const as it updates the ionic values in the full system
+        template <typename VectorStateType, typename MatrixStateType>
+        void compute_full_sources_and_derivs(VectorStateType &mole_sources, MatrixStateType &dmole_dX_s);
+
+        //! Newton solver here
+        void solve();
+
       public:
 
         AtmosphericSteadyState(const std::vector<Antioch::Species> &ss_species, Antioch::KineticsEvaluator<CoeffType> &reactions_system);
@@ -100,6 +110,10 @@ namespace Planet
         //! Newton solver
         template <typename VectorStateType>
         void steady_state(VectorStateType & mole_sources);
+
+        //! Newton solver
+        template <typename VectorStateType, typename MatrixStateType>
+        void steady_state_and_derivs(VectorStateType & mole_sources, MatrixStateType & drate_dn);
 
   };
 
@@ -128,6 +142,9 @@ namespace Planet
                                                                            const StateType & T_electrons)
   {
     Antioch::set_zero(_updated_rates);
+    Antioch::set_zero(_rates);
+
+    _mole_concentrations = mole_concentrations;
 
     // compute the requisite reaction rates
     for(unsigned int rxn = 0; rxn < _reactions_system.n_reactions(); rxn++)
@@ -147,6 +164,7 @@ namespace Planet
        }
 
        _updated_rates[rxn] = kfwd;
+       _rates[rxn] = kfwd;
        // adding neutral contribution, updating
        // update with neutral concentrations
        for (unsigned int r=0; r< reaction.n_reactants(); r++)
@@ -384,11 +402,92 @@ namespace Planet
     }
   }
 
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename VectorStateType, typename MatrixStateType>
+  inline
+  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::compute_full_sources_and_derivs(VectorStateType &mole_sources, MatrixStateType &dmole_dX_s)
+  {
+//initialization
+    Antioch::set_zero(mole_sources);
+    for(unsigned int ss = 0; ss < _ss_species.size(); ss++)
+    {
+       Antioch::set_zero(dmole_dX_s[ss]);
+       _mole_concentrations[_ionic_inverse_map.at(ss)] = _molar_concentrations[ss];
+    }
+
+    for(unsigned int rxn = 0; rxn < _reactions_system.reaction_set().n_reactions(); rxn++)
+    {
+
+        const Antioch::Reaction<CoeffType> & reac = _reactions_system.reaction_set().reaction(rxn);
+
+        VectorStateType dRfwd_dX_s(reac.n_species(), 0.L);
+        CoeffType facfwd(1.L);
+    
+        // pre-fill the participating species partials with the updated rates
+        for (unsigned int r=0; r< reac.n_reactants(); r++)
+        {
+           dRfwd_dX_s[r] = _rates[rxn];
+        }
+           // product of concentrations and derivatives term
+        for (unsigned int ro=0; ro < reac.n_reactants(); ro++)
+        {
+           const CoeffType val = 
+                Antioch::ant_pow(_mole_concentrations[reac.reactant_id(ro)],
+                                 static_cast<int>(reac.reactant_stoichiometric_coefficient(ro)) );
+
+           facfwd *= val;
+
+           const CoeffType dval = 
+                 ( static_cast<CoeffType>(reac.reactant_stoichiometric_coefficient(ro))*
+                Antioch::ant_pow(_mole_concentrations[reac.reactant_id(ro)],
+                                 static_cast<int>(reac.reactant_stoichiometric_coefficient(ro))-1 ) 
+                );
+
+           for (unsigned int ri=0; ri<reac.n_reactants(); ri++)
+           {
+              dRfwd_dX_s[reac.reactant_id(ri)] *= (ri == ro) ? dval : val;
+           }
+         }
+
+        /// calculate now sources and derivatives
+
+        // reactants contributions
+        for (unsigned int r = 0; r < reac.n_reactants(); r++)
+          {
+            const unsigned int s_id = _ionic_map.at(reac.reactant_id(r));
+            const unsigned int r_stoich = reac.reactant_stoichiometric_coefficient(r);
+            
+            // d/dX_s rate contributions, no need to consider other species than reactants
+            for (unsigned int rr=0; rr < reac.n_reactants(); rr++)
+              {
+                unsigned int s = _ionic_map.at(reac.reactant_id(rr));
+                dmole_dX_s[s_id][s] -= (static_cast<CoeffType>(r_stoich) * dRfwd_dX_s[s]);
+              }
+            // sources, loss term
+            mole_sources[reac.reactant_id(r)] -= static_cast<CoeffType>(r_stoich) * facfwd * _rates[rxn];
+          }
+        
+        // product contributions
+        for (unsigned int p=0; p < reac.n_products(); p++)
+          {
+            const unsigned int s_id = reac.product_id(p);
+            const unsigned int p_stoich = reac.product_stoichiometric_coefficient(p);
+            
+            // d/dX_s rate contributions, no need to consider other species than reactants
+            for (unsigned int r=0; r < reac.n_reactants(); r++)
+              {
+                unsigned int s = reac.reactant_id(r);
+                dmole_dX_s[s_id][s] += (static_cast<CoeffType>(p_stoich) * dRfwd_dX_s[s]);
+              }
+            // sources, prod term
+            mole_sources[reac.product_id(p)] += static_cast<CoeffType>(p_stoich) * facfwd * _rates[rxn];
+          }
+    }
+  }
 
   template <typename CoeffType, typename VectorCoeffType>
-  template <typename VectorStateType>
   inline
-  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state(VectorStateType & mole_sources) //full system size
+  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::solve()
   {
 
    if(_molar_concentrations[0] < 0.L)first_approximation();
@@ -398,8 +497,8 @@ namespace Planet
 // A is jacobian, b is molar sources
 
 //setup, ionic system syzed
-    VectorStateType molar_sources;
-    std::vector<VectorStateType> dmolar_dX_s;
+    VectorCoeffType molar_sources;
+    std::vector<VectorCoeffType> dmolar_dX_s;
 
     molar_sources.resize(_ss_species.size());
     dmolar_dX_s.resize(_ss_species.size());
@@ -464,9 +563,26 @@ namespace Planet
 
     } //solver loop
 
+  }
 
+
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename VectorStateType>
+  inline
+  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state(VectorStateType & mole_sources) //full system size
+  {
+    this->solve();
     this->compute_full_sources(mole_sources);
 
+  }
+
+  template <typename CoeffType, typename VectorCoeffType>
+  template <typename VectorStateType, typename MatrixStateType>
+  inline
+  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state_and_derivs(VectorStateType & mole_sources, MatrixStateType & drate_dn)
+  {
+    this->solve();
+    this->compute_full_sources_and_derivs(mole_sources,drate_dn);
   }
 
   
@@ -480,6 +596,8 @@ namespace Planet
   {
      _updated_rates.resize(_reactions_system.n_reactions(),0.L);
      _molar_concentrations.resize(_ss_species.size(),-1.L);
+     _rates.resize(_reactions_system.n_reactions(),0.L);
+     _mole_concentrations.resize(reactions_system.n_species(),-1.L);
      this->build_map();
      return;
   }

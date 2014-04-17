@@ -128,7 +128,7 @@ namespace Planet
       _photon(helper.tau(),_composition),
       _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature()),
       _eddy_diffusion(_composition,helper.K0()),
-      _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition),
+      _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition, helper.ss_species()),
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
       _scaling_factor(helper.scaling_factor())
   {
