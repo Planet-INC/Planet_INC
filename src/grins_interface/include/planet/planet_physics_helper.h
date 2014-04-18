@@ -220,6 +220,11 @@ namespace Planet
     void shave_string(std::string &str) const;
 
     void shave_strings(std::vector<std::string> &stock) const;
+
+    void sanity_check_chemical_system() const;
+
+    bool check_chemical_balance(const Antioch::ReactionSet<CoeffType> &reaction_set,const std::vector<Antioch::Species> &species) const;
+
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -235,6 +240,7 @@ namespace Planet
       _scaling_factor(1e13) // sensible default
   {
     this->build(input);
+    this->sanity_check_chemical_system();
 
     return;
   }
@@ -1540,19 +1546,50 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::condense_molecule(std::vector<unsigned int> &stoi, std::vector<std::string> &mol) const
   {
-    for(unsigned int ir = 1; ir < mol.size(); ir++)
-      {
-        for(unsigned int jr = 0; jr < ir; jr++)
-          {
-            if(mol[jr] == mol[ir])
+
+//first we suppress well species
+    std::vector<std::string> mol_cpy(mol);
+    for(unsigned int imol = 0; imol < mol_cpy.size(); imol++)
+    {
+        //if we find it in the copy
+        if(mol_cpy[imol] == "well" ||
+           mol_cpy[imol] == "CxHyNz+")
+        {
+          //look for and delete it in the original
+           for(unsigned int jmol = 0; jmol < mol.size(); jmol++)
+           {
+              if(mol[jmol] == "well" || mol[jmol] == "CxHyNz+")
               {
-                stoi[jr]++;
-                stoi.erase(stoi.begin() + ir);
-                mol.erase(mol.begin() + ir);
+                mol.erase(mol.begin() + jmol);
                 break;
               }
-          }
-      }
+           }
+        }
+    }
+
+//now count similar molecules
+    bool again(true);
+    while(again)
+    {
+// for every time we find a couple, we start over again,
+// to be sure nothing weird with the indices happens
+      again = false;
+      for(unsigned int ir = 1; ir < mol.size(); ir++)//end of vector
+        {
+          for(unsigned int jr = 0; jr < ir; jr++)//compared to beginning
+            {
+              if(mol[jr] == mol[ir])
+                {
+                  stoi[jr]++;
+                  stoi.erase(stoi.begin() + ir);
+                  mol.erase(mol.begin() + ir);
+                  again = true;
+                  break;
+                }
+            }
+            if(again)break;
+        }
+    }
 
     return;
   }
@@ -1684,6 +1721,77 @@ namespace Planet
 
     return;
   }
+
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::sanity_check_chemical_system() const
+  {
+    // checks neutral and ionic system are chemically balanced, if not, 
+    // write to std::cerr the names of unbalanced molecules and sends an antioch_error()
+    bool balanced(true);
+    balanced = balanced && check_chemical_balance(*_neutral_reaction_set,_neutral_reaction_set->chemical_mixture().species_list());
+    balanced = balanced && check_chemical_balance(*_ionic_reaction_set,_ss_species);
+
+   // if(!balanced)antioch_error();
+    return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  bool PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::check_chemical_balance(const Antioch::ReactionSet<CoeffType> &reaction_set,const std::vector<Antioch::Species> &species) const
+  {
+      std::vector<unsigned int> prod(species.size(),0);
+      std::vector<unsigned int> loss(species.size(),0);
+
+      std::map<unsigned int, unsigned int> species_map;
+
+      for(unsigned int s = 0; s < reaction_set.chemical_mixture().species_list().size(); s++)
+      {
+          for(unsigned int j = 0; j < species.size(); j++)
+          {
+              if(reaction_set.chemical_mixture().species_list()[s] == species[j])
+              {
+                 species_map[s] = j;
+                 break;
+              }
+          }
+      }
+
+      for(unsigned int rxn = 0; rxn < reaction_set.n_reactions(); rxn++)
+      {
+        //reactants
+          for(unsigned int r = 0; r < reaction_set.reaction(rxn).n_reactants(); r++)
+          {
+              loss[species_map[reaction_set.reaction(rxn).reactant_id(r)]]++;
+          }
+
+        //products
+          for(unsigned int p = 0; p < reaction_set.reaction(rxn).n_products(); p++)
+          {
+              prod[species_map[reaction_set.reaction(rxn).product_id(p)]]++;
+          }
+      }
+
+      bool balanced(true);
+      for(unsigned int s = 0; s < species.size(); s++)
+      {
+          if(prod[s] == 0 && loss[s] == 0)
+          {
+              std::cerr << "Species " << reaction_set.chemical_mixture().species_inverse_name_map().at(species[s])
+                        << " is unreactive" << std::endl;
+          }
+          if((prod[s] == 0 && loss[s] != 0) || (prod[s] != 0 && loss[s] != 0))
+          {
+              std::cerr << "Species " << reaction_set.chemical_mixture().species_inverse_name_map().at(species[s])
+                        << " is not balanced, it is only ";
+              (prod[s] == 0)?std::cerr << "consumed":std::cerr << "produced";
+              std::cerr << std::endl;
+              balanced = false;
+          }
+      }
+
+      return balanced;
+  }
+
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::composition() const

@@ -520,6 +520,14 @@ namespace Planet
     while(lim > thresh)
     {
 
+    std::cout << "loop #" << nloop << " ";
+    for(unsigned int s = 0; s < _molar_concentrations.size(); s++)
+    {
+        std::cout << std::scientific << std::setprecision(15)
+                  << _molar_concentrations[s] << " ";
+    }
+    std::cout << std::endl;
+
       this->compute_sources_and_jacob(molar_sources,dmolar_dX_s);
 
 //TODO what are the different options here?
@@ -548,8 +556,9 @@ namespace Planet
       {
         _molar_concentrations[s]  += x(s);
         if(_molar_concentrations[s] < 0.)Antioch::set_zero(_molar_concentrations[s]);
-        lim += Antioch::ant_abs(x(s));
+        lim += Antioch::ant_abs(x(s)); //absolute increment
       }
+      std::cout << std::endl;
 
       nloop++;
       if(nloop > loop_max)
@@ -561,6 +570,13 @@ namespace Planet
       }
 
     } //solver loop
+
+    std::cout << "solved with densities:\n";
+    for(unsigned int s = 0; s < _molar_concentrations.size(); s++)
+    {
+        std::cout << _molar_concentrations[s] << " ";
+    }
+    std::cout << std::endl;
 
   }
 
