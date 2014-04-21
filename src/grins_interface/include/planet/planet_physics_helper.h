@@ -1761,13 +1761,15 @@ namespace Planet
         //reactants
           for(unsigned int r = 0; r < reaction_set.reaction(rxn).n_reactants(); r++)
           {
-              loss[species_map[reaction_set.reaction(rxn).reactant_id(r)]]++;
+              if(species_map.count(reaction_set.reaction(rxn).reactant_id(r)))
+                             loss[species_map.at(reaction_set.reaction(rxn).reactant_id(r))]++;
           }
 
         //products
           for(unsigned int p = 0; p < reaction_set.reaction(rxn).n_products(); p++)
           {
-              prod[species_map[reaction_set.reaction(rxn).product_id(p)]]++;
+              if(species_map.count(reaction_set.reaction(rxn).product_id(p)))
+                             prod[species_map.at(reaction_set.reaction(rxn).product_id(p))]++;
           }
       }
 
@@ -1779,7 +1781,7 @@ namespace Planet
               std::cerr << "Species " << reaction_set.chemical_mixture().species_inverse_name_map().at(species[s])
                         << " is unreactive" << std::endl;
           }
-          if((prod[s] == 0 && loss[s] != 0) || (prod[s] != 0 && loss[s] != 0))
+          if((prod[s] == 0 && loss[s] != 0) || (prod[s] != 0 && loss[s] == 0))
           {
               std::cerr << "Species " << reaction_set.chemical_mixture().species_inverse_name_map().at(species[s])
                         << " is not balanced, it is only ";

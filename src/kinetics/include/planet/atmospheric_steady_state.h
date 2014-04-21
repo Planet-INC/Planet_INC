@@ -68,6 +68,7 @@ namespace Planet
         Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> A;
         Eigen::Matrix<CoeffType,Eigen::Dynamic,1>              b;
 
+        CoeffType _thresh;
 
         //! to avoid antioch long calculations
         template <typename VectorStateType, typename MatrixStateType>
@@ -90,7 +91,7 @@ namespace Planet
         void compute_full_sources_and_derivs(VectorStateType &mole_sources, MatrixStateType &dmole_dX_s);
 
         //! Newton solver here
-        void solve();
+        bool solve();
 
       public:
 
@@ -109,11 +110,11 @@ namespace Planet
 
         //! Newton solver
         template <typename VectorStateType>
-        void steady_state(VectorStateType & mole_sources);
+        bool steady_state(VectorStateType & mole_sources);
 
         //! Newton solver
         template <typename VectorStateType, typename MatrixStateType>
-        void steady_state_and_derivs(VectorStateType & mole_sources, MatrixStateType & drate_dn);
+        bool steady_state_and_derivs(VectorStateType & mole_sources, MatrixStateType & drate_dn);
 
   };
 
@@ -202,6 +203,7 @@ namespace Planet
     {
 //prod
        const Antioch::Reaction<CoeffType>& reaction = _reactions_system.reaction_set().reaction(rxn);
+
        for (unsigned int p=0; p<reaction.n_products(); p++)
        {
          if(!_ionic_map.count(reaction.product_id(p)))continue;
@@ -219,22 +221,23 @@ namespace Planet
      CoeffType sum;
      Antioch::set_zero(sum);
      unsigned int s_electron(_ionic_map.at(mixture.species_list_map().at(Antioch::Species::e)));
+     const CoeffType tol = std::numeric_limits<CoeffType>::epsilon() * 100.L;
      for(unsigned int ss = 0; ss < _ss_species.size(); ss++)
      {
        if(ss == s_electron)continue;
-        _molar_concentrations[ss] = Antioch::ant_sqrt(sum_forward[ss] / sum_backward[ss]);
+       if(sum_backward[ss] > tol && sum_forward[ss] > tol)
+          _molar_concentrations[ss] = Antioch::ant_sqrt(sum_forward[ss] / sum_backward[ss]);
         sum += _molar_concentrations[ss];
      }
      _molar_concentrations[s_electron] = sum;
 
 //beurk, comparison to zero
 //TODO find something better than comparing a real number to zero
-     const CoeffType tol = std::numeric_limits<CoeffType>::epsilon() * 100.L;
-     if(sum < tol)
+/*     if(sum < tol)
      {
         std::cerr << "Error: A first approximation is global 0" << std::endl;
-        antioch_error();
      }
+*/
      return;
   }
 
@@ -486,10 +489,12 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType>
   inline
-  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::solve()
+  bool AtmosphericSteadyState<CoeffType,VectorCoeffType>::solve()
   {
 
-   if(_molar_concentrations[0] < 0.L)first_approximation();
+   bool return_flag(true);
+   unsigned int s_electron(_ionic_map.at(_reactions_system.reaction_set().chemical_mixture().species_list_map().at(Antioch::Species::e)));
+   if(_molar_concentrations[s_electron] < _thresh)first_approximation();
 
 // Newton solver here
 // Ax + b = 0
@@ -499,7 +504,7 @@ namespace Planet
     VectorCoeffType molar_sources;
     std::vector<VectorCoeffType> dmolar_dX_s;
 
-    molar_sources.resize(_ss_species.size());
+    molar_sources.resize(_ss_species.size(),0.L);
     dmolar_dX_s.resize(_ss_species.size());
     for(unsigned int s=0; s < _ss_species.size();s++)
     {
@@ -509,24 +514,11 @@ namespace Planet
 // shoot
     CoeffType lim(1.L);
     CoeffType res_mol(0.L);
-
-// physically this precision is ridiculous, which is nice
-    CoeffType thresh = std::numeric_limits<CoeffType>::epsilon() * 200.;
-//    if(thresh < 1e-10)thresh = 1e-10; 
-
-    unsigned int loop_max(100);
+    const unsigned int loop_max(20);
     unsigned int nloop(0);
 
-    while(lim > thresh)
+    while(lim > _thresh && nloop < loop_max)
     {
-
-    std::cout << "loop #" << nloop << " ";
-    for(unsigned int s = 0; s < _molar_concentrations.size(); s++)
-    {
-        std::cout << std::scientific << std::setprecision(15)
-                  << _molar_concentrations[s] << " ";
-    }
-    std::cout << std::endl;
 
       this->compute_sources_and_jacob(molar_sources,dmolar_dX_s);
 
@@ -544,12 +536,11 @@ namespace Planet
         b(i) = - molar_sources[i]; // - first derivative
         res_mol += Antioch::ant_abs(molar_sources[i]);
       }
-      if(res_mol < thresh)break;
+      if(res_mol < _thresh)break;
 
       Eigen::PartialPivLU<Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> > mypartialPivLu(A);
       Eigen::Matrix<CoeffType,Eigen::Dynamic,1> x(_ss_species.size());
       x = mypartialPivLu.solve(b);
-
 
       Antioch::set_zero(lim);
       for(unsigned int s = 0; s < _ss_species.size(); s++)
@@ -558,25 +549,21 @@ namespace Planet
         if(_molar_concentrations[s] < 0.)Antioch::set_zero(_molar_concentrations[s]);
         lim += Antioch::ant_abs(x(s)); //absolute increment
       }
-      std::cout << std::endl;
 
       nloop++;
-      if(nloop > loop_max)
+      if(nloop > loop_max || _molar_concentrations[s_electron] < _thresh)
       {
-        std::cerr << "Newton solver failed after " << loop_max << " loops with a residual of " << lim
+/*        std::cerr << "Newton solver failed after " << loop_max << " loops with a residual of " << lim
                   << ", a molar source total of " << res_mol
-                  << " and a tolerance of " << thresh << std::endl;
-        antioch_error();
+                  << " and a tolerance of " << _thresh << std::endl;
+*/       // antioch_error();
+        Antioch::set_zero(_molar_concentrations);
+        return_flag = false;
+        break;
       }
 
     } //solver loop
-
-    std::cout << "solved with densities:\n";
-    for(unsigned int s = 0; s < _molar_concentrations.size(); s++)
-    {
-        std::cout << _molar_concentrations[s] << " ";
-    }
-    std::cout << std::endl;
+    return return_flag;
 
   }
 
@@ -584,20 +571,25 @@ namespace Planet
   template <typename CoeffType, typename VectorCoeffType>
   template <typename VectorStateType>
   inline
-  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state(VectorStateType & mole_sources) //full system size
+  bool AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state(VectorStateType & mole_sources) //full system size
   {
-    this->solve();
-    this->compute_full_sources(mole_sources);
+    bool flag(this->solve());
 
+    if(flag)this->compute_full_sources(mole_sources);
+
+    return flag;
   }
 
   template <typename CoeffType, typename VectorCoeffType>
   template <typename VectorStateType, typename MatrixStateType>
   inline
-  void AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state_and_derivs(VectorStateType & mole_sources, MatrixStateType & drate_dn)
+  bool AtmosphericSteadyState<CoeffType,VectorCoeffType>::steady_state_and_derivs(VectorStateType & mole_sources, MatrixStateType & drate_dn)
   {
-    this->solve();
-    this->compute_full_sources_and_derivs(mole_sources,drate_dn);
+    bool flag(this->solve());
+    
+    if(flag)this->compute_full_sources_and_derivs(mole_sources,drate_dn);
+    
+    return flag;
   }
 
   
@@ -607,12 +599,16 @@ namespace Planet
       _reactions_system(reactions_system),
       _ss_species(ss_species),
       A(ss_species.size(),ss_species.size()),
-      b(ss_species.size())
+      b(ss_species.size()),
+     _thresh(std::numeric_limits<CoeffType>::epsilon() * 200.)
   {
      _updated_rates.resize(_reactions_system.n_reactions(),0.L);
      _molar_concentrations.resize(_ss_species.size(),-1.L);
      _rates.resize(_reactions_system.n_reactions(),0.L);
      _mole_concentrations.resize(reactions_system.n_species(),-1.L);
+// physically this precision is ridiculous, which is nice
+     if(_thresh < 1e-10)_thresh = 1e-10; 
+
      this->build_map();
      return;
   }
