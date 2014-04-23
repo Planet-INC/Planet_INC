@@ -57,6 +57,26 @@ include_HEADERS += grins_interface/include/planet/planet_physics_helper.h
 include_HEADERS += grins_interface/include/planet/planet_physics_evaluator.h
 include_HEADERS += grins_interface/include/planet/physics_factory.h
 include_HEADERS += grins_interface/include/planet/physics_names.h
+include_HEADERS += grins_interface/include/planet/planet_bc_handling.h
+include_HEADERS += grins_interface/include/planet/planet_initial_guess.h
+include_HEADERS += grins_interface/include/planet/planet_upper_neumann_bc.h
+
+# queso interface
+include_HEADERS += pdf_management/include/planet/kinetics_branching_structure.h
+include_HEADERS += pdf_management/include/planet/branching_ratio_node.h
+include_HEADERS += pdf_management/include/planet/pdf_enum.h
+include_HEADERS += pdf_management/include/planet/base_pdf.h
+include_HEADERS += pdf_management/include/planet/norm_pdf.h
+include_HEADERS += pdf_management/include/planet/nort_pdf.h
+include_HEADERS += pdf_management/include/planet/unif_pdf.h
+include_HEADERS += pdf_management/include/planet/logn_pdf.h
+include_HEADERS += pdf_management/include/planet/logu_pdf.h
+include_HEADERS += pdf_management/include/planet/diri_pdf.h
+include_HEADERS += pdf_management/include/planet/dirg_pdf.h
+include_HEADERS += pdf_management/include/planet/diut_pdf.h
+include_HEADERS += pdf_management/include/planet/diun_pdf.h
+include_HEADERS += pdf_management/include/planet/dior_pdf.h
+include_HEADERS += pdf_management/include/planet/pdf_management.h
 
 # queso interface
 include_HEADERS += pdf_management/include/planet/kinetics_branching_structure.h

@@ -84,19 +84,51 @@ void shave_strings(std::vector<std::string> &stock)
 
 void condense_molecule(std::vector<unsigned int> &stoi, std::vector<std::string> &mol)
 {
-      for(unsigned int ir = 1; ir < mol.size(); ir++)
-      {
-         for(unsigned int jr = 0; jr < ir; jr++)
-         {
-            if(mol[jr] == mol[ir])
+//first we suppress well species
+    std::vector<std::string> mol_cpy(mol);
+    for(unsigned int imol = 0; imol < mol_cpy.size(); imol++)
+    {
+        //if we find it in the copy
+        if(mol_cpy[imol] == "well" ||
+           mol_cpy[imol] == "CxHyNz+")
+        {
+          //look for and delete it in the original
+           for(unsigned int jmol = 0; jmol < mol.size(); jmol++)
+           {
+              if(mol[jmol] == "well" || mol[jmol] == "CxHyNz+")
+              {
+                mol.erase(mol.begin() + jmol);
+                break;
+              }
+           }
+        }
+    }
+
+//now count similar molecules
+    bool again(true);
+    while(again)
+    {
+// for every time we find a couple, we start over again,
+// to be sure nothing weird with the indices happens
+      again = false;
+      for(unsigned int ir = 1; ir < mol.size(); ir++)//end of vector
+        {
+          for(unsigned int jr = 0; jr < ir; jr++)//compared to beginning
             {
-               stoi[jr]++;
-               stoi.erase(stoi.begin() + ir);
-               mol.erase(mol.begin() + ir);
-               break;
+              if(mol[jr] == mol[ir])
+                {
+                  stoi[jr]++;
+                  stoi.erase(stoi.begin() + ir);
+                  mol.erase(mol.begin() + ir);
+                  again = true;
+                  break;
+                }
             }
-         }
-      }
+            if(again)break;
+        }
+    }
+
+    return;
 }
 
 template <typename Scalar>

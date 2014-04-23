@@ -1,6 +1,6 @@
 BUILT_SOURCES   = .license.stamp
 
-EXTRA_DIST = input_files
+EXTRA_DIST = input
 
 check_PROGRAMS  = 
 check_PROGRAMS += binary_diffusion_unit
