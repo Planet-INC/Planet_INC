@@ -122,7 +122,7 @@ namespace Planet
   MolecularDiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::MolecularDiffusionEvaluator
                        (const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
                         const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                        const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp
+                        const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
                         const std::vector<std::string> & medium
                        ):
        _n_medium(diff.size()),
