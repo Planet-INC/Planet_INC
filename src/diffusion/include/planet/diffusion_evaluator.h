@@ -48,15 +48,15 @@ namespace Planet{
        DiffusionEvaluator() {antioch_error();return;}
 
 //dependencies
-       MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &_molecular_diffusion;
-       EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &_eddy_diffusion;
-       const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &_mixture;
-       const AtmosphericTemperature<CoeffType,VectorCoeffType>                      &_temperature;
+       const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> & _molecular_diffusion;
+       const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      & _eddy_diffusion;
+       const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          & _mixture;
+       const AtmosphericTemperature<CoeffType,VectorCoeffType>                      & _temperature;
 
       public:
        //!
-       DiffusionEvaluator(MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
-                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
+       DiffusionEvaluator(const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
+                          const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
                           const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
                           const AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp);
 
@@ -84,8 +84,8 @@ namespace Planet{
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
   DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::DiffusionEvaluator(
-                          MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
-                          EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
+                          const MolecularDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> &mol_diff,
+                          const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>      &eddy_diff,
                           const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>          &mix,
                           const AtmosphericTemperature<CoeffType,VectorCoeffType>                      &temp):
     _molecular_diffusion(mol_diff),
