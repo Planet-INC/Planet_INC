@@ -237,8 +237,7 @@ int tester(const std::string &input_T)
 //not needed
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
-  molecular_diffusion.set_medium_species(medium);
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature,medium);
 
 //eddy diffusion
 //not needed

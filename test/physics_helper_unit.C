@@ -569,14 +569,17 @@ Scalar dbarometry_dz(const Scalar &zmin, const Scalar &z, const Scalar &T, const
 }
 
 template<typename Scalar, typename VectorScalar>
-void calculate_densities(VectorScalar &densities, VectorScalar &dn_dz, const VectorScalar &molar_frac, const Scalar &nTot, const Scalar &dnTot_dz)
+void calculate_densities(VectorScalar &densities, VectorScalar &sum_densities, VectorScalar &dn_dz, 
+                         const VectorScalar &molar_frac, const Scalar &nTot, const Scalar &dnTot_dz, const Scalar &dz)
 {
+   if(sum_densities.size() != molar_frac.size())sum_densities.resize(molar_frac.size(),0.L);
    densities.resize(molar_frac.size(),0.L);
    dn_dz.resize(molar_frac.size(),0.L);
    for(unsigned int s = 0; s < molar_frac.size(); s++)
    {
      densities[s] = molar_frac[s] * nTot;
      dn_dz[s] = molar_frac[s] * dnTot_dz;
+     sum_densities[s] += densities[s] * dz;
    }
 
    return;
@@ -770,6 +773,17 @@ int tester(const std::string &input_T,const std::string & input_hv,
 //photon flux
   std::vector<Scalar> lambda_hv,phy1AU;
   read_hv_flux<Scalar>(lambda_hv,phy1AU,input_hv);
+  Antioch::ParticleFlux<std::vector<Scalar> > phy_at_top;
+  phy_at_top.set_abscissa(lambda_hv);
+  std::vector<Scalar> flux(phy1AU.size(),0.);
+  for(unsigned int il = 0; il < phy1AU.size(); il++)
+  {
+     flux[il] = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>());
+  }
+  phy_at_top.set_flux(flux);
+
+  Antioch::ParticleFlux<std::vector<Scalar> > phy_at_z;
+  phy_at_z.set_abscissa(lambda_hv);
 
 ////cross-section
   std::vector<Scalar> lambda_N2,sigma_N2;
@@ -934,23 +948,12 @@ int tester(const std::string &input_T,const std::string & input_hv,
   Antioch::KineticsEvaluator<Scalar> ionic_kinetics( ionic_reaction_set, 0 );
 //theo, we have confidence in Antioch
   Antioch::KineticsEvaluator<Scalar> neutral_theo( neut_reac_theo, 0 );
+  neutral_theo.set_photon_flux(&phy_at_z);
 
 //photon evaluator
-  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
-  photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
+  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(phy_at_top,tau,composition);
 
-  neutral_theo.set_photon_flux(photon.photon_flux_ptr());
 
-/************************
- * fourth level
- ************************/
-/*
-//full diffusion
-  Planet::DiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > diffusion(molecular_diffusion,eddy_diffusion,composition,temperature);
-
-//full chemistry
-  Planet::AtmosphericKinetics<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > kinetics(neutral_kinetics, ionic_kinetics, temperature, photon, composition);
-*/
 /**************************
  * fifth level
  **************************/
@@ -973,6 +976,8 @@ int tester(const std::string &input_T,const std::string & input_hv,
 
   int return_flag(0);
   const Scalar nTot_virtual(dens_tot);
+  std::vector<Scalar> flux_at_z(lambda_hv.size(),0.);
+  std::vector<Scalar> sum_densities;
 
   for(Scalar z = zmax; z >= zmax; z -= zstep)
   {
@@ -987,14 +992,10 @@ int tester(const std::string &input_T,const std::string & input_hv,
      std::vector<Scalar> dns_dz;
      std::vector<Scalar> densities;
 
-     calculate_densities(densities,dns_dz,molar_frac,nTot,dnTot_dz);
-//initialize hv pointer
-     if(z == zmax)
-     {
-        std::vector<Scalar> no_sum;
-        no_sum.resize(densities.size(),0.L);
-        photon.update_photon_flux(densities,no_sum,z);
-     }
+     calculate_densities(densities,sum_densities,dns_dz,molar_frac,nTot,dnTot_dz, Scalar(zstep * 1e3)); //km -> m
+ 
+     photon.update_photon_flux(densities,sum_densities,z,flux_at_z);
+     phy_at_z.set_flux(flux_at_z);
 
      std::vector<Scalar> omega_theo;
      std::vector<Scalar> chemical_theo;
@@ -1004,6 +1005,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
 
      dummy.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
+
 
      neutral_theo.compute_mole_sources(T, densities, dummy, chemical_theo);
 

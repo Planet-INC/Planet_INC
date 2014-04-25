@@ -251,6 +251,14 @@ int tester(const std::string &input_T, const std::string &input_hv,
 //photon flux
   std::vector<Scalar> lambda_hv,phy1AU;
   read_hv_flux<Scalar>(lambda_hv,phy1AU,input_hv);
+  Antioch::ParticleFlux<std::vector<Scalar> > phy_at_top;
+  phy_at_top.set_abscissa(lambda_hv);
+  std::vector<Scalar> flux_at_top(phy1AU.size(),0.);
+  for(unsigned int il = 0; il < phy1AU.size(); il++)
+  {
+     flux_at_top[il] = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>());
+  }
+  phy_at_top.set_flux(flux_at_top);
 
 ////cross-section
   std::vector<Scalar> lambda_N2,sigma_N2;
@@ -311,8 +319,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //photon evaluator
-  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
-  photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
+  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(phy_at_top,tau,composition);
 //here, don't you forget to set the photon flux pointers to the reaction set
 
 //molecular diffusion
@@ -335,6 +342,8 @@ int tester(const std::string &input_T, const std::string &input_hv,
 
   int return_flag(0);
 
+  std::vector<Scalar> flux_at_z(lambda_hv.size(),0.);
+
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
     std::vector<Scalar> densities, sum_dens;
@@ -347,7 +356,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
     calculate_tau(opacity,chapman,cs,lambda_hv,sum_dens,x);
 
 
-    photon.update_photon_flux(densities,sum_dens,z);
+    photon.update_photon_flux(densities,sum_dens,z,flux_at_z);
     
 
     for(unsigned int il = 0; il < lambda_hv.size(); il++)  
@@ -356,7 +365,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
         Scalar phy_theo = phy_top * Antioch::ant_exp(-opacity[il]);
    
         int flag_phy_top = check_test(phy_top, photon.photon_flux_at_top().flux()[il], "phy at top at altitude and wavelength");
-        int flag_phy     =  check_test(phy_theo, photon.photon_flux().flux()[il], "phy at altitude and wavelength");
+        int flag_phy     =  check_test(phy_theo, flux_at_z[il], "phy at altitude and wavelength");
         return_flag = flag_phy_top || flag_phy  || return_flag;
     }
   }
