@@ -126,7 +126,7 @@ namespace Planet
       _neutral_kinetics(helper.neutral_reaction_set(),0), /*! \todo generalize 0 for other types*/
       _ionic_kinetics(helper.ionic_reaction_set(),0), /*! \todo generalize 0 for other types*/
       _photon(helper.tau(),_composition),
-      _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature()),
+      _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature(),helper.medium()),
       _eddy_diffusion(_composition,helper.K0()),
       _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition, helper.ss_species()),
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
@@ -152,8 +152,6 @@ namespace Planet
               it's resetting stuff in the ReactionSet */
     //helper.neutral_reaction_set().set_particle_flux(_photon.photon_flux_ptr()); // reactions know the solar flux
     _neutral_kinetics.set_photon_flux(_photon.photon_flux_ptr());
-
-    _molecular_diffusion.set_medium_species(helper.medium());
 
     return;
   }

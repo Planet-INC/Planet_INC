@@ -48,10 +48,11 @@ namespace Planet
         unsigned int _n_medium;
         std::vector<unsigned int> _i_medium;
 
-        const std::vector<std::vector<BinaryDiffusion<CoeffType> > > & _diffusion;
     //dependencies
-        const AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>     &_mixture;
-        const AtmosphericTemperature<CoeffType, VectorCoeffType>                 &_temperature;
+        //! stock of binary diffusion coefficients
+        const std::vector<std::vector<BinaryDiffusion<CoeffType> > >          & _diffusion;
+        const AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>  &_mixture;
+        const AtmosphericTemperature<CoeffType, VectorCoeffType>              &_temperature;
 
         //! The coefficients are known
         template<typename StateType>
@@ -72,18 +73,17 @@ namespace Planet
         binary_coefficient_unknown_ij(unsigned int i, unsigned int j, const StateType &T, const StateType &P) const
         ANTIOCH_AUTOFUNC(StateType,_diffusion[i][i].binary_coefficient(T,P) * Antioch::ant_sqrt(_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(i)))
 
+        void set_medium_species(const std::vector<std::string> &medium_species);
+
 
      public:
         //!
         MolecularDiffusionEvaluator( const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
                                      const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
-                                     const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp);
+                                     const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp,
+                                     const std::vector<std::string> & medium);
         //!
         ~MolecularDiffusionEvaluator();
-
-        //!
-        template<typename StateType>
-        void set_binary_coefficient(unsigned int i, unsigned int j, const BinaryDiffusion<StateType> &bin_coef);
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -99,8 +99,6 @@ namespace Planet
                                                 (_mixture.neutral_composition().M(j) < _mixture.neutral_composition().M(i))?
                                                         this->binary_coefficient_unknown_ji(i,j,T,P):
                                                         this->binary_coefficient_unknown_ij(i,j,T,P))
-
-        void set_medium_species(const std::vector<std::string> &medium_species);
 
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
         void Dtilde_and_derivs_dn(const VectorStateType &molar_concentrations, const StateType &T, const StateType &nTot, 
@@ -125,12 +123,14 @@ namespace Planet
                        (const std::vector<std::vector<BinaryDiffusion<CoeffType> > > &diff,
                         const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &comp,
                         const AtmosphericTemperature<CoeffType,VectorCoeffType> &temp
+                        const std::vector<std::string> & medium
                        ):
        _n_medium(diff.size()),
        _diffusion(diff),
        _mixture(comp),
        _temperature(temp)
   {
+     this->set_medium_species(medium);
      return;
   }
 
@@ -147,18 +147,6 @@ namespace Planet
   
     return; 
    }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename StateType>
-  inline
-  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::set_binary_coefficient(unsigned int i, 
-                                                                                       unsigned int j, 
-                                                                                       const BinaryDiffusion<StateType> &bin_coef)
-  {
-     antioch_assert_less(i,_n_medium);
-     antioch_assert_less(j,_mixture.neutral_composition().n_species());
-      _diffusion[i][j] = bin_coef;
-  }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>

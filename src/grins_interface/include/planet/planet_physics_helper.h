@@ -93,13 +93,11 @@ namespace Planet
 
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& composition() const;
 
-    /*! \todo This should really be const. Need to fix up ParticleFlux stuff. */
-    Antioch::ReactionSet<CoeffType>& neutral_reaction_set();
+    const Antioch::ReactionSet<CoeffType>& neutral_reaction_set() const;
 
     const Antioch::ReactionSet<CoeffType>& ionic_reaction_set() const;
 
-    /*! \todo This should really be const. Losing thread-safety somewhere */
-    PhotonOpacity<CoeffType,VectorCoeffType>& tau();
+    const PhotonOpacity<CoeffType,VectorCoeffType>& tau() const;
 
     const std::vector<std::vector<BinaryDiffusion<CoeffType> > >& bin_diff_coeff() const;
 
@@ -122,28 +120,38 @@ namespace Planet
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>*  _composition; //for first guess
 
     // Additional data structures that need to be cached
+// temperatures
     AtmosphericTemperature<CoeffType,VectorCoeffType>* _temperature;
+
+// mixtures
     Antioch::ChemicalMixture<CoeffType>* _neutral_species;
     Antioch::ChemicalMixture<CoeffType>* _ionic_species;
 
+// chemistry
     Antioch::ReactionSet<CoeffType>* _neutral_reaction_set;
     Antioch::ReactionSet<CoeffType>* _ionic_reaction_set;
 
+// photons related
     Chapman<CoeffType>* _chapman;
 
-    std::vector<std::vector<BinaryDiffusion<CoeffType> > > _bin_diff_coeff;
+    Antioch::ParticleFlux<VectorCoeffType> _phy1AU;
+    VectorCoeffType                        _phy_at_top;
 
-    //! Parameter for diffusion
-    /*! Needs to be cached because some Evaluators depend on this value */
-    CoeffType _K0;
+    std::vector<CrossSection<VectorCoeffType> > _hv_cross_section;
 
     PhotonOpacity<CoeffType,VectorCoeffType>* _tau;
 
-    VectorCoeffType _lambda_hv;
-    VectorCoeffType _phy1AU;
+//diffusion
+//  molecular
+
+    std::vector<std::vector<BinaryDiffusion<CoeffType> > > _bin_diff_coeff;
 
     std::vector<std::string>      _medium;
     std::vector<Antioch::Species> _ss_species;
+
+//  eddy
+    CoeffType _K0;
+
 
     CoeffType _scaling_factor;
 
@@ -196,7 +204,7 @@ namespace Planet
     void read_cross_section( const std::string &file,
                             VectorCoeffType &lambda, VectorCoeffType &sigma ) const;
 
-    void read_hv_flux(VectorCoeffType& lambda, VectorCoeffType& phy1AU, const std::string &file) const;
+    void read_hv_flux(Antioch::ParticleFlux<VectorCoeffType> & phy1AU, const std::string &file) const;
 
     void read_neutral_characteristics(const std::vector<std::string>& neutrals,
                                       VectorCoeffType& tc,VectorCoeffType& hard_sphere_radius,
@@ -465,7 +473,6 @@ namespace Planet
     std::string input_hv  = input("Planet/input_hv", "DIE!" );
 
     this->read_hv_flux(_lambda_hv, _phy1AU, input_hv); //photon.angstrom-1.s-1
-
 
 //cross-section
 
@@ -1365,7 +1372,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_hv_flux(VectorCoeffType &lambda, VectorCoeffType &phy1AU, const std::string &file) const
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::read_hv_flux(VectorCoeffType &lambda, Antioch::ParticleFlux<VectorCoeffType> &phy1AU, const std::string &file) const
   {
     std::string line;
     std::ifstream flux_1AU(file);
@@ -1375,13 +1382,14 @@ namespace Planet
         antioch_error();
       }
     getline(flux_1AU,line);
+    VectorCoeffType lambda,flux;
     while(!flux_1AU.eof())
       {
         CoeffType wv(-1),ir(-1),dirr(-1);
         flux_1AU >> wv >> ir >> dirr;
         if(wv < 0.)break;
         lambda.push_back(wv);// * 10.L);//nm -> A
-        phy1AU.push_back(ir);/* * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
+        flux.push_back(ir);/* * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
                                                    Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A*/
       }
     flux_1AU.close();
@@ -1390,17 +1398,21 @@ namespace Planet
    if(lambda.back() < lambda.front())
    {
       VectorCoeffType tmp_l(lambda.size());
-      VectorCoeffType tmp_p(phy1AU.size());
+      VectorCoeffType tmp_p(flux.size());
       for(unsigned int i = 0; i < lambda.size(); i++)
       {
          tmp_l[lambda.size() - 1 - i] = lambda[i];
-         tmp_p[lambda.size() - 1 - i] = phy1AU[i];
+         tmp_p[lambda.size() - 1 - i] = flux[i];
       }
       lambda.clear();
-      phy1AU.clear();
+      flux.clear();
       lambda = tmp_l;
-      phy1AU = tmp_p;
+      flux = tmp_p;
    }
+
+    phy1AU.set_abscissa(lambda);
+    phy1AU.set_flux(flux);
+
     return;
   }
 
@@ -1836,13 +1848,13 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   const VectorCoeffType& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::lambda_hv() const
   {
-    return _lambda_hv;
+    return _phy1AU.abscissa();
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   const VectorCoeffType& PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::phy1AU() const
   {
-    return _phy1AU;
+    return _phy1AU.flux();
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
