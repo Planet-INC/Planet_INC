@@ -57,7 +57,7 @@ namespace Planet
     libMesh::Real dchemical_term_dn_i(unsigned int s, unsigned int i)  const;
 
     //!
-    CoeffType scaling_factor() const;
+    const CoeffType scaling_factor() const;
 
     const EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>& eddy_diffusion() const;
 
@@ -110,6 +110,9 @@ namespace Planet
     VectorCoeffType _cache_altitudes;
     std::map<CoeffType,VectorCoeffType> _cache;
 
+    Antioch::ParticleFlux<VectorCoeffType> phy_at_z;
+
+
 //    CoeffType scaling_factor() const;
 
   private:
@@ -118,6 +121,7 @@ namespace Planet
 
     const CoeffType _scaling_factor;
 
+
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -125,7 +129,7 @@ namespace Planet
     : _composition(helper.composition()),
       _neutral_kinetics(helper.neutral_reaction_set(),0), /*! \todo generalize 0 for other types*/
       _ionic_kinetics(helper.ionic_reaction_set(),0), /*! \todo generalize 0 for other types*/
-      _photon(helper.tau(),_composition),
+      _photon(helper.phy_at_top(),helper.tau(),_composition),
       _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature(),helper.medium()),
       _eddy_diffusion(_composition,helper.K0()),
       _kinetics(_neutral_kinetics,_ionic_kinetics,helper.temperature(),_photon,_composition, helper.ss_species()),
@@ -146,12 +150,13 @@ namespace Planet
       _domegas_dn_B_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
     }
 
-    _photon.set_photon_flux_at_top(helper.lambda_hv(), helper.phy1AU(), Constants::Saturn::d_Sun<CoeffType>());
+    // calculate photon flux
 
-    /*! \todo This call to set_particle_flux is going to kill thread safety because
-              it's resetting stuff in the ReactionSet */
-    //helper.neutral_reaction_set().set_particle_flux(_photon.photon_flux_ptr()); // reactions know the solar flux
-    _neutral_kinetics.set_photon_flux(_photon.photon_flux_ptr());
+    phy_at_z.set_abscissa(_photon.photon_flux_at_top().abscissa());
+
+    // sets pointer and map in KineticsEvaluator to pass correct
+    // flux to corresponding reaction
+    _neutral_kinetics.set_photon_flux(&phy_at_z);
 
     return;
   }
@@ -176,8 +181,17 @@ namespace Planet
       dmolar[i] = dmolar_concentrations_dz[i] * _scaling_factor;
    }
 
+// calculate phy
+   VectorStateType phy;
+   phy.resize(_photon.photon_flux_at_top().abscissa().size());
+
+   _photon.update_photon_flux(molar,this->get_cache(z),z,phy);
+
+   phy_at_z.set_flux(phy);
+
+// diff and chem
    _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
-   _kinetics.chemical_rate_and_derivs(molar,this->get_cache(z),z,_omegas_dots,_domegas_dots_dn);
+   _kinetics.chemical_rate_and_derivs(molar,z,_omegas_dots,_domegas_dots_dn);
 
    this->update_cache(molar,z);
 
@@ -323,7 +337,7 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  CoeffType PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::scaling_factor() const
+  const CoeffType PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::scaling_factor() const
   {
      return _scaling_factor;
   }

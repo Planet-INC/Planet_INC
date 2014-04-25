@@ -77,11 +77,11 @@ namespace Planet
 
         //! compute chemical net rate and provide them in kin_rates
         template<typename StateType, typename VectorStateType>
-        void chemical_rate(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
+        void chemical_rate(const VectorStateType &molar_concentrations, 
                            const StateType &z, VectorStateType &kin_rates);
 
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
-        void chemical_rate_and_derivs(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
+        void chemical_rate_and_derivs(const VectorStateType &molar_concentrations,
                                       const StateType &z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn);
 
         //! Newton solver for the ionic system
@@ -145,14 +145,12 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   inline
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, 
-                                                                     const VectorStateType &sum_concentrations, 
                                                                      const StateType &z,
                                                                      VectorStateType &kin_rates)
   {
      antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
      VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
-     _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
      _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
                                              molar_concentrations,dummy,kin_rates);
 
@@ -164,7 +162,7 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType, typename MatrixStateType>
   inline
-  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate_and_derivs(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate_and_derivs(const VectorStateType &molar_concentrations,
                                       const StateType &z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn)
   {
      antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
@@ -182,7 +180,6 @@ namespace Planet
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      ddummy_dT.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      dkin_dT.resize(_composition.neutral_composition().n_species(),0.L); //no temp
-     _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
      _neutral_reactions.compute_mole_sources_and_derivs(_temperature.neutral_temperature(z),molar_concentrations,dummy,ddummy_dT,
                                                         kin_rates,dkin_dT,dkin_rates_dn);
 
