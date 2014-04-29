@@ -99,9 +99,6 @@ include_HEADERS += pdf_management/include/planet/pdf_management.h
 # temperature
 include_HEADERS += temperature/include/planet/atmospheric_temperature.h
 
-# atmosphere
-include_HEADERS += atmosphere/include/planet/atmosphere.h
-
 # diffusion
 include_HEADERS += diffusion/include/planet/binary_diffusion.h
 include_HEADERS += diffusion/include/planet/molecular_diffusion_evaluator.h
