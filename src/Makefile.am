@@ -63,6 +63,7 @@ include_HEADERS += pdf_management/include/planet/kinetics_branching_structure.h
 include_HEADERS += pdf_management/include/planet/branching_ratio_node.h
 include_HEADERS += pdf_management/include/planet/pdf_enum.h
 include_HEADERS += pdf_management/include/planet/base_pdf.h
+include_HEADERS += pdf_management/include/planet/unif_pdf.h
 include_HEADERS += pdf_management/include/planet/norm_pdf.h
 include_HEADERS += pdf_management/include/planet/nort_pdf.h
 include_HEADERS += pdf_management/include/planet/logn_pdf.h
