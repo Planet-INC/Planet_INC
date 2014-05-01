@@ -99,3 +99,4 @@ test/input/grins_input.in
 test/input/grins_input_physics_helper.in
 src/planet
 src/planet.o
+test/input/solver_test.in
