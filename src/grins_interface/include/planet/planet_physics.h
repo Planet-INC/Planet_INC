@@ -247,7 +247,27 @@ namespace Planet
 
                 if( compute_jacobian )
                   {
-                    libmesh_not_implemented();
+                    //libmesh_not_implemented();
+                    for(unsigned int t=0; t < this->_n_species; t++ )
+                      {
+                        libMesh::DenseSubMatrix<libMesh::Number> &J =
+                          context.get_elem_jacobian(this->_species_vars[s], this->_species_vars[t]); // R_{s},{t}
+
+                        libMesh::Real domega_dot_dns = evaluator.dchemical_term_dn_i(s,t);
+
+                        libMesh::Real domega_B_term_dns = evaluator.ddiffusion_B_term_dn(s,t);
+
+                        libMesh::Real domega_A_term_dns = evaluator.ddiffusion_A_term_dn(s,t);
+
+                        for(unsigned int j=0; j != n_s_dofs; j++)
+                          {
+                            J(i,j) += jac*( domega_dot_dns*s_phi[i][qp]*s_phi[j][qp]
+                                            + omega_B_term*s_grad_phi[i][qp](0)*s_phi[j][qp]
+                                            + n_s*domega_B_term_dns*s_grad_phi[i][qp](0)*s_phi[j][qp]
+                                            + omega_A_term*s_grad_phi[i][qp](0)*s_grad_phi[j][qp](0)
+                                            + dns_dz*domega_A_term_dns*s_grad_phi[i][qp](0)*s_phi[j][qp] );
+                          }
+                      }
                   }
               }
 
