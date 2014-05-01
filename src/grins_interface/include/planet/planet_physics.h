@@ -39,6 +39,8 @@
 #include "planet/planet_initial_guess.h"
 
 // libMesh
+#include "libmesh/enum_fe_family.h"
+#include "libmesh/enum_order.h"
 #include "libmesh/getpot.h"
 #include "libmesh/fem_system.h"
 #include "libmesh/string_to_enum.h"
@@ -89,10 +91,10 @@ namespace Planet
     std::vector<std::string> _species_var_names;
 
     //! Element type, read from input
-    libMeshEnums::FEFamily _species_FE_family;
+    libMesh::FEFamily _species_FE_family;
 
     //! Element orders, read from input
-    libMeshEnums::Order _species_order;
+    libMesh::Order _species_order;
 
     PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType> _helper;
 
@@ -106,8 +108,8 @@ namespace Planet
   PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
     : GRINS::Physics(physics_name,input), 
       _n_species( input.vector_variable_size("Planet/neutral_species") ),
-      _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
-      _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
+      _species_FE_family( libMesh::Utility::string_to_enum<libMesh::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
+      _species_order( libMesh::Utility::string_to_enum<libMesh::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
       _helper(input)
   {
      _species_var_names.reserve(this->_n_species);

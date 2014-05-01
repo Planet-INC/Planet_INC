@@ -48,7 +48,8 @@ int main(int argc, char* argv[])
   sim_builder.attach_physics_factory(physics_factory);
 
   GRINS::Simulation grins( libMesh_inputfile,
-                           sim_builder );
+                           sim_builder,
+                           libmesh_init.comm() );
 
   // Asssign initial temperature value
   std::string system_name = libMesh_inputfile( "screen-options/system_name", "Planet" );
