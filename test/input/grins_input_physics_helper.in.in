@@ -10,9 +10,9 @@ absorbing_species = 'N2 CH4'
 # files ${input_photoreactions_root}${photo_reacting_species} are what is searched for
 photo_reacting_species = 'N2 CH4'
 
-# This example, the ionic species and neutral species are the same.
-# If ionic species were different, would just list them here
-ionic_species = '${Planet/neutral_species}'
+# This example, there are no ionic species 
+# If there were, we would just list them here
+# ionic_species = 
 
 temperature_file = '@abs_top_srcdir@/test/input/T40_temp.profile'
 file_flyby = '@abs_top_srcdir@/test/input/test_Flyby.txt'
