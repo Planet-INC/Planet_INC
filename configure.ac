@@ -79,8 +79,10 @@ dnl--------------------------
 # Check for Antioch
 AX_PATH_ANTIOCH(0.0.0,yes)
 
+# GRINS
 AX_PATH_GRINS(0.4.0,yes)
 
+# Libmesh flags
 AC_ARG_ENABLE([libmesh-flags],
                AC_HELP_STRING([--disable-libmesh-flags],[disable use of libmesh cxxflags for CXXFLAGS]),
                [case "${enableval}" in
@@ -98,6 +100,9 @@ else
    AC_DEFINE(USE_LIBMESH_CXX_FLAGS,0,[Define if libmesh cxxflags enabled])
    CXXFLAGS="-O0 -g -fno-unsafe-math-optimizations"
 fi
+
+# eigen
+CONFIGURE_EIGEN(2.3.0,yes)
 
 dnl -Wall warnings, -Wall the time.
 AX_CXXFLAGS_WARN_ALL
@@ -124,10 +129,6 @@ elif (test x$enablecxx11 = xoptional); then
   AX_CXX_COMPILE_STDCXX_11(noext, optional)
   AX_CXX_AUTO_THIS(optional)
 fi
-
-AX_PATH_GRINS(0.4.0,yes)
-CONFIGURE_EIGEN(2.3.0,yes)
-AX_PATH_GRINS(0.4.0,yes)
 
 dnl--------------------------
 dnl Checks for code coverage
