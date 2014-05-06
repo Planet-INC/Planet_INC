@@ -570,7 +570,8 @@ Scalar dbarometry_dz(const Scalar &zmin, const Scalar &z, const Scalar &T, const
 
 template<typename Scalar, typename VectorScalar>
 void calculate_densities(VectorScalar &densities, VectorScalar &sum_densities, VectorScalar &dn_dz, 
-                         const VectorScalar &molar_frac, const Scalar &nTot, const Scalar &dnTot_dz, const Scalar &dz)
+                         const VectorScalar &molar_frac, const Scalar &nTot, const Scalar &dnTot_dz, const Scalar &dz,
+                         const bool compute)
 {
    if(sum_densities.size() != molar_frac.size())sum_densities.resize(molar_frac.size(),0.L);
    densities.resize(molar_frac.size(),0.L);
@@ -579,7 +580,14 @@ void calculate_densities(VectorScalar &densities, VectorScalar &sum_densities, V
    {
      densities[s] = molar_frac[s] * nTot;
      dn_dz[s] = molar_frac[s] * dnTot_dz;
-     sum_densities[s] += densities[s] * dz;
+   }
+
+   if(compute)
+   {
+     for(unsigned int s = 0; s < molar_frac.size(); s++)
+     {
+       sum_densities[s] += densities[s] * dz;
+     }
    }
 
    return;
@@ -992,7 +1000,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
      std::vector<Scalar> dns_dz;
      std::vector<Scalar> densities;
 
-     calculate_densities(densities,sum_densities,dns_dz,molar_frac,nTot,dnTot_dz, Scalar(zstep * 1e3)); //km -> m
+     calculate_densities(densities,sum_densities,dns_dz,molar_frac,nTot,dnTot_dz, zstep, (z != zmax));
  
      photon.update_photon_flux(densities,sum_densities,z,flux_at_z);
      phy_at_z.set_flux(flux_at_z);
