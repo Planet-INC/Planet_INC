@@ -698,7 +698,6 @@ namespace Planet
         antioch_error();
       }
     std::string line;
-    getline(data,line); //title
     Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::KOOIJ);
     Antioch::ReactionType::ReactionType reactionType(Antioch::ReactionType::ELEMENTARY);
     const Antioch::ChemicalMixture<CoeffType>& chem_mixture = neutral_reaction_set.chemical_mixture();
@@ -778,9 +777,6 @@ namespace Planet
         antioch_error();
       }
     std::string line;
-    getline(data,line); //title
-    getline(data,line); //title
-    getline(data,line); //title
     Antioch::KineticsModel::KineticsModel kineticsModel(Antioch::KineticsModel::KOOIJ);
     Antioch::ReactionType::ReactionType reactionType(Antioch::ReactionType::LINDEMANN_FALLOFF);
     const Antioch::ChemicalMixture<CoeffType>& chem_mixture = neutral_reaction_set.chemical_mixture();

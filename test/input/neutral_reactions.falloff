@@ -1,6 +1,6 @@
-reactants -> products; falloff chemical process: k(T,C) = C . k0(T) . kinf(T) / (C . k0(T) + kinf(T))
-A0 beta0 Ea_R0 Ainf betainf Ea_Rinf Hr (s-1 - K cm^3/s - K kJ/mol)
-Kooij rate constant: ki(T) = Ai (T/Tref)^betai - exp(-Ea_Ri/T), i = 0, inf, Tref = 1 K
+#reactants -> products; falloff chemical process: k(T,C) = C . k0(T) . kinf(T) / (C . k0(T) + kinf(T))
+#A0 beta0 Ea_R0 Ainf betainf Ea_Rinf Hr (s-1 - K cm^3/s - K kJ/mol)
+#Kooij rate constant: ki(T) = Ai (T/Tref)^betai - exp(-Ea_Ri/T), i = 0, inf, Tref = 1 K
 C + H2       -> (3)CH2;          6.89e-32  0    -0         2.06e-11  0      57     0
 CH + H2      -> CH3;             4.7e-26  -1.6  -0         2.5e-10  -0.08  -0     -445.36
 (3)CH2 + H   -> CH3;             3.1e-30   0    -457       1.5e-10   0     -0     -455.99
