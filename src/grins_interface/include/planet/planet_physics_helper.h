@@ -705,6 +705,7 @@ namespace Planet
     while(!data.eof())
       {
         if(!getline(data,line))break;
+        if(line[0] == '#' || line.empty())continue;
         std::vector<std::string> reactants;
         std::vector<std::string> products;
 
@@ -786,6 +787,7 @@ namespace Planet
     while(!data.eof())
       {
         if(!getline(data,line))break;
+        if(line[0] == '#' || line.empty())continue;
         std::vector<std::string> reactants;
         std::vector<std::string> products;
 
@@ -860,7 +862,7 @@ namespace Planet
     while(!data.eof())
     {
        if(!getline(data,line))break;
-       if(line[0] == '#')continue;
+       if(line[0] == '#' || line.empty())continue;
        std::vector<std::string> out;
        Antioch::SplitString(line,";",out,false);
        if(out.empty())antioch_error();
