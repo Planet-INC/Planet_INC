@@ -57,6 +57,9 @@ template <typename CoeffType>
 class DirGPdf;
 
 template <typename CoeffType>
+class DirWPdf;
+
+template <typename CoeffType>
 class DiUnPdf;
 
 template <typename CoeffType>

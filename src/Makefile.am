@@ -70,6 +70,7 @@ include_HEADERS += pdf_management/include/planet/logn_pdf.h
 include_HEADERS += pdf_management/include/planet/logu_pdf.h
 include_HEADERS += pdf_management/include/planet/diri_pdf.h
 include_HEADERS += pdf_management/include/planet/dirg_pdf.h
+include_HEADERS += pdf_management/include/planet/dirw_pdf.h
 include_HEADERS += pdf_management/include/planet/diut_pdf.h
 include_HEADERS += pdf_management/include/planet/diun_pdf.h
 include_HEADERS += pdf_management/include/planet/dior_pdf.h

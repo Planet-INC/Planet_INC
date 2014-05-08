@@ -38,6 +38,7 @@ namespace Planet
                   DiUn,
                   DiUT,
                   DirG,
+                  DirW,
                   DiOr
                   };
   }
