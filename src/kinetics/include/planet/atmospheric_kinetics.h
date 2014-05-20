@@ -216,17 +216,14 @@ namespace Planet
     if(_newton_solver.steady_state(source_ions))
     {
 
+//     std::cout << "Ionospheric activity at " << z << " km" << std::endl;
 // update sources
       for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
       {
         unsigned int i_neu = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
         kin_rates[s] += source_ions[i_neu];
       }
-    }else
-    {
-       std::cerr << "No ionospheric activity at " << z << " km" << std::endl;
     }
-
   }
 
 
@@ -262,6 +259,7 @@ namespace Planet
     if(_newton_solver.steady_state_and_derivs(source_ions,drate_dn))
     {
 
+//       std::cout << "Ionospheric activity at " << z << " km" << std::endl;
 // update sources and derivs
       for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
       {
@@ -273,9 +271,6 @@ namespace Planet
            dkin_rates_dn[s][q] += drate_dn[i_neu][j_neu];
         }
       }
-    }else
-    {
-       std::cerr << "No ionospheric activity at " << z << " km" << std::endl;
     }
   }
 }

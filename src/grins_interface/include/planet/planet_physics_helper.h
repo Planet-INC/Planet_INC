@@ -223,7 +223,7 @@ namespace Planet
 
     void sanity_check_chemical_system() const;
 
-    bool check_chemical_balance(const Antioch::ReactionSet<CoeffType> &reaction_set,const std::vector<Antioch::Species> &species) const;
+    bool check_chemical_balance(const Antioch::ReactionSet<CoeffType> &reaction_set,const std::vector<Antioch::Species> &species, const std::string & help) const;
 
   };
 
@@ -1729,15 +1729,17 @@ namespace Planet
     // checks neutral and ionic system are chemically balanced, if not, 
     // write to std::cerr the names of unbalanced molecules and sends an antioch_error()
     bool balanced(true);
-    balanced = balanced && check_chemical_balance(*_neutral_reaction_set,_neutral_reaction_set->chemical_mixture().species_list());
-    balanced = balanced && check_chemical_balance(*_ionic_reaction_set,_ss_species);
+    balanced = balanced && check_chemical_balance(*_neutral_reaction_set,_neutral_reaction_set->chemical_mixture().species_list(),"in photochemical model");
+    balanced = balanced && check_chemical_balance(*_ionic_reaction_set,_ss_species,"in ionospheric model");
 
    // if(!balanced)antioch_error();
     return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  bool PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::check_chemical_balance(const Antioch::ReactionSet<CoeffType> &reaction_set,const std::vector<Antioch::Species> &species) const
+  bool PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::check_chemical_balance(const Antioch::ReactionSet<CoeffType> &reaction_set,
+                                                                                              const std::vector<Antioch::Species> &species,
+                                                                                              const std::string & help) const
   {
       std::vector<unsigned int> prod(species.size(),0);
       std::vector<unsigned int> loss(species.size(),0);
@@ -1779,14 +1781,14 @@ namespace Planet
           if(prod[s] == 0 && loss[s] == 0)
           {
               std::cerr << "Species " << reaction_set.chemical_mixture().species_inverse_name_map().at(species[s])
-                        << " is unreactive" << std::endl;
+                        << " is unreactive " << help << std::endl;
           }
           if((prod[s] == 0 && loss[s] != 0) || (prod[s] != 0 && loss[s] == 0))
           {
               std::cerr << "Species " << reaction_set.chemical_mixture().species_inverse_name_map().at(species[s])
                         << " is not balanced, it is only ";
-              (prod[s] == 0)?std::cerr << "consumed":std::cerr << "produced";
-              std::cerr << std::endl;
+              (prod[s] == 0)?std::cerr << "consumed ":std::cerr << "produced ";
+              std::cerr << help << std::endl;
               balanced = false;
           }
       }

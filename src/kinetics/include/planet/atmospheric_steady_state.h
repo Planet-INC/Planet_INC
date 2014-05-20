@@ -34,6 +34,9 @@
 //eigen
 #include <Eigen/Dense>
 
+//boost
+#include <boost/math/special_functions/fpclassify.hpp>
+
 //C++
 #include <map>
 
@@ -551,12 +554,13 @@ namespace Planet
       }
 
       nloop++;
-      if(nloop > loop_max || _molar_concentrations[s_electron] < _thresh)
+      if(nloop > loop_max || _molar_concentrations[s_electron] < _thresh || !(boost::math::isfinite)(lim)) //nan or inf
       {
-/*        std::cerr << "Newton solver failed after " << loop_max << " loops with a residual of " << lim
+/*        std::cerr << "Newton solver failed after " << nloop << "/" << loop_max
+                  << " loops with a residual of " << lim
                   << ", a molar source total of " << res_mol
-                  << " and a tolerance of " << _thresh << std::endl;
-*/       // antioch_error();
+                  << " and a tolerance of " << _thresh << std::endl;*/
+       // antioch_error();
         Antioch::set_zero(_molar_concentrations);
         return_flag = false;
         break;
