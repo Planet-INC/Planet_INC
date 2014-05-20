@@ -523,8 +523,11 @@ namespace Planet
   {
       antioch_assert_equal_to(upper_fluxes.size(),_neutral_composition.n_species());
       antioch_assert_equal_to(upper_fluxes.size(),molar_concentrations.size());
+      std::fill(upper_fluxes.begin(),upper_fluxes.end(),0.);
       for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
       {
+          if(_neutral_composition.species_list()[s] != Antioch::H &&
+             _neutral_composition.species_list()[s] != Antioch::H2)continue;
           CoeffType ms = _neutral_composition.M(s) * Antioch::constant_clone(ms,1e-3) / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
           upper_fluxes[s] = - this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // cm-3.km/s, escaping flux, term < 0
       }
@@ -538,7 +541,9 @@ namespace Planet
       antioch_assert_less(s,molar_concentrations.size());
 
       CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
-      CoeffType value = - this->Jeans_flux(ms, molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0
+      CoeffType value = (_neutral_composition.species_list()[s] != Antioch::H && _neutral_composition.species_list()[s] != Antioch::H2)?
+                        0.:
+                        - this->Jeans_flux(ms, molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0;
       return value;
   }
 
@@ -548,7 +553,9 @@ namespace Planet
   {
 
       CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
-      CoeffType value = - this->Jeans_velocity(ms, _temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0
+      CoeffType value =  (_neutral_composition.species_list()[s] != Antioch::H && _neutral_composition.species_list()[s] != Antioch::H2)?
+                        0.:
+                        - this->Jeans_velocity(ms, _temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0
       return value;
   }
 
