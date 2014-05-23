@@ -864,12 +864,20 @@ namespace Planet
        if(line[0] == '#' || line.empty())continue;
        std::vector<std::string> out;
        Antioch::SplitString(line,";",out,false);
-       if(out.empty())antioch_error();
+       if(out.empty())
+       {
+           std::cerr << "Error: the line\n\t" << line << "\nis badly shaped" << std::endl;
+           antioch_error();
+       }
        std::string name = out[0].substr(0,out[0].find(' '));
        line.erase(0,name.size());
        std::vector<std::string> branch;
        Antioch::SplitString(name,".",branch,false);
-       if(branch.empty())antioch_error();
+       if(branch.empty())
+       {
+           std::cerr << "Error: the reaction name of line\n\t" << line << "\nis badly shaped: " << name << std::endl;
+          antioch_error();
+       }
   
        std::vector<unsigned int> br;
        for(unsigned int i = 3; i < branch.size(); i++)
@@ -976,7 +984,11 @@ namespace Planet
      k_pdf_type.push_back(prob_reac.pdf_map().at(loc_pdf));
      if(line.find("beta") != std::string::npos) //DR then
      {
-       if(out[1].find("RD") == std::string::npos)antioch_error();
+       if(out[1].find("RD") == std::string::npos)
+       {
+           std::cerr << "Error: found beta parameter for not a DR reaction (keyword looked for is \"RD\") in reaction description\n\t" << line << std::endl;
+           antioch_error();
+       }
        kineticsModel = Antioch::KineticsModel::HERCOURT_ESSEN; //type reaction
        std::string str = out.back().substr(0,out.back().find('('));
        shave_string(str);
@@ -1154,7 +1166,11 @@ namespace Planet
   
            std::vector<std::string> tmp;
            Antioch::SplitString(reac.channels[ibr],";",tmp,false);//
-           if(tmp.size() < 4)antioch_error();
+           if(tmp.size() < 4)
+           {
+                std::cerr << "Error: 4 parameters minimum are required in this description:\n\t" << reac.channels[ibr] << std::endl;
+                antioch_error();
+           }
   //pdf
            shave_strings(tmp);
            if(node_pdf.empty())
@@ -1529,13 +1545,21 @@ namespace Planet
   {
     std::vector<std::string> out;
     Antioch::SplitString(line,";",out,false);
-    if(out.size() != 2)antioch_error();
+    if(out.size() != 2)
+    {
+        std::cerr << "Error: badly shaped line\n\t" << line << std::endl;
+        antioch_error();
+    }
     equation = out[0];
     std::string parameters(out[1]);
     ///// equation
     std::vector<std::string> molecules;
     Antioch::SplitString(equation,"->",molecules,false);
-    if(molecules.size() != 2)antioch_error();
+    if(molecules.size() != 2)
+    {
+        std::cerr << "Error: badly shaped equation\n\t" << equation << std::endl;
+        antioch_error();
+    }
 
     Antioch::SplitString(molecules[0],"+",reactants,false);
     if(reactants.empty())reactants.push_back(molecules[0]);
@@ -1639,7 +1663,11 @@ namespace Planet
     std::vector<std::string> out;
     Antioch::SplitString(line," ",out,false);
     unsigned int nbr = out.size();
-    if(nbr == 0)antioch_error();
+    if(nbr == 0)
+    {
+        std::cerr << "Error: badly shaped line\n\t" << line << std::endl;
+        antioch_error();
+    }
 
     MatrixCoeffType datas;
     std::vector<std::vector<std::string> > produc;
