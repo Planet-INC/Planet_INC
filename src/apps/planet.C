@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   GetPot libMesh_inputfile( libMesh_input_filename );
 
   // Initialize libMesh library.
-  LibMeshInit libmesh_init(argc, argv);
+  libMesh::LibMeshInit libmesh_init(argc, argv);
 
   GRINS::SimulationBuilder sim_builder;
 

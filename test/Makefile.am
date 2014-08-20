@@ -48,6 +48,9 @@ AM_CPPFLAGS += $(ANTIOCH_CPPFLAGS)
 #GRINS
 AM_CPPFLAGS += $(GRINS_CPPFLAGS)
 
+#GRVY
+AM_CPPFLAGS += $(GRVY_CFLAGS)
+
 # Sources for these tests
 binary_diffusion_unit_SOURCES = binary_diffusion_unit.C
 chapman_unit_SOURCES = chapman_unit.C

@@ -131,6 +131,13 @@ elif (test x$enablecxx11 = xoptional); then
 fi
 
 dnl--------------------------
+dnl Checks grvy, may want to
+dnl to brutally import grins
+dnl config
+dnl--------------------------
+AX_PATH_GRVY_NEW([0.30],[no])
+
+dnl--------------------------
 dnl Checks for code coverage
 dnl--------------------------
 AX_CODE_COVERAGE

@@ -7,6 +7,9 @@ BUILT_SOURCES   = .license.stamp
 lib_LTLIBRARIES = libplanet.la
 
 libplanet_la_LIBADD = $(GRINS_PREFIX)/lib/libgrins.la $(LIBMESH_LIBDIR)/libmesh_$(LIBMESH_METHOD).la
+if GRVY_ENABLED
+   libplanet_la_LIBADD += $(GRVY_PREFIX)/lib/libgrvy.la
+endif
 
 #----------------------------------------------
 # List of source files to build dynamic library
@@ -142,7 +145,8 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 
 AM_CPPFLAGS += $(ANTIOCH_CPPFLAGS)
-AM_CPPFLAGS += $(GRINS_CPPFLAGS)
+AM_CPPFLAGS += $(GRINS_CPPFLAGS) # contains libmesh
+AM_CPPFLAGS += $(GRVY_CFLAGS)
 
 CLEANFILES =
 
