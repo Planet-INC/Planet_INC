@@ -38,7 +38,7 @@
 namespace Planet{
 
 template <typename CoeffType = double>
-class Chapman{
+  class Chapman{
    private:
 
      CoeffType _chi;
@@ -58,44 +58,18 @@ class Chapman{
      //! chapman for high angles
      template <typename StateType>
      ANTIOCH_AUTO(StateType)
-     chapman_high_angles(const StateType &x) const
-     ANTIOCH_AUTOGENFUNC(StateType,antioch_assert_greater(_chi,rad(90.L));antioch_assert_less(_chi,rad(180.L)),
-                                Antioch::ant_sqrt(StateType(2.L) * Constants::pi<StateType>() * x) * 
-                                (  Antioch::ant_sqrt(Antioch::ant_sin(_chi)) * 
-                                   Antioch::ant_exp( x * (StateType(1.L) - Antioch::ant_sin(_chi))) -
-                                   StateType(0.5L) *
-                                   Antioch::ant_exp( x/StateType(2.L) *
-                                            Antioch::ant_pow(Antioch::ant_cos(_chi),2) * 
-                                            (StateType(1.L) - this->erf(
-                                                                        Antioch::ant_sqrt( x / StateType(2.L)) * 
-                                                                        Antioch::ant_abs(Antioch::ant_cos(_chi))
-                                                                       )
-                                            )
-                                                   )
-                                )
-                        )
+     chapman_high_angles(const StateType &x) const;
+
      //! chapman for medium angles
      template <typename StateType>
      ANTIOCH_AUTO(StateType)
-     chapman_medium_angles(const StateType &x) const
-     ANTIOCH_AUTOGENFUNC(StateType,antioch_assert_less(_chi,rad(90.1L));antioch_assert_greater(_chi,rad(75.L)),
-                                Antioch::ant_sqrt(Constants::pi<StateType>() * x/StateType(2.L)) * 
-                                (StateType(1.L) - this->erf(Antioch::ant_sqrt(x/StateType(2.L))  * Antioch::ant_abs(Antioch::ant_cos(_chi)))) *
-                                Antioch::ant_exp(x/StateType(2.L) * Antioch::ant_pow(Antioch::ant_cos(_chi),2))
-                        )
+     chapman_medium_angles(const StateType &x) const;
      
      //! The approximation from Abramowitz and Stegun, Eq. 7.1.26
      template <typename StateType>
      ANTIOCH_AUTO(StateType)
-     erf(StateType x) const
-     ANTIOCH_AUTOGENFUNC(StateType, if(x < 0.)x = -x ,
-                StateType(1.L) - (StateType( 0.254829592L)  * (StateType(1.L)/(StateType(1.L)                 + StateType(0.3275911L) * x))   +
-                                  StateType(-0.284496736L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),2) + 
-                                  StateType( 1.421413741L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),3) + 
-                                  StateType(-1.453152027L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),4) + 
-                                  StateType( 1.061405429L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),5)
-                                 ) * Antioch::ant_exp(-Antioch::ant_pow(x,2))
-                        )
+     erf(StateType x) const;
+
    public:
 
      Chapman(){return;}
@@ -123,39 +97,86 @@ class Chapman{
 
      //! Approach angle
      CoeffType chi() const;
-};
+  };
 
-template<typename CoeffType>
-inline
-CoeffType Chapman<CoeffType>::operator()() const
-{
-   return this->chapman();
-}
+  template<typename CoeffType>
+  inline
+  CoeffType Chapman<CoeffType>::operator()() const
+  {
+     return this->chapman();
+  }
 
-template<typename CoeffType>
-inline
-CoeffType Chapman<CoeffType>::chapman() const
-{
-   antioch_assert_less(_chi,rad(75.1L));
-   return CoeffType(1.L)/Antioch::ant_cos(_chi);
-}
+  template<typename CoeffType>
+  inline
+  CoeffType Chapman<CoeffType>::chapman() const
+  {
+     antioch_assert_less(_chi,rad(75.1L));
+     return CoeffType(1.L)/Antioch::ant_cos(_chi);
+  }
 
-template<typename CoeffType>
-template<typename StateType>
-inline
-StateType Chapman<CoeffType>::chapman(const StateType & x) const
-{
-  if(_chi < rad(75.1L))return this->chapman();
-  if(_chi < rad(90.1L))return this->chapman_medium_angles(x);
-                       return this->chapman_high_angles(x);
-}
+  template<typename CoeffType>
+  template<typename StateType>
+  inline
+  StateType Chapman<CoeffType>::chapman(const StateType & x) const
+  {
+    if(_chi < rad(75.1L))return this->chapman();
+    if(_chi < rad(90.1L))return this->chapman_medium_angles(x);
+                         return this->chapman_high_angles(x);
+  }
 
-template <typename CoeffType>
-inline
-CoeffType Chapman<CoeffType>::chi() const
-{
-  return _chi;
-}
+  template <typename CoeffType>
+  inline
+  CoeffType Chapman<CoeffType>::chi() const
+  {
+    return _chi;
+  }
+
+  template <typename CoeffType>
+  template<typename StateType>
+  inline
+  ANTIOCH_AUTO(StateType) Chapman<CoeffType>::chapman_high_angles(const StateType &x) const
+  {
+     antioch_assert_greater(_chi,rad(90.L));antioch_assert_less(_chi,rad(180.L));
+     return Antioch::ant_sqrt(StateType(2.L) * Constants::pi<StateType>() * x) * 
+                                (  Antioch::ant_sqrt(Antioch::ant_sin(_chi)) * 
+                                   Antioch::ant_exp( x * (StateType(1.L) - Antioch::ant_sin(_chi))) -
+                                   StateType(0.5L) *
+                                   Antioch::ant_exp( x/StateType(2.L) *
+                                            Antioch::ant_pow(Antioch::ant_cos(_chi),2) * 
+                                            (StateType(1.L) - this->erf(
+                                                                        Antioch::ant_sqrt( x / StateType(2.L)) * 
+                                                                        Antioch::ant_abs(Antioch::ant_cos(_chi))
+                                                                       )
+                                            )
+                                                   )
+                                );
+  }
+
+
+  template <typename CoeffType>
+  template <typename StateType>
+  inline
+  ANTIOCH_AUTO(StateType) Chapman<CoeffType>::chapman_medium_angles(const StateType &x) const
+  {
+     antioch_assert_less(_chi,rad(90.1L));antioch_assert_greater(_chi,rad(75.L));
+     return Antioch::ant_sqrt(Constants::pi<StateType>() * x/StateType(2.L)) * 
+            (StateType(1.L) - this->erf(Antioch::ant_sqrt(x/StateType(2.L))  * Antioch::ant_abs(Antioch::ant_cos(_chi)))) *
+            Antioch::ant_exp(x/StateType(2.L) * Antioch::ant_pow(Antioch::ant_cos(_chi),2));
+  }
+
+
+  template <typename CoeffType>
+  template <typename StateType>
+  ANTIOCH_AUTO(StateType) Chapman<CoeffType>::erf(StateType x) const
+  {
+    if(x < 0.)x = -x;
+    return StateType(1.L) - (StateType( 0.254829592L)  * (StateType(1.L)/(StateType(1.L)                 + StateType(0.3275911L) * x))   +
+                             StateType(-0.284496736L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),2) + 
+                             StateType( 1.421413741L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),3) + 
+                             StateType(-1.453152027L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),4) + 
+                             StateType( 1.061405429L)  * Antioch::ant_pow(StateType(1.L)/(StateType(1.L) + StateType(0.3275911L) * x),5)
+                            ) * Antioch::ant_exp(-Antioch::ant_pow(x,2));
+  }
 
 }
 

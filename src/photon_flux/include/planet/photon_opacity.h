@@ -31,7 +31,6 @@
 //Antioch
 #include "antioch/antioch_asserts.h"
 #include "antioch/cmath_shims.h"
-#include "antioch/species_enum.h"
 
 //C++
 #include <vector>

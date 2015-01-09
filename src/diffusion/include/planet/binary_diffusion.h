@@ -26,7 +26,6 @@
 
 //Antioch
 #include "antioch/antioch_asserts.h"
-#include "antioch/species_enum.h"
 #include "antioch/cmath_shims.h"
 
 //Planet
