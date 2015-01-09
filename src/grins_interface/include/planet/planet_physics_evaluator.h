@@ -151,12 +151,7 @@ namespace Planet
     }
 
     // calculate photon flux
-
     phy_at_z.set_abscissa(_photon.photon_flux_at_top().abscissa());
-
-    // sets pointer and map in KineticsEvaluator to pass correct
-    // flux to corresponding reaction
-    _neutral_kinetics.set_photon_flux(&phy_at_z);
 
     return;
   }
