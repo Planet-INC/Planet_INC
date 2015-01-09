@@ -44,6 +44,8 @@ namespace Planet
       private:
         //!no default constructor
         AtmosphericMixture(){antioch_error();return;}
+        Antioch::Species iH;  // unsigned int
+        Antioch::Species iH2; // unsigned int
 //boundaries
         CoeffType _zmin;
         CoeffType _zmax;
@@ -231,6 +233,8 @@ namespace Planet
   AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericMixture(Antioch::ChemicalMixture<CoeffType> &neutral,
                                                                     Antioch::ChemicalMixture<CoeffType> &ion,
                                                                     AtmosphericTemperature<CoeffType,VectorCoeffType> &temp):
+  iH(neutral.species_name_map().at("H")),
+  iH2(neutral.species_name_map().at("H2")),
   _zmin(0.L),
   _zmax(0.L),
   _neutral_composition(neutral),
@@ -526,8 +530,8 @@ namespace Planet
       std::fill(upper_fluxes.begin(),upper_fluxes.end(),0.);
       for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
       {
-          if(_neutral_composition.species_list()[s] != Antioch::H &&
-             _neutral_composition.species_list()[s] != Antioch::H2)continue;
+          if(_neutral_composition.species_list()[s] != iH &&
+             _neutral_composition.species_list()[s] != iH2)continue;
           CoeffType ms = _neutral_composition.M(s) * Antioch::constant_clone(ms,1e-3) / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
           upper_fluxes[s] = - this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // cm-3.km/s, escaping flux, term < 0
       }
@@ -541,7 +545,7 @@ namespace Planet
       antioch_assert_less(s,molar_concentrations.size());
 
       CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
-      CoeffType value = (_neutral_composition.species_list()[s] != Antioch::H && _neutral_composition.species_list()[s] != Antioch::H2)?
+      CoeffType value = (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
                         0.:
                         - this->Jeans_flux(ms, molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0;
       return value;
@@ -553,7 +557,7 @@ namespace Planet
   {
 
       CoeffType ms = _neutral_composition.M(s) * 1e-3 / Antioch::Constants::Avogadro<CoeffType>(); //to kg.mol-1 then kg
-      CoeffType value =  (_neutral_composition.species_list()[s] != Antioch::H && _neutral_composition.species_list()[s] != Antioch::H2)?
+      CoeffType value =  (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
                         0.:
                         - this->Jeans_velocity(ms, _temperature.neutral_temperature(_zmax),_zmax) * Antioch::constant_clone(ms,1e-3); // to cm-3.km.s-1, escaping flux, term < 0
       return value;

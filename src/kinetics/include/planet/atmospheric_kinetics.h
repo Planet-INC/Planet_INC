@@ -200,7 +200,7 @@ namespace Planet
     full_concentrations.resize(_composition.ionic_composition().n_species(),0.L);
     for(unsigned int s = 0; s < neutral_concentrations.size(); s++)
     {
-       unsigned int i = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
+       unsigned int i = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
        full_concentrations[i] = neutral_concentrations[s];
     }
 
@@ -217,7 +217,7 @@ namespace Planet
 // update sources
       for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
       {
-        unsigned int i_neu = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
+        unsigned int i_neu = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
         kin_rates[s] += source_ions[i_neu];
       }
     }
@@ -238,7 +238,7 @@ namespace Planet
     full_concentrations.resize(_composition.ionic_composition().n_species(),0.L);
     for(unsigned int s = 0; s < neutral_concentrations.size(); s++)
     {
-       unsigned int i = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
+       unsigned int i = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
        full_concentrations[i] = neutral_concentrations[s];
     }
 
@@ -260,11 +260,11 @@ namespace Planet
 // update sources and derivs
       for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
       {
-        unsigned int i_neu = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
+        unsigned int i_neu = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
         kin_rates[s] += source_ions[i_neu];
         for(unsigned int q = 0; q < _composition.neutral_composition().n_species(); q++)
         {
-           unsigned int j_neu = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[q]);
+           unsigned int j_neu = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[q]];
            dkin_rates_dn[s][q] += drate_dn[i_neu][j_neu];
         }
       }

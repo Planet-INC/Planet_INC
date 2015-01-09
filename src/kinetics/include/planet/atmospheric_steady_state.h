@@ -129,8 +129,8 @@ namespace Planet
      const Antioch::ChemicalMixture<CoeffType> & mixture = _reactions_system.reaction_set().chemical_mixture();
      for(unsigned int s = 0; s < _ss_species.size(); s++)
      {
-         _ionic_inverse_map[s] = mixture.species_list_map().at(_ss_species[s]);
-         _ionic_map[mixture.species_list_map().at(_ss_species[s])] = s;
+         _ionic_inverse_map[s] = mixture.species_list()[_ss_species[s]];
+         _ionic_map[mixture.species_list()[_ss_species[s]]] = s;
      }
   }
 
@@ -223,7 +223,7 @@ namespace Planet
 
      CoeffType sum;
      Antioch::set_zero(sum);
-     unsigned int s_electron(_ionic_map.at(mixture.species_list_map().at(Antioch::Species::e)));
+     unsigned int s_electron(_ionic_map.at(mixture.species_name_map().at("e")));
      const CoeffType tol = std::numeric_limits<CoeffType>::epsilon() * 100.L;
      for(unsigned int ss = 0; ss < _ss_species.size(); ss++)
      {
@@ -256,7 +256,7 @@ namespace Planet
 // neutral atmosphere approximation: [e] = sum [ions]
         CoeffType sum;
         Antioch::set_zero(sum);
-        unsigned int s_electron(_ionic_map.at(mixture.species_list_map().at(Antioch::Species::e)));
+        unsigned int s_electron(_ionic_map.at(mixture.species_name_map().at("e")));
         for(unsigned int s = 0; s < _ss_species.size(); s++)
         {
            if(s == s_electron)continue;
@@ -496,7 +496,7 @@ namespace Planet
   {
 
    bool return_flag(true);
-   unsigned int s_electron(_ionic_map.at(_reactions_system.reaction_set().chemical_mixture().species_list_map().at(Antioch::Species::e)));
+   unsigned int s_electron(_ionic_map.at(_reactions_system.reaction_set().chemical_mixture().species_name_map().at("e")));
    if(_molar_concentrations[s_electron] < _thresh)first_approximation();
 
 // Newton solver here
