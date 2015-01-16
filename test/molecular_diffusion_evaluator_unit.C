@@ -43,7 +43,7 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.L;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
