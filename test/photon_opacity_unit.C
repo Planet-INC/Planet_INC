@@ -176,6 +176,7 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
   Antioch::SigmaBinConverter<std::vector<Scalar> > binconv;
   for(unsigned int i = 0; i < 2; i++)
   {
+    sigma_ref[i].resize(lambda.size());
     binconv.y_on_custom_grid(lambdas[i],sigmas[i],lambda,sigma_ref[i]);
   }
 
@@ -183,15 +184,15 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
   Planet::Chapman<Scalar> chapman(chi);
 /////
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
-  tau.add_cross_section(lambdas[0],sigmas[0],Antioch::Species::N2, 0);
-  tau.add_cross_section(lambdas[1],sigmas[1],Antioch::Species::CH4, 1);
+  tau.add_cross_section(lambdas[0],sigmas[0],0, 0);
+  tau.add_cross_section(lambdas[1],sigmas[1],1, 1);
   tau.update_cross_section(lambda);
+
 
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
-
 
 ////////////////////:
   molar_frac.pop_back();

@@ -296,8 +296,8 @@ int tester(const std::string &input_T, const std::string &input_hv,
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
-  tau.add_cross_section(lambda_N2,  sigma_N2,  Antioch::Species::N2, neutral_species.active_species_name_map().at("N2"));
-  tau.add_cross_section(lambda_CH4, sigma_CH4, Antioch::Species::CH4, neutral_species.active_species_name_map().at("CH4"));
+  tau.add_cross_section(lambda_N2,  sigma_N2,  0, neutral_species.active_species_name_map().at("N2"));
+  tau.add_cross_section(lambda_CH4, sigma_CH4, 1, neutral_species.active_species_name_map().at("CH4"));
   tau.update_cross_section(lambda_hv);
 
 //reaction sets

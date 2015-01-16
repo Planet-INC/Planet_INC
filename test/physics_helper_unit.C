@@ -841,15 +841,15 @@ int tester(const std::string &input_T,const std::string & input_hv,
   bin_diff_data.resize(2);
   bin_diff_model.resize(2);
 
-  std::vector<Antioch::Species> spec;
-  spec.push_back(Antioch::Species::N2);
-  spec.push_back(Antioch::Species::CH4);
-  spec.push_back(Antioch::Species::N_4S);
-  spec.push_back(Antioch::Species::CH3);
-  spec.push_back(Antioch::Species::CH2_1);
-  spec.push_back(Antioch::Species::CH2_3);
-  spec.push_back(Antioch::Species::H);
-  spec.push_back(Antioch::Species::H2);
+  std::vector<unsigned int> spec;
+  spec.push_back(0);
+  spec.push_back(1);
+  spec.push_back(2);
+  spec.push_back(3);
+  spec.push_back(4);
+  spec.push_back(5);
+  spec.push_back(6);
+  spec.push_back(7);
 
 //N2 with ...
   bin_diff_data.resize(medium.size());
@@ -961,8 +961,8 @@ int tester(const std::string &input_T,const std::string & input_hv,
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
-  tau.add_cross_section(lambda_N2,  sigma_N2,  Antioch::Species::N2,  neutral_species.active_species_name_map().at("N2"));
-  tau.add_cross_section(lambda_CH4, sigma_CH4, Antioch::Species::CH4, neutral_species.active_species_name_map().at("CH4"));
+  tau.add_cross_section(lambda_N2,  sigma_N2,  0,  neutral_species.active_species_name_map().at("N2"));
+  tau.add_cross_section(lambda_CH4, sigma_CH4, 1, neutral_species.active_species_name_map().at("CH4"));
   tau.update_cross_section(lambda_hv);
 
 //reaction sets
@@ -988,7 +988,6 @@ int tester(const std::string &input_T,const std::string & input_hv,
   Antioch::KineticsEvaluator<Scalar> ionic_kinetics( ionic_reaction_set, 0 );
 //theo, we have confidence in Antioch
   Antioch::KineticsEvaluator<Scalar> neutral_theo( neut_reac_theo, 0 );
-  neutral_theo.set_photon_flux(&phy_at_z);
 
 //photon evaluator
   Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(phy_at_top,tau,composition);
@@ -1046,8 +1045,11 @@ int tester(const std::string &input_T,const std::string & input_hv,
      dummy.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
 
+     Antioch::KineticsConditions<Scalar> KC(T);
+     for(unsigned int hv = 0; hv < helper.index_photochemistry().size(); hv++)
+                KC.add_particle_flux(phy_at_z,helper.index_photochemistry()[hv]);
 
-     neutral_theo.compute_mole_sources(T, densities, dummy, chemical_theo);
+     neutral_theo.compute_mole_sources(KC, densities, dummy, chemical_theo);
 
      Scalar K = K0 * Antioch::ant_sqrt(dens_tot/nTot);
 

@@ -238,9 +238,9 @@ int tester(const std::string &input_T)
 //not needed
 
 //binary diffusion
-  Planet::BinaryDiffusion<Scalar> N2N2(   Antioch::Species::N2,  Antioch::Species::N2 , bNN1, bNN2, NN_model);
-  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, bCN1, bCN2, CN_model);
-  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, bCC1, bCC2, CC_model);
+  Planet::BinaryDiffusion<Scalar> N2N2(   0, 0, bNN1, bNN2, NN_model);
+  Planet::BinaryDiffusion<Scalar> N2CH4(  0, 1, bCN1, bCN2, CN_model);
+  Planet::BinaryDiffusion<Scalar> CH4CH4( 1, 1, bCC1, bCC2, CC_model);
   std::vector<std::vector<Planet::BinaryDiffusion<Scalar> > > bin_diff_coeff;
   bin_diff_coeff.resize(2);
   for(unsigned int n = 0; n < 2; n++)
