@@ -25,6 +25,7 @@
 #define PLANET_ATMOSPHERIC_KINETICS_H
 
 //Antioch
+#include "antioch/kinetics_conditions.h"
 #include "antioch/kinetics_evaluator.h"
 
 //Planet
@@ -55,9 +56,9 @@ namespace Planet
         AtmosphericSteadyState<CoeffType,VectorCoeffType> _newton_solver;
         
 //
-        const AtmosphericTemperature<CoeffType,VectorCoeffType>             &_temperature;
-        PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &_photon;
-        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
+        const AtmosphericTemperature<CoeffType,VectorCoeffType>             & _temperature;
+        PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>          & _photon;
+        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> & _composition;
       public:
         //!
         AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                               &neu,
@@ -78,19 +79,24 @@ namespace Planet
         //! compute chemical net rate and provide them in kin_rates
         template<typename StateType, typename VectorStateType>
         void chemical_rate(const VectorStateType &molar_concentrations, 
-                           const StateType &z, VectorStateType &kin_rates);
+                           const Antioch::KineticsConditions<StateType> &KC, 
+                           const StateType & z, VectorStateType &kin_rates);
 
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
         void chemical_rate_and_derivs(const VectorStateType &molar_concentrations,
-                                      const StateType &z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn);
+                                      const Antioch::KineticsConditions<StateType> &KC, 
+                                      const StateType & z,
+                                      VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn);
 
         //! Newton solver for the ionic system
         template<typename StateType, typename VectorStateType>
-        void add_ionic_contribution(const VectorStateType &molar_concentrations, const StateType &z, VectorStateType &kin_rates);
+        void add_ionic_contribution(const VectorStateType &molar_concentrations, const Antioch::KineticsConditions<StateType> &KC, 
+                                    const StateType & z, VectorStateType &kin_rates);
 
         //! Newton solver for the ionic system
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
-        void add_ionic_contribution_and_derivs(const VectorStateType &neutral_concentrations, const StateType &z, 
+        void add_ionic_contribution_and_derivs(const VectorStateType &neutral_concentrations, 
+                                               const Antioch::KineticsConditions<StateType> & KC, const StateType &z, 
                                                VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn);
   };
 
@@ -145,16 +151,17 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   inline
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, 
-                                                                     const StateType &z,
+                                                                     const Antioch::KineticsConditions<StateType> &KC,
+                                                                     const StateType & z,
                                                                      VectorStateType &kin_rates)
   {
      antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
      VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
-     _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
+     _neutral_reactions.compute_mole_sources(KC,
                                              molar_concentrations,dummy,kin_rates);
 
-     if(_ionic_coupling)this->add_ionic_contribution(molar_concentrations,z,kin_rates);
+     if(_ionic_coupling)this->add_ionic_contribution(molar_concentrations,KC,z,kin_rates);
 
      return;
   }
@@ -163,7 +170,8 @@ namespace Planet
   template<typename StateType, typename VectorStateType, typename MatrixStateType>
   inline
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate_and_derivs(const VectorStateType &molar_concentrations,
-                                      const StateType &z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn)
+                                      const Antioch::KineticsConditions<StateType> & kinetics_conditions, 
+                                      const StateType & z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn)
   {
      antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
      antioch_assert_equal_to(dkin_rates_dn.size(),_composition.neutral_composition().n_species());
@@ -180,16 +188,18 @@ namespace Planet
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      ddummy_dT.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
      dkin_dT.resize(_composition.neutral_composition().n_species(),0.L); //no temp
-     _neutral_reactions.compute_mole_sources_and_derivs(_temperature.neutral_temperature(z),molar_concentrations,dummy,ddummy_dT,
+     _neutral_reactions.compute_mole_sources_and_derivs(kinetics_conditions,molar_concentrations,dummy,ddummy_dT,
                                                         kin_rates,dkin_dT,dkin_rates_dn);
 
-     if(_ionic_coupling)this->add_ionic_contribution_and_derivs(molar_concentrations,z,kin_rates,dkin_rates_dn);
+     if(_ionic_coupling)this->add_ionic_contribution_and_derivs(molar_concentrations,kinetics_conditions,z,kin_rates,dkin_rates_dn);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution(const VectorStateType &neutral_concentrations, const StateType &z, 
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution(const VectorStateType &neutral_concentrations, 
+                                                                                              const Antioch::KineticsConditions<StateType> &KC, 
+                                                                                              const StateType & z,
                                                                                               VectorStateType &kin_rates)
   {
 
@@ -209,7 +219,7 @@ namespace Planet
     source_ions.resize(_ionic_reactions.n_species(),0.L);
 //all temperature conditions, solver deal with it
 
-    _newton_solver.precompute_rates(full_concentrations,_temperature.neutral_temperature(z), _temperature.ionic_temperature(z), _temperature.electronic_temperature(z)); 
+    _newton_solver.precompute_rates(full_concentrations,KC, KC.T(), _temperature.electronic_temperature(z)); 
     if(_newton_solver.steady_state(source_ions))
     {
 
@@ -227,7 +237,8 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType, typename MatrixStateType>
   inline
-  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution_and_derivs(const VectorStateType &neutral_concentrations, const StateType &z, 
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution_and_derivs(const VectorStateType &neutral_concentrations, 
+                                                                                                         const Antioch::KineticsConditions<StateType> & KC, const StateType &z, 
                                                                                               VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn)
   {
 
@@ -252,7 +263,7 @@ namespace Planet
       drate_dn[s].resize(_ionic_reactions.n_species(),0.L);
     }
 //all temperature conditions, solver deal with it
-    _newton_solver.precompute_rates(full_concentrations,_temperature.neutral_temperature(z), _temperature.ionic_temperature(z), _temperature.electronic_temperature(z)); 
+    _newton_solver.precompute_rates(full_concentrations,KC, KC.T(), _temperature.electronic_temperature(z)); 
     if(_newton_solver.steady_state_and_derivs(source_ions,drate_dn))
     {
 

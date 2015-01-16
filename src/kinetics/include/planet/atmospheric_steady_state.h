@@ -107,7 +107,7 @@ namespace Planet
         //! caches updated rate constants
         template <typename StateType, typename VectorStateType>
         void precompute_rates(const VectorStateType & mole_concentrations, 
-                              const StateType & T_neutral,
+                              const Antioch::KineticsConditions<StateType> & KC,
                               const StateType & T_ions,
                               const StateType & T_electrons);
 
@@ -141,7 +141,7 @@ namespace Planet
   template <typename StateType, typename VectorStateType>
   inline
   void AtmosphericSteadyState<CoeffType,VectorCoeffType>::precompute_rates(const VectorStateType & mole_concentrations,
-                                                                           const StateType & T_neutral,
+                                                                           const Antioch::KineticsConditions<StateType> & KC, //T_neutral & photochemistry as of now
                                                                            const StateType & T_ions,
                                                                            const StateType & T_electrons)
   {
@@ -156,16 +156,10 @@ namespace Planet
        const Antioch::Reaction<CoeffType> & reaction = _reactions_system.reaction_set().reaction(rxn);
        StateType kfwd;
        Antioch::set_zero(kfwd);
-       if(reaction.kinetics_model() == Antioch::KineticsModel::PHOTOCHEM)
-       {
-          kfwd = reaction.compute_photo_rate_of_progress(mole_concentrations, (*_reactions_system.particle_flux()[_reactions_system.reaction_particle_flux_map().at(rxn)] ),T_neutral);
-       }else
-       {
 //TODO separate the different kind of reactions in a better way
-          kfwd = (reaction.kinetics_model() == Antioch::KineticsModel::HERCOURT_ESSEN)?
-                    reaction.compute_forward_rate_coefficient( mole_concentrations, T_neutral):   // any reaction that is not a DR
-                    reaction.compute_forward_rate_coefficient( mole_concentrations, T_electrons); // DR
-       }
+        kfwd = (reaction.kinetics_model() == Antioch::KineticsModel::HERCOURT_ESSEN)?
+                    reaction.compute_forward_rate_coefficient( mole_concentrations, KC):   // any reaction that is not a DR
+                    reaction.compute_forward_rate_coefficient( mole_concentrations, Antioch::KineticsConditions<StateType>(T_electrons)); // DR
 
        _updated_rates[rxn] = kfwd;
        _rates[rxn] = kfwd;
