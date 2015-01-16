@@ -87,8 +87,12 @@ namespace Planet
 
     const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>& _composition;
 
+// temperatures
+    const AtmosphericTemperature<CoeffType,VectorCoeffType> & _temperature;
+
     Antioch::KineticsEvaluator<CoeffType> _neutral_kinetics;
     Antioch::KineticsEvaluator<CoeffType> _ionic_kinetics;
+    const std::vector<unsigned int> & _index_hv;
 
     PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> _photon;
 
@@ -127,8 +131,10 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysicsEvaluator( PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>& helper )
     : _composition(helper.composition()),
+      _temperature(helper.temperature()),
       _neutral_kinetics(helper.neutral_reaction_set(),0), /*! \todo generalize 0 for other types*/
       _ionic_kinetics(helper.ionic_reaction_set(),0), /*! \todo generalize 0 for other types*/
+      _index_hv(helper.index_photochemistry()),
       _photon(helper.phy_at_top(),helper.tau(),_composition),
       _molecular_diffusion(helper.bin_diff_coeff(),_composition,helper.temperature(),helper.medium()),
       _eddy_diffusion(_composition,helper.K0()),
@@ -183,10 +189,15 @@ namespace Planet
    _photon.update_photon_flux(molar,this->get_cache(z),z,phy);
 
    phy_at_z.set_flux(phy);
+   Antioch::KineticsConditions<StateType> KC(_temperature.neutral_temperature(z));
+   for(unsigned int hv = 0; hv < _index_hv.size(); hv++)
+   {
+      KC.add_particle_flux(phy_at_z,_index_hv[hv]);
+   }
 
 // diff and chem
    _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
-   _kinetics.chemical_rate_and_derivs(molar,z,_omegas_dots,_domegas_dots_dn);
+   _kinetics.chemical_rate_and_derivs(molar,KC,z,_omegas_dots,_domegas_dots_dn);
 
    this->update_cache(molar,z);
 

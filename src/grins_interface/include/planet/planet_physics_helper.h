@@ -115,7 +115,9 @@ namespace Planet
 
     CoeffType scaling_factor() const;
 
-    const std::vector<Antioch::Species> ss_species() const;
+    const std::vector<Antioch::Species> & ss_species() const;
+
+    const std::vector<unsigned int> & index_photochemistry() const;
 
   private:
 
@@ -134,6 +136,7 @@ namespace Planet
     Antioch::ReactionSet<CoeffType>* _ionic_reaction_set;
 
 // photons related
+    std::vector<unsigned int> _index_photochemistry;
     Chapman<CoeffType>* _chapman;
 
     Antioch::ParticleFlux<VectorCoeffType> _phy1AU;
@@ -568,6 +571,7 @@ namespace Planet
 
     this->fill_neutral_reactions_falloff(input_reactions_fall, *_neutral_reaction_set);
 
+    unsigned int tmp_reac = _neutral_reaction_set->n_reactions();
     //now the photochemical ones
     unsigned int n_hv_reacting = input.vector_variable_size("Planet/photo_reacting_species");
 
@@ -577,7 +581,6 @@ namespace Planet
       {
         hv_file[s] = std::string(input("Planet/input_photoreactions_root","DIE!")) + std::string(input("Planet/photo_reacting_species", "DIE!", s));
       }
-
 
    for(unsigned int s = 0; s < n_hv_reacting; s++)
    {
@@ -593,7 +596,9 @@ namespace Planet
       this->read_photochemistry_reac(hv_file[s], species, *_neutral_reaction_set);
 
     }
-
+        // all photochemistry is here
+   for(unsigned int ih = tmp_reac; ih < _neutral_reaction_set->n_reactions(); ih++)
+       _index_photochemistry.push_back(ih);
 
     if( input.have_variable("Planet/input_ions_reactions") )
       {
@@ -1934,9 +1939,15 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  const std::vector<Antioch::Species> PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::ss_species() const
+  const std::vector<Antioch::Species> & PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::ss_species() const
   {
     return _ss_species;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  const std::vector<unsigned int> & PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::index_photochemistry() const
+  {
+    return _index_photochemistry;
   }
 
 } // end namespace Planet
