@@ -42,10 +42,11 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  Scalar coeff(100.);
-  if(std::numeric_limits<Scalar>::epsilon() < 1e-17)coeff *= 5.;
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
+  const Scalar tol = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e16:
+                                                                      std::numeric_limits<Scalar>::epsilon() * 150;
+
   if(std::abs((theory-cal)/theory) < tol)return 0;
+
   std::cout << std::scientific  << std::setprecision(20)
             << "failed test: "  << words << "\n"
             << "theory: "       << theory
@@ -96,7 +97,7 @@ Scalar Jeans(const Scalar &m, const Scalar &n, const Scalar &T, const Scalar &z)
 }
 
 template <typename Scalar>
-int tester(const std::string & input_T)
+int tester(const std::string & input_T, const std::string & input_species)
 {
   std::vector<std::string> neutrals;
   std::vector<std::string> ions;
@@ -105,7 +106,7 @@ int tester(const std::string & input_T)
 //ionic system contains neutral system
   ions = neutrals;
   ions.push_back("N2+");
-  Scalar MN(14.008L), MC(12.011L), MH(1.008L);
+  Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
@@ -130,9 +131,9 @@ int tester(const std::string & input_T)
  * first level
  *******************************/
 //neutrals
-  Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
+  Antioch::ChemicalMixture<Scalar> neutral_species(neutrals,true,input_species); 
 //ions
-  Antioch::ChemicalMixture<Scalar> ionic_species(ions); 
+  Antioch::ChemicalMixture<Scalar> ionic_species(ions,true,input_species); 
 
 /*********************************
  * second level
@@ -146,7 +147,6 @@ int tester(const std::string & input_T)
 /*********************************
  * third level
  *********************************/
-
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot,zmin,zmax);
@@ -158,6 +158,9 @@ int tester(const std::string & input_T)
   int return_flag(0);
   for(Scalar z = zmin; z < zmax; z += dz)
   {
+    std::stringstream wordsz;
+    wordsz << z;
+
     Scalar T = temperature.neutral_temperature(z);
 
     std::vector<Scalar> scale_heights;
@@ -170,35 +173,36 @@ int tester(const std::string & input_T)
     {
        Scalar scale_height = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T / 
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                        Mm[s]/Antioch::Constants::Avogadro<Scalar>() * 1e-3L);
+                        Mm[s]/Antioch::Constants::Avogadro<Scalar>());
 
-       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //mass (kg)
+       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>(), //mass (kg)
                                  neutral_molar_concentration[s], //n
                                  T,z); //T,alt
 
+       std::stringstream wordsJ;
        return_flag = check_test(Jeans_flux,composition.Jeans_flux(
-                                        composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>() * Scalar(1e-3), //g/mol -> kg/mol
+                                        composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>(), //g/mol -> kg/mol
                                         neutral_molar_concentration[s], //n, cm-3
                                         T,// T (K)
-                                        z), //km -> m
+                                        z), //km 
                                 "Jeans escape flux of species " + 
-                                composition.neutral_composition().species_inverse_name_map().at(composition.neutral_composition().species_list()[s]) + 
-                                " at altitude") ||
+                                composition.neutral_composition().species_inverse_name_map().at(composition.neutral_composition().species_list()[s])
+                                + " at altitude " + wordsz.str()) ||
                      return_flag;
-                                        
-       return_flag = check_test(scale_height, scale_heights[s], "scale height of species at altitude") ||
+                                      
+       return_flag = check_test(scale_height, scale_heights[s], "scale height of species at altitude " + wordsz.str()) ||
                      return_flag;
        M_the += Mm[s] * molar_frac[s];
     }
 
     Scalar H_the = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T /
                    (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                   M_the * 1e-3L / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
+                   M_the / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
 
     Scalar a_the = (Planet::Constants::Titan::radius<Scalar>() + z) / H_the;
 
-    return_flag = check_test(H_the, composition.atmospheric_scale_height(neutral_molar_concentration, z), "atmospheric scale height at altitude") ||
-                  check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude") ||
+    return_flag = check_test(H_the, composition.atmospheric_scale_height(neutral_molar_concentration, z), "atmospheric scale height at altitude " + wordsz.str()) ||
+                  check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude " + wordsz.str()) ||
                   return_flag;
 
   }
@@ -216,7 +220,7 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (tester<float>(std::string(argv[1])) ||
-          tester<double>(std::string(argv[1])) ||
-          tester<long double>(std::string(argv[1])));
+  return (tester<float>(std::string(argv[1]), std::string(argv[2])) ||
+          tester<double>(std::string(argv[1]), std::string(argv[2])) ||
+          tester<long double>(std::string(argv[1]), std::string(argv[2])));
 }
