@@ -81,24 +81,6 @@ include_HEADERS += pdf_management/include/planet/diun_pdf.h
 include_HEADERS += pdf_management/include/planet/dior_pdf.h
 include_HEADERS += pdf_management/include/planet/pdf_management.h
 
-# queso interface
-include_HEADERS += pdf_management/include/planet/kinetics_branching_structure.h
-include_HEADERS += pdf_management/include/planet/branching_ratio_node.h
-include_HEADERS += pdf_management/include/planet/pdf_enum.h
-include_HEADERS += pdf_management/include/planet/base_pdf.h
-include_HEADERS += pdf_management/include/planet/unif_pdf.h
-include_HEADERS += pdf_management/include/planet/norm_pdf.h
-include_HEADERS += pdf_management/include/planet/nort_pdf.h
-include_HEADERS += pdf_management/include/planet/logn_pdf.h
-include_HEADERS += pdf_management/include/planet/logu_pdf.h
-include_HEADERS += pdf_management/include/planet/diri_pdf.h
-include_HEADERS += pdf_management/include/planet/dirg_pdf.h
-include_HEADERS += pdf_management/include/planet/dirw_pdf.h
-include_HEADERS += pdf_management/include/planet/diut_pdf.h
-include_HEADERS += pdf_management/include/planet/diun_pdf.h
-include_HEADERS += pdf_management/include/planet/dior_pdf.h
-include_HEADERS += pdf_management/include/planet/pdf_management.h
-
 # temperature
 include_HEADERS += temperature/include/planet/atmospheric_temperature.h
 
