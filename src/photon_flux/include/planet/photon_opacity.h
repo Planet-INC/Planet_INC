@@ -49,9 +49,9 @@ namespace Planet
           Chapman<CoeffType> &_chapman;
 
 //store
-          std::map<Antioch::Species, unsigned int>    _cross_sections_map;
+          std::map<unsigned int, unsigned int>    _cross_sections_map;
           std::vector<CrossSection<VectorCoeffType> > _absorbing_species_cs;
-          std::vector<Antioch::Species>               _absorbing_species;
+          std::vector<unsigned int>               _absorbing_species;
           std::vector<unsigned int>                   _absorbing_species_id;
 
         public:
@@ -63,17 +63,17 @@ namespace Planet
           void compute_tau(const StateType &a, const VectorStateType &sum_dens, VectorStateType &tau) const;
 
           //!\return absorbing species
-          const std::vector<Antioch::Species> absorbing_species() const;
+          const std::vector<unsigned int> absorbing_species() const;
 
           //!\return absorbing species cross-section
           const std::vector<CrossSection<VectorCoeffType> > &absorbing_species_cs() const;
 
           //!\return absorbing species cross-section map
-          const std::map<Antioch::Species, unsigned int> cross_sections_map() const;
+          const std::map<unsigned int, unsigned int> cross_sections_map() const;
 
           //!adds a photon cross-section
           template<typename VectorStateType>
-          void add_cross_section(const VectorStateType &lambda, const VectorStateType &cs, const Antioch::Species &sp, unsigned int id);
+          void add_cross_section(const VectorStateType &lambda, const VectorStateType &cs, const unsigned int &sp, unsigned int id);
 
           //!update cross-section
           template<typename VectorStateType>
@@ -101,7 +101,7 @@ namespace Planet
   template<typename VectorStateType>
   inline
   void PhotonOpacity<CoeffType,VectorCoeffType>::add_cross_section(const VectorStateType &lambda, const VectorStateType &cs, 
-                                                                   const Antioch::Species &sp, unsigned int id)
+                                                                   const unsigned int &sp, unsigned int id)
   {
      _absorbing_species.push_back(sp);
      _absorbing_species_id.push_back(id);
@@ -111,7 +111,7 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
-  const std::vector<Antioch::Species> PhotonOpacity<CoeffType,VectorCoeffType>::absorbing_species() const
+  const std::vector<unsigned int> PhotonOpacity<CoeffType,VectorCoeffType>::absorbing_species() const
   {
      return _absorbing_species;
   }
@@ -126,7 +126,7 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType>
   inline
-  const std::map<Antioch::Species, unsigned int> PhotonOpacity<CoeffType,VectorCoeffType>::cross_sections_map() const
+  const std::map<unsigned int, unsigned int> PhotonOpacity<CoeffType,VectorCoeffType>::cross_sections_map() const
   {
      return _cross_sections_map;
   }

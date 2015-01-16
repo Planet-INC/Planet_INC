@@ -48,8 +48,8 @@ class BinaryDiffusion{
         CoeffType _beta;
         DiffusionType _diffusion_model;
 
-        Antioch::Species _mol1;
-        Antioch::Species _mol2;
+        unsigned int _mol1;
+        unsigned int _mol2;
 
       public:
         //!
@@ -57,14 +57,14 @@ class BinaryDiffusion{
         //!
         BinaryDiffusion(const BinaryDiffusion &rhs);
         //! no data
-        BinaryDiffusion(const Antioch::Species &mol1, const Antioch::Species & mol2);
+        BinaryDiffusion(const unsigned int &mol1, const unsigned int & mol2);
         //!
-        BinaryDiffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, const CoeffType &par1, const CoeffType &par2, const DiffusionType &model);
+        BinaryDiffusion(const unsigned int &mol1, const unsigned int & mol2, const CoeffType &par1, const CoeffType &par2, const DiffusionType &model);
         //!
         ~BinaryDiffusion();
 
         //!
-        void set_molecules(const Antioch::Species &mol1, const Antioch::Species &mol2);
+        void set_molecules(const unsigned int &mol1, const unsigned int &mol2);
         //!
         void set_diffusion_model(const DiffusionType &model);
         //!
@@ -72,7 +72,7 @@ class BinaryDiffusion{
         void set_parameters(const StateType &par1, const StateType &par2);
         //!
         template<typename StateType>
-        void set_binary_diffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, 
+        void set_binary_diffusion(const unsigned int &mol1, const unsigned int & mol2, 
                                   const StateType &par1, const StateType &par2, const DiffusionType &model);
 
         //!
@@ -113,9 +113,9 @@ class BinaryDiffusion{
         //!
         DiffusionType diffusion_model() const;
         //!
-        Antioch::Species mol1() const {return _mol1;}
+        unsigned int mol1() const {return _mol1;}
         //!
-        Antioch::Species mol2() const {return _mol2;}
+        unsigned int mol2() const {return _mol2;}
 
 };
 
@@ -164,8 +164,8 @@ _diffusion_model(DiffusionType::NoData)
 
 template<typename CoeffType>
 inline
-BinaryDiffusion<CoeffType>::BinaryDiffusion(const Antioch::Species &mol1, 
-                                            const Antioch::Species &mol2):
+BinaryDiffusion<CoeffType>::BinaryDiffusion(const unsigned int &mol1, 
+                                            const unsigned int &mol2):
 _D01(-1.L),
 _beta(0.L),
 _diffusion_model(DiffusionType::NoData),
@@ -177,8 +177,8 @@ _mol2(mol2)
 
 template<typename CoeffType>
 inline
-BinaryDiffusion<CoeffType>::BinaryDiffusion(const Antioch::Species &mol1, 
-                                            const Antioch::Species &mol2, 
+BinaryDiffusion<CoeffType>::BinaryDiffusion(const unsigned int &mol1, 
+                                            const unsigned int &mol2, 
                                             const CoeffType &par1, 
                                             const CoeffType &par2, 
                                             const DiffusionType &model):
@@ -199,7 +199,7 @@ BinaryDiffusion<CoeffType>::~BinaryDiffusion()
 
 template<typename CoeffType>
 inline
-void BinaryDiffusion<CoeffType>::set_molecules(const Antioch::Species &mol1, const Antioch::Species &mol2)
+void BinaryDiffusion<CoeffType>::set_molecules(const unsigned int &mol1, const unsigned int &mol2)
 {
   _mol1 = mol1;
   _mol2 = mol2;
@@ -262,7 +262,7 @@ void BinaryDiffusion<CoeffType>::set_parameters(const StateType &par1, const Sta
 template<typename CoeffType>
 template<typename StateType>
 inline
-void BinaryDiffusion<CoeffType>::set_binary_diffusion(const Antioch::Species &mol1, const Antioch::Species & mol2, 
+void BinaryDiffusion<CoeffType>::set_binary_diffusion(const unsigned int &mol1, const unsigned int & mol2, 
                                                       const StateType &par1, const StateType &par2, const DiffusionType &model)
 {
   this->set_diffusion_model(model);
