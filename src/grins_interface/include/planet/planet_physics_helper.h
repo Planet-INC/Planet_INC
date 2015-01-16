@@ -511,7 +511,7 @@ namespace Planet
 
       std::string species = input("Planet/absorbing_species", "DIE!", s);
 
-      if(!_neutral_species->active_species_name_map().count(species))
+      if(!_neutral_species->species_name_map().count(species))
       {
          std::cerr << "Unknown species \"" << species << "\".  Forgot to add it to the neutral_species entry?" << std::endl;
          antioch_error();
@@ -522,7 +522,7 @@ namespace Planet
       this->read_cross_section(abs_file[s], lambda, sigma); //cm2.angstrom-1
 
       _tau->add_cross_section( lambda, sigma, _neutral_species->species_name_map().at(species),          // Antioch::Species
-                                              _neutral_species->active_species_name_map().at(species) ); // id
+                                              _neutral_species->species_name_map().at(species) ); // id
 
     }
 
@@ -587,7 +587,7 @@ namespace Planet
 
       std::string species = input("Planet/photo_reacting_species", "DIE!", s);
 
-      if(!_neutral_species->active_species_name_map().count(species))
+      if(!_neutral_species->species_name_map().count(species))
       {
          std::cerr << "Unknown species \"" << species << "\".  Forgot to add it to the neutral_species entry?" << std::endl;
          antioch_error();
@@ -760,11 +760,11 @@ namespace Planet
 
         for(unsigned int ir = 0; ir < reactants.size(); ir++)
           {
-            reaction->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+            reaction->add_reactant( reactants[ir],chem_mixture.species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
           }
         for(unsigned int ip = 0; ip < products.size(); ip++)
           {
-            reaction->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+            reaction->add_product( products[ip],chem_mixture.species_name_map().find( products[ip] )->second,stoi_prod[ip]);
           }
         neutral_reaction_set.add_reaction(reaction);
       }
@@ -843,11 +843,11 @@ namespace Planet
 
         for(unsigned int ir = 0; ir < reactants.size(); ir++)
           {
-            reaction->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+            reaction->add_reactant( reactants[ir],chem_mixture.species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
           }
         for(unsigned int ip = 0; ip < products.size(); ip++)
           {
-            reaction->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+            reaction->add_product( products[ip],chem_mixture.species_name_map().find( products[ip] )->second,stoi_prod[ip]);
           }
         neutral_reaction_set.add_reaction(reaction);
 
@@ -1269,7 +1269,7 @@ namespace Planet
          bool count_reaction(true);
          for(unsigned int ir = 0; ir < reactants.size(); ir++)
          {
-            if(!reaction_set.chemical_mixture().active_species_name_map().count(reactants[ir]))
+            if(!reaction_set.chemical_mixture().species_name_map().count(reactants[ir]))
                 count_reaction = false;
          }
 
@@ -1281,7 +1281,7 @@ namespace Planet
 
          for(unsigned int ir = 0; ir < reactants.size(); ir++)
          {
-            my_rxn->add_reactant(reactants[ir],reaction_set.chemical_mixture().active_species_name_map().find( reactants[ir] )->second,stoi[ir]);
+            my_rxn->add_reactant(reactants[ir],reaction_set.chemical_mixture().species_name_map().find( reactants[ir] )->second,stoi[ir]);
          }
   
          reactants.clear();
@@ -1304,7 +1304,7 @@ namespace Planet
 
          for(unsigned int ip = 0; ip < reactants.size(); ip++)
          {
-            if(!reaction_set.chemical_mixture().active_species_name_map().count( reactants[ip]))
+            if(!reaction_set.chemical_mixture().species_name_map().count( reactants[ip]))
                       count_reaction = false;
          }
   
@@ -1316,7 +1316,7 @@ namespace Planet
 
          for(unsigned int ip = 0; ip < reactants.size(); ip++)
          {
-            my_rxn->add_product(reactants[ip],reaction_set.chemical_mixture().active_species_name_map().find( reactants[ip])->second,stoi[ip]);
+            my_rxn->add_product(reactants[ip],reaction_set.chemical_mixture().species_name_map().find( reactants[ip])->second,stoi[ip]);
          }
         
          reaction_set.add_reaction(my_rxn);
@@ -1580,7 +1580,7 @@ namespace Planet
 
     for(unsigned int ir = 0; ir < reactants.size(); ir++)
       {
-        if( !chem_mixture.active_species_name_map().count(reactants[ir]))
+        if( !chem_mixture.species_name_map().count(reactants[ir]))
           {
             skip = true;
             break;
@@ -1590,7 +1590,7 @@ namespace Planet
       {
         for(unsigned int ip = 0; ip < products.size(); ip++)
           {
-            if( !chem_mixture.active_species_name_map().count(products[ip]))
+            if( !chem_mixture.species_name_map().count(products[ip]))
               {
                 skip = true;
                 break;
@@ -1693,7 +1693,7 @@ namespace Planet
         condense_molecule(stoi_prod[ibr],produc[ibr]);
         for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
           {
-            if( !chem_mixture.active_species_name_map().count(produc[ibr][ip]))
+            if( !chem_mixture.species_name_map().count(produc[ibr][ip]))
               {
                 skip[ibr] = true;
                 break;
@@ -1726,10 +1726,10 @@ namespace Planet
         equation.erase(equation.size() - 3, 3);
         Antioch::Reaction<CoeffType> * reaction = Antioch::build_reaction<CoeffType>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
 
-        reaction->add_reactant( reac,chem_mixture.active_species_name_map().find(reac)->second,1);
+        reaction->add_reactant( reac,chem_mixture.species_name_map().find(reac)->second,1);
         for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
           {
-            reaction->add_product( produc[ibr][ip],chem_mixture.active_species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
+            reaction->add_product( produc[ibr][ip],chem_mixture.species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
           }
 
         VectorCoeffType dataf;

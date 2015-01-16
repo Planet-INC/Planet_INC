@@ -142,7 +142,7 @@ namespace Planet
     _i_medium.resize(_n_medium);
     for(unsigned int i = 0; i < _n_medium; i++)
     {
-      _i_medium[i] = _mixture.neutral_composition().active_species_name_map().at(medium_species[i]);
+      _i_medium[i] = _mixture.neutral_composition().species_name_map().at(medium_species[i]);
     }
   
     return; 
