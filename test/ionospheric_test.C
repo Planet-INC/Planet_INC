@@ -459,7 +459,7 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
 
        for(unsigned int ir = 0; ir < reactants.size(); ir++)
        {
-          my_rxn->add_reactant(reactants[ir],reaction_set.chemical_mixture().active_species_name_map().find( reactants[ir] )->second,stoi[ir]);
+          my_rxn->add_reactant(reactants[ir],reaction_set.chemical_mixture().species_name_map().find( reactants[ir] )->second,stoi[ir]);
        }
 
        reactants.clear();
@@ -482,7 +482,7 @@ void treat_reaction(LocalReaction &reac, Antioch::ReactionSet<Scalar> &reaction_
 
        for(unsigned int ip = 0; ip < reactants.size(); ip++)
        {
-          my_rxn->add_product(reactants[ip],reaction_set.chemical_mixture().active_species_name_map().find( reactants[ip])->second,stoi[ip]);
+          my_rxn->add_product(reactants[ip],reaction_set.chemical_mixture().species_name_map().find( reactants[ip])->second,stoi[ip]);
        }
       
        reaction_set.add_reaction(my_rxn);     
@@ -590,19 +590,19 @@ void prepare_the_ionosphere(const std::string &file_neu_conc, std::vector<Scalar
   {
      Scalar xmol;
      data >> name >> xmol;
-     concentrations[mixture.active_species_name_map().at(name)] = ntot * xmol;
+     concentrations[mixture.species_name_map().at(name)] = ntot * xmol;
   }
   data.close();
 }
 
 template <typename Scalar>
-int tester(const std::string & file_spec, const std::string &file_reac, const std::string &file_neu_conc)
+int tester(const std::string & file_spec, const std::string &file_reac, const std::string &file_neu_conc, const std::string & species_file)
 {
 // first, the species
   std::vector<std::string> all_species;
   read_the_species(file_spec,all_species);
 
-  Antioch::ChemicalMixture<Scalar> mixture(all_species);
+  Antioch::ChemicalMixture<Scalar> mixture(all_species,true,species_file);
 
 // then, the ions
   std::vector<unsigned int>  ss_species;
@@ -663,8 +663,8 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
-          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])) ||
-          tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3])));
+  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4])) ||
+          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4])) ||
+          tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4])));
 
 }
