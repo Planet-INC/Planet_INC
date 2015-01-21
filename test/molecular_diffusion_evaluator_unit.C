@@ -66,6 +66,7 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   {
      Scalar t,tz,dt,dtz;
      temp >> t >> tz >> dt >> dtz;
+     if(!temp.good())break;
      T0.push_back(t);
      Tz.push_back(tz);
   }
