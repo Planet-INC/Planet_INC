@@ -49,6 +49,16 @@ int main(int argc, char* argv[])
                            sim_builder,
                            libmesh_init.comm() );
 
+  // Asssign initial temperature value
+  std::string system_name = libMesh_inputfile( "screen-options/system_name", "Planet" );
+  std::tr1::shared_ptr<libMesh::EquationSystems> es = grins.get_equation_system();
+  const libMesh::System& system = es->get_system(system_name);
+
+  Planet::PlanetPhysicsHelper<double,std::vector<double>, std::vector<std::vector<double> > > helper(libMesh_inputfile);
+  Planet::PlanetInitialGuess<double,std::vector<double>, std::vector<std::vector<double> > > initial_func(helper);
+
+  system.project_solution(&initial_func);
+
   // Do solve here
   grins.run();
   
