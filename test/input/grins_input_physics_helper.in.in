@@ -1,5 +1,7 @@
 [Planet]
 
+species_input_file = '@abs_top_srcdir@/test/input/chemical_species.inp' 
+
 medium = 'N2 CH4'
 
 neutral_species = 'N2 CH4 N(4S) CH3 (1)CH2 (3)CH2 H H2'
