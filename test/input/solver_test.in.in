@@ -1,6 +1,8 @@
 # Options related to all Planet
 [Planet]
 
+species_input_file = '@abs_top_srcdir@/test/input/chemical_species.inp' 
+
 medium = 'N2 CH4'
 
 #neutral_species = 'N2 CH4 H H2 C CH (1)CH2 (3)CH2 CH3 C2H2 C2H4 C2H6 N(4S) NH CN
@@ -27,7 +29,7 @@ file_flyby = '@abs_top_srcdir@/test/input/T40_Flyby'
 root_input = '@abs_top_srcdir@/test/input/'
 file_neutral_charac = '@abs_top_srcdir@/test/input/neutrals.dat'
 input_cross_section_root = '@abs_top_srcdir@/test/input/hv_cross_section_low_res.'
-input_hv = '@abs_top_srcdir@/test/input/hv_SwRI_low_res.dat'
+input_hv = '@abs_top_srcdir@/test/input/hv_SwRI_high_res.dat'
 input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
 input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
 input_photoreactions_root = '@abs_top_srcdir@/test/input/neutral_reactions_photochem.'
