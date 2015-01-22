@@ -87,10 +87,12 @@ namespace Planet
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         barometry_density(const StateType &z, const StateType &zmin, const StateType &zmin_dens, const StateType &T, const StateType &Mm) const
-        ANTIOCH_AUTOFUNC(StateType, zmin_dens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<StateType>() + z) * (Planet::Constants::Titan::radius<StateType>() + zmin) * 
-                                                                 Antioch::constant_clone(z,1e3) * //to SI (km -> m)
-                                             Antioch::Constants::Avogadro<StateType>() * Planet::Constants::Universal::kb<StateType>() * T / 
-                                                        (Planet::Constants::Universal::G<StateType>() * Planet::Constants::Titan::mass<StateType>() * Mm))
+        ANTIOCH_AUTOFUNC(StateType, zmin_dens * Antioch::ant_exp( - (z - zmin) /
+                                                                 ( (Planet::Constants::Titan::radius<StateType>() + z) * 
+                                                                   (Planet::Constants::Titan::radius<StateType>() + zmin) * Antioch::constant_clone(z,1e3) * //to SI (km -> m)
+                                                                    Antioch::Constants::Avogadro<StateType>() * Planet::Constants::Universal::kb<StateType>() * T / 
+                                                                   (Planet::Constants::Universal::G<StateType>() * Planet::Constants::Titan::mass<StateType>() * Mm)
+                                                                 )
                                                                )
                         )
 
@@ -475,11 +477,7 @@ namespace Planet
          Mm += _neutral_molar_fraction_bottom[s] * _neutral_composition.M(s);
       }
 
-      CoeffType nTot = this->barometry_density(z, _zmin, _total_bottom_density, _temperature.neutral_temperature(z), Mm);
-
-      StateType density = _neutral_molar_fraction_bottom[species] * nTot;
-
-      return density;
+      return _neutral_molar_fraction_bottom[species] * this->barometry_density(z, _zmin, _total_bottom_density, _temperature.neutral_temperature(z), Mm);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
