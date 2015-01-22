@@ -115,9 +115,9 @@ namespace Planet
      _species_var_names.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
-	/*! \todo Make this prefix string an input option */
-	std::string var_name = "n_"+std::string(input( "Planet/neutral_species", "DIE!", i ));
-	_species_var_names.push_back( var_name );
+        /*! \todo Make this prefix string an input option */
+        std::string var_name = "n_"+std::string(input( "Planet/neutral_species", "DIE!", i ));
+        _species_var_names.push_back( var_name );
       }
 
     this->_bc_handler = new PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>(physics_name,input,_helper);
@@ -143,8 +143,8 @@ namespace Planet
     _species_vars.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
-	_species_vars.push_back( system->add_variable( _species_var_names[i], 
-						       this->_species_order, _species_FE_family) );
+        _species_vars.push_back( system->add_variable( _species_var_names[i], 
+                                                       this->_species_order, _species_FE_family) );
       }
 
     return;
@@ -155,7 +155,7 @@ namespace Planet
   {
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
-	system->time_evolving( _species_vars[i] );
+        system->time_evolving( _species_vars[i] );
       }
 
     return;
@@ -206,7 +206,7 @@ namespace Planet
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
-        const libMesh::Number z = r - Constants::Titan::radius<double>();
+        const libMesh::Number z = r - Constants::Titan::radius<libMesh::Number>();
         
         libMesh::Real jac = r  * r * JxW[qp];
 
@@ -217,7 +217,6 @@ namespace Planet
           {
             molar_concentrations[s] = context.interior_value(this->_species_vars[s],qp);
             dmolar_concentrations_dz[s] = context.interior_gradient(this->_species_vars[s],qp)(0);
-
           }
 
         evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
@@ -340,11 +339,11 @@ namespace Planet
     std::vector<GRINS::BoundaryID> ids = context.side_boundary_ids();
 
     for( std::vector<GRINS::BoundaryID>::const_iterator it = ids.begin();
-	 it != ids.end(); it++ )
+         it != ids.end(); it++ )
       {
-	libmesh_assert (*it != libMesh::BoundaryInfo::invalid_id);
+        libmesh_assert (*it != libMesh::BoundaryInfo::invalid_id);
 
-	this->_bc_handler->apply_neumann_bcs( context, cache, compute_jacobian, *it );
+        this->_bc_handler->apply_neumann_bcs( context, cache, compute_jacobian, *it );
       }
 
     return;
