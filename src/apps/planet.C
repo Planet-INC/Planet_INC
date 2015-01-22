@@ -27,6 +27,8 @@
 
 // Planet
 #include "planet/physics_factory.h"
+#include "planet/planet_physics_helper.h"
+#include "planet/planet_initial_guess.h"
 
 int main(int argc, char* argv[])
 {
