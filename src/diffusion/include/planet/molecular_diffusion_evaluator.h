@@ -51,8 +51,8 @@ namespace Planet
     //dependencies
         //! stock of binary diffusion coefficients
         const std::vector<std::vector<BinaryDiffusion<CoeffType> > >          & _diffusion;
-        const AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>  &_mixture;
-        const AtmosphericTemperature<CoeffType, VectorCoeffType>              &_temperature;
+        const AtmosphericMixture<CoeffType, VectorCoeffType,MatrixCoeffType>  & _mixture;
+        const AtmosphericTemperature<CoeffType, VectorCoeffType>              & _temperature;
 
         //! The coefficients are known
         template<typename StateType>
@@ -252,8 +252,9 @@ namespace Planet
         for(unsigned int j = 0; j < _mixture.neutral_composition().n_species(); j++)
         {
           if(j == s)continue;
-          meanM += _mixture.neutral_composition().M(j) * molar_concentrations[j] / ntot_s; //x_i without s: ni/(ntot - ns)
+          meanM += _mixture.neutral_composition().M(j) * molar_concentrations[j]; 
         }
+        meanM /=  ntot_s; //x_i without s: ni/(ntot - ns)
 
         CoeffType sum = (Antioch::constant_clone(nTot,1) - molar_concentrations[s]/nTot * 
                         (Antioch::constant_clone(nTot,1) - _mixture.neutral_composition().M(s)/meanM));
