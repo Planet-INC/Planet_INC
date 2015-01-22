@@ -252,10 +252,17 @@ namespace Planet
       _ionic_reaction_set(NULL),
       _chapman(NULL),
       _tau(NULL),
-      _scaling_factor(1e13) // sensible default
+      _scaling_factor(1.L) // sensible default
   {
     this->build(input);
     this->sanity_check_chemical_system();
+
+    // once system sane, photochemistry indexing
+    for(unsigned int ih = 0; ih < _neutral_reaction_set->n_reactions(); ih++)
+    {
+      if(_neutral_reaction_set->reaction(ih).kinetics_model() == Antioch::KineticsModel::PHOTOCHEM)
+             _index_photochemistry.push_back(ih);
+    }
 
     return;
   }
@@ -423,11 +430,20 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build_species( const GetPot& input, std::vector<std::string>& neutrals, std::vector<std::string>& ions )
   {
+
+    if( !input.have_variable("Planet/species_input_file") )
+      {
+        std::cerr << "Error: species_input_file not found in input file!" << std::endl;
+        antioch_error();
+      }
+
     if( !input.have_variable("Planet/neutral_species") )
       {
         std::cerr << "Error: neutral_species not found in input file!" << std::endl;
         antioch_error();
       }
+
+    std::string chem_spec_file = input("Planet/species_input_file","DIE!");
 
     unsigned int n_ionic(0);
     if( input.have_variable("Planet/ionic_species") )
@@ -453,8 +469,8 @@ namespace Planet
         ions[n_neutral + s] = input("Planet/ionic_species", "DIE!", s);
       }
 
-    _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals);
-    _ionic_species   = new Antioch::ChemicalMixture<CoeffType>(ions);
+    _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals,true,chem_spec_file);
+    _ionic_species   = new Antioch::ChemicalMixture<CoeffType>(ions,true,chem_spec_file);
 
     for( unsigned int s = 0; s < n_ionic; s++ )
       {
@@ -536,7 +552,7 @@ namespace Planet
   {
     // Build up reaction sets
     _neutral_reaction_set = new Antioch::ReactionSet<CoeffType>(*_neutral_species);
-    _ionic_reaction_set = new Antioch::ReactionSet<CoeffType>(*_ionic_species);
+    _ionic_reaction_set   = new Antioch::ReactionSet<CoeffType>(*_ionic_species);
 
     if( !input.have_variable("Planet/input_reactions_elem") )
       {
@@ -571,7 +587,6 @@ namespace Planet
 
     this->fill_neutral_reactions_falloff(input_reactions_fall, *_neutral_reaction_set);
 
-    unsigned int tmp_reac = _neutral_reaction_set->n_reactions();
     //now the photochemical ones
     unsigned int n_hv_reacting = input.vector_variable_size("Planet/photo_reacting_species");
 
@@ -596,9 +611,6 @@ namespace Planet
       this->read_photochemistry_reac(hv_file[s], species, *_neutral_reaction_set);
 
     }
-        // all photochemistry is here
-   for(unsigned int ih = tmp_reac; ih < _neutral_reaction_set->n_reactions(); ih++)
-       _index_photochemistry.push_back(ih);
 
     if( input.have_variable("Planet/input_ions_reactions") )
       {
@@ -680,9 +692,9 @@ namespace Planet
     getline(temp,line);
     while(!temp.eof())
       {
-        CoeffType t(0.),tz(0.),dt(0.),dtz(0.);
-        temp >> t >> tz >> dt >> dtz;
-        if(tz < 1.)continue; //altitude < 1. possible only if nothing is read
+        CoeffType t(0.),tz(0.);
+        temp >> t >> tz;
+        if(!temp.good())break;
         T0.push_back(t);
         Tz.push_back(tz);
       }
@@ -744,13 +756,13 @@ namespace Planet
           {
             kineticsModel = Antioch::KineticsModel::ARRHENIUS;
             dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-            dataf.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
+            dataf.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
           }else
           {
             dataf.push_back(std::atof(str_data[1].c_str())); //beta
             dataf.push_back(std::atof(str_data[2].c_str()));//Ea
             dataf.push_back(1.); //Tref
-            dataf.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
+            dataf.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
           }
 
 
@@ -832,8 +844,8 @@ namespace Planet
             dataf1.push_back(1.); //Tref
             dataf2.push_back(1.); //Tref
           }
-        dataf1.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
-        dataf2.push_back(Antioch::Constants::R_universal<CoeffType>()*1e-3); //scale (R in J/mol/K)
+        dataf1.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
+        dataf2.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
 
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate1 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf1,kineticsModel); //kinetics rate
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate2 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf2,kineticsModel); //kinetics rate
@@ -1388,7 +1400,7 @@ namespace Planet
         CoeffType wv(-1.),sigt(-1.);
         sig_f >> wv >> sigt;
         if(!getline(sig_f,line))break;
-        if(wv < 0.)break;
+        if(!sig_f.good())break;
         lambda.push_back(wv);//A
         sigma.push_back(sigt);//cm-2/A
       }
@@ -1416,7 +1428,7 @@ namespace Planet
       {
         CoeffType wv(-1),ir(-1),dirr(-1);
         flux_1AU >> wv >> ir >> dirr;
-        if(wv < 0.)break;
+        if(!flux_1AU.good())break;
         lambda.push_back(wv);// * 10.L);//nm -> A
         flux.push_back(ir);/* * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<CoeffType>() *
                                                    Antioch::Constants::light_celerity<CoeffType>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A*/
@@ -1424,8 +1436,8 @@ namespace Planet
     flux_1AU.close();
 
 //if in reverse order
-   if(lambda.back() < lambda.front())
-   {
+    if(lambda.back() < lambda.front())
+    {
       VectorCoeffType tmp_l(lambda.size());
       VectorCoeffType tmp_p(flux.size());
       for(unsigned int i = 0; i < lambda.size(); i++)
@@ -1437,7 +1449,7 @@ namespace Planet
       flux.clear();
       lambda = tmp_l;
       flux = tmp_p;
-   }
+    }
 
     phy1AU.set_abscissa(lambda);
     phy1AU.set_flux(flux);
@@ -1489,6 +1501,7 @@ namespace Planet
         std::string name;
         CoeffType mass,AN2,sN2,ACH4,sCH4,alpha,enth,hsr,mr;
         neu >> name >> mass >> AN2 >> sN2 >> ACH4 >> sCH4 >> alpha >> enth >> hsr >> mr;
+        if(!neu.good())break;
         for(unsigned int s = 0; s < neutrals.size(); s++)
           {
             if(name == neutrals[s])
@@ -1528,6 +1541,7 @@ namespace Planet
         std::string neutral;
         CoeffType frac_600, frac_1050, Dfrac_1050;
         frac >> neutral >> frac_600 >> frac_1050 >> Dfrac_1050;
+        if(!frac.good())break;
         for(unsigned int s = 0; s < neutrals.size(); s++)
           {
             if(neutral == neutrals[s])
@@ -1708,7 +1722,7 @@ namespace Planet
         VectorCoeffType sigmas;
         sigmas.resize(nbr - 2,0.L);
         data >> lambda >> total;
-        if(lambda < 0.)break;
+        if(!data.good())break;
         for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr]; //only br here
         datas[0].push_back(lambda);
         for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)datas[ibr + 1].push_back(sigmas[ibr]); // + \lambda

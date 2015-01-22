@@ -160,7 +160,7 @@ void parse_equation(std::vector<std::string> &reactants, std::vector<std::string
 
    for(unsigned int ir = 0; ir < reactants.size(); ir++)
    {
-     if( !chem_mixture.active_species_name_map().count(reactants[ir]))
+     if( !chem_mixture.species_name_map().count(reactants[ir]))
      {
        skip = true;
        break;
@@ -170,7 +170,7 @@ void parse_equation(std::vector<std::string> &reactants, std::vector<std::string
    {
      for(unsigned int ip = 0; ip < products.size(); ip++)
      {
-       if( !chem_mixture.active_species_name_map().count(products[ip]))
+       if( !chem_mixture.species_name_map().count(products[ip]))
        {
          skip = true;
          break;
@@ -222,7 +222,7 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
       condense_molecule(stoi_prod[ibr],produc[ibr]);
       for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
       {
-        if( !chem_mixture.active_species_name_map().count(produc[ibr][ip]))
+        if( !chem_mixture.species_name_map().count(produc[ibr][ip]))
         {
            skip[ibr] = true;
            break;
@@ -237,7 +237,7 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
       std::vector<Scalar> sigmas;
       sigmas.resize(nbr - 2,0.L);
       data >> lambda >> total;
-      if(lambda < 0.)break;
+      if(!data.good())break;
       for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)data >> sigmas[ibr]; //only br here
       datas[0].push_back(lambda);
       for(unsigned int ibr = 0; ibr < nbr - 2; ibr++)datas[ibr + 1].push_back(sigmas[ibr]);// + \lambda
@@ -253,15 +253,15 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
         for(unsigned int i = 0; i < stoi_prod[ibr][ip]; i++)equation += produc[ibr][ip] + " + ";
      }
      equation.erase(equation.size() - 3, 3);
-     Antioch::Reaction<Scalar> * reaction = Antioch::build_reaction<Scalar>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
+     Antioch::Reaction<Scalar> * reaction  = Antioch::build_reaction<Scalar>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
      Antioch::Reaction<Scalar> * reaction2 = Antioch::build_reaction<Scalar>(chem_mixture.n_species(), equation, false, reactionType, kineticsModel);
 
-     reaction->add_reactant( reac,chem_mixture.active_species_name_map().find(reac)->second,1);
-     reaction2->add_reactant( reac,chem_mixture.active_species_name_map().find(reac)->second,1);
+     reaction->add_reactant( reac,chem_mixture.species_name_map().find(reac)->second,1);
+     reaction2->add_reactant( reac,chem_mixture.species_name_map().find(reac)->second,1);
      for(unsigned int ip = 0; ip < produc[ibr].size(); ip++)
      {
-        reaction->add_product( produc[ibr][ip],chem_mixture.active_species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
-        reaction2->add_product( produc[ibr][ip],chem_mixture.active_species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
+        reaction->add_product( produc[ibr][ip],chem_mixture.species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
+        reaction2->add_product( produc[ibr][ip],chem_mixture.species_name_map().find(produc[ibr][ip])->second,stoi_prod[ibr][ip]);
      }
 
      std::vector<Scalar> dataf;
@@ -318,6 +318,7 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
    while(!data.eof())
    {
       if(!getline(data,line))break;
+      if(!data.good())break;
       std::vector<std::string> reactants;
       std::vector<std::string> products;
 
@@ -359,8 +360,8 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
         dataf1.push_back(1.); //Tref
         dataf2.push_back(1.); //Tref
       }
-      dataf1.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
-      dataf2.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
+      dataf1.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
+      dataf2.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
 
       Antioch::KineticsType<Scalar, VectorScalar>* rate1 = Antioch::build_rate<Scalar,VectorScalar>(dataf1,kineticsModel); //kinetics rate
       Antioch::KineticsType<Scalar, VectorScalar>* rate2 = Antioch::build_rate<Scalar,VectorScalar>(dataf2,kineticsModel); //kinetics rate
@@ -370,11 +371,11 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
       
       for(unsigned int ir = 0; ir < reactants.size(); ir++)
       {
-        reaction->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+        reaction->add_reactant( reactants[ir],chem_mixture.species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
       }
       for(unsigned int ip = 0; ip < products.size(); ip++)
       {
-        reaction->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+        reaction->add_product( products[ip],chem_mixture.species_name_map().find( products[ip] )->second,stoi_prod[ip]);
       }
       neutral_reaction_set.add_reaction(reaction);
 /// theo
@@ -386,11 +387,11 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
       
       for(unsigned int ir = 0; ir < reactants.size(); ir++)
       {
-        reaction2->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+        reaction2->add_reactant( reactants[ir],chem_mixture.species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
       }
       for(unsigned int ip = 0; ip < products.size(); ip++)
       {
-        reaction2->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+        reaction2->add_product( products[ip],chem_mixture.species_name_map().find( products[ip] )->second,stoi_prod[ip]);
       }
       theo_neutral_reaction_set.add_reaction(reaction2);
 
@@ -421,6 +422,7 @@ void fill_neutral_reactions(const std::string &neutral_reactions_elem,
    while(!data.eof())
    {
       if(!getline(data,line))break;
+      if(!data.good())break;
       std::vector<std::string> reactants;
       std::vector<std::string> products;
 
@@ -454,13 +456,13 @@ void fill_neutral_reactions(const std::string &neutral_reactions_elem,
       {
          kineticsModel = Antioch::KineticsModel::ARRHENIUS;
          dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-         dataf.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
+         dataf.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
       }else
       {
         dataf.push_back(std::atof(str_data[1].c_str())); //beta
         dataf.push_back(std::atof(str_data[2].c_str()));//Ea
         dataf.push_back(1.); //Tref
-        dataf.push_back(Antioch::Constants::R_universal<Scalar>()*1e-3); //scale (R in J/mol/K)
+        dataf.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
       }
 
       Antioch::KineticsType<Scalar, VectorScalar>* rate = Antioch::build_rate<Scalar,VectorScalar>(dataf,kineticsModel); //kinetics rate
@@ -473,23 +475,23 @@ void fill_neutral_reactions(const std::string &neutral_reactions_elem,
 
       for(unsigned int ir = 0; ir < reactants.size(); ir++)
       {
-        reaction->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
-        reaction2->add_reactant( reactants[ir],chem_mixture.active_species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+        reaction->add_reactant( reactants[ir],chem_mixture.species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
+        reaction2->add_reactant( reactants[ir],chem_mixture.species_name_map().find( reactants[ir] )->second,stoi_reac[ir]);
       }
       for(unsigned int ip = 0; ip < products.size(); ip++)
       {
-        reaction->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
-        reaction2->add_product( products[ip],chem_mixture.active_species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+        reaction->add_product( products[ip],chem_mixture.species_name_map().find( products[ip] )->second,stoi_prod[ip]);
+        reaction2->add_product( products[ip],chem_mixture.species_name_map().find( products[ip] )->second,stoi_prod[ip]);
       }
       neutral_reaction_set.add_reaction(reaction);
       neut_reac_theo.add_reaction(reaction2);
    }
    data.close();
+//now falloff
+   fill_neutral_reactions_falloff<Scalar,VectorScalar>(neutral_reactions_fall, neutral_reaction_set, neut_reac_theo);
 //now the photochemical ones
    read_photochemistry_reac(N2_hv_file, "N2", neutral_reaction_set, neut_reac_theo);
    read_photochemistry_reac(CH4_hv_file, "CH4", neutral_reaction_set, neut_reac_theo);
-//now falloff
-   fill_neutral_reactions_falloff<Scalar,VectorScalar>(neutral_reactions_fall, neutral_reaction_set, neut_reac_theo);
 }
 
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
@@ -507,9 +509,9 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t(-1.),tz,dt,dtz;
-     temp >> t >> tz >> dt >> dtz;
-     if(t < 0.)break;
+     Scalar t(-1.),tz;
+     temp >> t >> tz;
+     if(!temp.good())break;
      T0.push_back(t);
      Tz.push_back(tz);
   }
@@ -532,7 +534,7 @@ void read_hv_flux(VectorScalar &lambda, VectorScalar &phy1AU, const std::string 
   {
      Scalar wv(-1.),ir,dirr;
      flux_1AU >> wv >> ir >> dirr;
-     if(wv < 0.)break;
+     if(!flux_1AU.good())break;
      lambda.push_back(wv);//A * 10.L);//nm -> A
      phy1AU.push_back(ir);// * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<Scalar>() * 
                             //            Antioch::Constants::light_celerity<Scalar>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A
@@ -572,8 +574,8 @@ void read_crossSection(const std::string &file, VectorScalar &lambda, VectorScal
   {
      Scalar wv(-1.),sigt;
      sig_f >> wv >> sigt;
+     if(!sig_f.good())break;
      if(!getline(sig_f,line))break;
-     if(wv < 0.)break;
      lambda.push_back(wv);//A
      sigma.push_back(sigt);//cm-2/A
   }
@@ -587,7 +589,7 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
 {
    return botdens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<Scalar>() + z) * (Planet::Constants::Titan::radius<Scalar>() + zmin) * 1e3 *
                                              Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T / 
-                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm * 1e-3))
+                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm))
                               );
 }
 
@@ -596,7 +598,7 @@ Scalar dbarometry_dz(const Scalar &zmin, const Scalar &z, const Scalar &T, const
 {
    return barometry(zmin, z, T, Mm, botdens) / ((Planet::Constants::Titan::radius<Scalar>() + z) * (Planet::Constants::Titan::radius<Scalar>() + zmin) * 1e6 *
                                              Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T / 
-                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm * 1e-3))
+                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm))
           * (Scalar(1.L) - Scalar(2.L) * (z - zmin)/(Planet::Constants::Titan::radius<Scalar>() + zmin));
 }
 
@@ -686,7 +688,7 @@ Scalar pressure(const Scalar &n, const Scalar &T)
 template<typename Scalar>
 Scalar scale_height(const Scalar &T, const Scalar &z, const Scalar &Mm)
 {
-  return Planet::Constants::Universal::kb<Scalar>() * T / 
+  return Scalar(1e-3) * Planet::Constants::Universal::kb<Scalar>() * T /  // in km
          (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) *
           Mm/Antioch::Constants::Avogadro<Scalar>());
 }
@@ -699,10 +701,11 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
                        const TensorScalar &bin_coeff_data,
                        const std::vector<std::vector<Planet::DiffusionType> > &bin_coeff_model,
                        const VectorScalar &tc, const Scalar &Ha,
-                       VectorScalar &omega_theo)
+                       VectorScalar &omega_theo_A, VectorScalar &omega_theo_B)
 {
 
-    omega_theo.resize(molar_frac.size(),0.L);
+    omega_theo_A.resize(molar_frac.size(),0.L);
+    omega_theo_B.resize(molar_frac.size(),0.L);
 
     std::vector<std::vector<Scalar> > Dij;
     Dij.resize(2);
@@ -737,19 +740,23 @@ void compute_diffusion(const Scalar &K, const VectorScalar &densities,
        }
        M_diff /= totdens_diff;
 
-       Scalar Dt_theo = Ds / (Scalar(1.L) - molar_frac[s] * 
-                           (Scalar(1.L) - Mm[s] / M_diff)
-                         );
+       Scalar Dt_theo = Ds / (  Scalar(1.L) - molar_frac[s] * 
+                               (Scalar(1.L) - Mm[s] / M_diff)
+                             );
 //
        Scalar Hs = scale_height(T,z,Mm[s]);
 
-       omega_theo[s] = - Dt_theo * ( dns_dz[s] /densities[s]
-                                    + Scalar(1.L)/Hs 
-                                    + dT_dz /T * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s]))
-                       - K      * ( dns_dz[s] /densities[s]
-                                    + Scalar(1.L)/Ha
-                                    + dT_dz/T);
-       omega_theo[s] *= Scalar(1e-10) * densities[s];
+       omega_theo_A[s] = - Dt_theo - K;
+       omega_theo_B[s] = - Dt_theo * 
+                                    ( Scalar(1.L)/Hs 
+                                     + dT_dz /T * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s])
+                                    )
+                         - K * 
+                                    ( Scalar(1.L)/Ha
+                                     + dT_dz/T
+                                    );
+       omega_theo_A[s] *= Scalar(1e-10);
+       omega_theo_B[s] *= Scalar(1e-10);
     }
 
     return;
@@ -760,7 +767,8 @@ template <typename Scalar>
 int tester(const std::string &input_T,const std::string & input_hv, 
            const std::string &input_reactions_elem, const std::string &input_reactions_fall, 
            const std::string &input_reactions_photochem_N2, const std::string &input_reactions_photochem_CH4, 
-           const std::string &input_N2,const std::string &input_CH4, const std::string& input_filename )
+           const std::string &input_N2,const std::string &input_CH4, const std::string& input_filename,
+           const std::string &species_file )
 {
 
 //description
@@ -776,11 +784,11 @@ int tester(const std::string &input_T,const std::string & input_hv,
   neutrals.push_back("H2");
 //ionic system contains neutral system
   ions = neutrals;
-  Scalar MN(14.008L), MC(12.011), MH(1.008L);
-  Scalar MN2 = 2.L*MN , 
-         MCH4 = MC + 4.L*MH, 
+  Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
+  Scalar MN2  = 2.L * MN , 
+         MCH4 = MC + 4.L * MH, 
          MCH2 = 2.L * MH + MC, 
-         MH2 = 2.L * MH,
+         MH2  = 2.L * MH,
          MCH3 = MC + 3.L * MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
@@ -942,10 +950,10 @@ int tester(const std::string &input_T,const std::string & input_hv,
  ************************/
 
 //neutrals
-  Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
+  Antioch::ChemicalMixture<Scalar> neutral_species(neutrals,true,species_file); 
 
 //ions
-  Antioch::ChemicalMixture<Scalar> ionic_species(ions); 
+  Antioch::ChemicalMixture<Scalar> ionic_species(ions,true,species_file); 
 
 //chapman
   Planet::Chapman<Scalar> chapman(chi);
@@ -961,8 +969,8 @@ int tester(const std::string &input_T,const std::string & input_hv,
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
-  tau.add_cross_section(lambda_N2,  sigma_N2,  0,  neutral_species.active_species_name_map().at("N2"));
-  tau.add_cross_section(lambda_CH4, sigma_CH4, 1, neutral_species.active_species_name_map().at("CH4"));
+  tau.add_cross_section(lambda_N2,  sigma_N2,  0,  neutral_species.species_name_map().at("N2"));
+  tau.add_cross_section(lambda_CH4, sigma_CH4, 1, neutral_species.species_name_map().at("CH4"));
   tau.update_cross_section(lambda_hv);
 
 //reaction sets
@@ -1036,7 +1044,8 @@ int tester(const std::string &input_T,const std::string & input_hv,
      photon.update_photon_flux(densities,sum_densities,z,flux_at_z);
      phy_at_z.set_flux(flux_at_z);
 
-     std::vector<Scalar> omega_theo;
+     std::vector<Scalar> omega_theo_A;
+     std::vector<Scalar> omega_theo_B;
      std::vector<Scalar> chemical_theo;
      std::vector<Scalar> dummy;
      std::vector<Scalar> virtual_densities;
@@ -1047,7 +1056,9 @@ int tester(const std::string &input_T,const std::string & input_hv,
 
      Antioch::KineticsConditions<Scalar> KC(T);
      for(unsigned int hv = 0; hv < helper.index_photochemistry().size(); hv++)
-                KC.add_particle_flux(phy_at_z,helper.index_photochemistry()[hv]);
+     {
+        KC.add_particle_flux(phy_at_z,helper.index_photochemistry()[hv]);
+     }
 
      neutral_theo.compute_mole_sources(KC, densities, dummy, chemical_theo);
 
@@ -1056,7 +1067,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
      compute_diffusion(K, densities,
                        dns_dz, nTot, molar_frac, Mm, T, dT_dz, P, z, 
                        bin_diff_data, bin_diff_model, 
-                       tc, Ha, omega_theo);
+                       tc, Ha, omega_theo_A, omega_theo_B);
 
      virtual_densities.resize(densities.size());
      virtual_dns_dz.resize(densities.size());
@@ -1071,15 +1082,20 @@ int tester(const std::string &input_T,const std::string & input_hv,
      }
      evaluator.compute(virtual_densities, virtual_dns_dz, z);//compute with real densities
 
+     std::stringstream alt;
+     alt << z;
      for(unsigned int s = 0; s < molar_frac.size(); s++)
      {
+       std::stringstream spec;
+       spec << s;
        Scalar diff_A = evaluator.diffusion_A_term(s);
        Scalar diff_B = evaluator.diffusion_B_term(s);
-       const Scalar diff(diff_A * dns_dz[s] + diff_B * densities[s]); 
        Scalar chem = evaluator.chemical_term(s) * nTot_virtual;
-       return_flag =  check_test(omega_theo[s],   diff,"diffusion term of species at altitude") ||
+       return_flag =  check_test(omega_theo_A[s],   diff_A, "diffusion term A of species " + spec.str() + " at altitude " + alt.str()) ||
          return_flag;
-       return_flag =  check_test(chemical_theo[s],chem,"chemical term of species at altitude")  ||
+       return_flag =  check_test(omega_theo_B[s],   diff_B, "diffusion term B of species " + spec.str() + " at altitude " + alt.str()) ||
+         return_flag;
+       return_flag =  check_test(chemical_theo[s],chem, "chemical term of species "  + spec.str() + " at altitude " + alt.str())  ||
          return_flag;
      }
 
@@ -1098,7 +1114,10 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9])) ||
-          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9])));//||
-          //tester<long double>(std::string(argv[1])));
+  return (/*tester<float>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),std::string(argv[5]),
+                        std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9]),std::string(argv[10])) ||*/ //float can't take some rate constants
+          tester<double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),
+                         std::string(argv[5]),std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9]),std::string(argv[10]))||
+          tester<long double>(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]),std::string(argv[4]),
+                         std::string(argv[5]),std::string(argv[6]),std::string(argv[7]),std::string(argv[8]),std::string(argv[9]),std::string(argv[10])));
 }
