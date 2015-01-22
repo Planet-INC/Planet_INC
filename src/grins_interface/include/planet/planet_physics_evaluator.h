@@ -189,7 +189,9 @@ namespace Planet
    _photon.update_photon_flux(molar,this->get_cache(z),z,phy);
 
    phy_at_z.set_flux(phy);
-   Antioch::KineticsConditions<StateType> KC(_temperature.neutral_temperature(z));
+   StateType T = _temperature.neutral_temperature(z);
+   Antioch::KineticsConditions<StateType> KC(T);
+
    for(unsigned int hv = 0; hv < _index_hv.size(); hv++)
    {
       KC.add_particle_flux(phy_at_z,_index_hv[hv]);
