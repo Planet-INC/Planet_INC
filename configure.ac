@@ -2,7 +2,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([Planet], [0.0.0], [splessis@ices.utexas.edu], [Planet])
+AC_INIT([planet], [0.0.0], [splessis@ices.utexas.edu], [planet])
 PACKAGE_DESCRIPTION="A planet's atmospheric code using Antioch, adapted to Titan"
 AC_SUBST([PACKAGE_DESCRIPTION])
 PACKAGE_URL=""
@@ -46,8 +46,6 @@ AC_DEFINE_UNQUOTED([MAJOR_VERSION],$GENERIC_MAJOR_VERSION,[Major version])
 AC_DEFINE_UNQUOTED([MINOR_VERSION],$GENERIC_MINOR_VERSION,[Minor version])
 AC_DEFINE_UNQUOTED([MICRO_VERSION],$GENERIC_MICRO_VERSION,[Micro version])
 
-
-
 dnl------------------------------
 dnl Checks for compilers
 dnl------------------------------
@@ -57,9 +55,6 @@ AC_PROG_CXX
 
 dnl Added for AX_CODE_COVERAGE macro to work correctly, even though there's no Fortran here.
 AC_PROG_FC
-
-dnl -Wall warnings, -Wall the time.
-AX_CXXFLAGS_WARN_ALL
 
 dnl Allow users to make vectorized tests larger
 AC_ARG_WITH([n_tuples],
@@ -80,23 +75,37 @@ AC_DEFINE_UNQUOTED(N_RUNS, $n_runs, [number of runs done in each vector test])
 dnl------------------------
 dnl Checks dependencies
 dnl--------------------------
-planet_optional_INCLUDES=""
-planet_optional_test_INCLUDES=""
-planet_optional_test_LDFLAGS=""
-planet_optional_test_LIBS=""
 
 # Check for Antioch
 AX_PATH_ANTIOCH(0.0.0,yes)
 
-planet_optional_INCLUDES="$ANTIOCH_CPPFLAGS $planet_optional_test_INCLUDES"
-planet_optional_test_INCLUDES="$ANTIOCH_CPPFLAGS $planet_optional_test_INCLUDES"
-planet_optional_test_LDFLAGS="$ANTIOCH_LDFLAGS $planet_optional_test_LDFLAGS"
-planet_optional_test_LIBS="$ANTIOCH_LIBS $planet_optional_test_LIBS"
+# GRINS
+AX_PATH_GRINS(0.4.0,yes)
 
-AC_SUBST(planet_optional_INCLUDES)
-AC_SUBST(planet_optional_test_INCLUDES)
-AC_SUBST(planet_optional_test_LDFLAGS)
-AC_SUBST(planet_optional_test_LIBS)
+# Libmesh flags
+AC_ARG_ENABLE([libmesh-flags],
+               AC_HELP_STRING([--disable-libmesh-flags],[disable use of libmesh cxxflags for CXXFLAGS]),
+               [case "${enableval}" in
+                   yes) USE_LIBMESH_CXX_FLAGS=1 ;;
+                    no) USE_LIBMESH_CXX_FLAGS=0 ;;
+                     *) AC_MSG_ERROR(bad value ${enableval} for libmesh-flags) ;;
+                esac],
+               [USE_LIBMESH_CXX_FLAGS=1])
+
+if test "$USE_LIBMESH_CXX_FLAGS" = "1"; then
+   AC_DEFINE(USE_LIBMESH_CXX_FLAGS,1,[Define if libmesh cxxflags enabled])
+   CXXFLAGS=`$LIBMESH_CONFIG --cppflags --cxxflags`
+else
+ dnl TODO: WE NEED TO DISTINGUISH BETWEEN COMPILERS IN A BETTER WAY
+   AC_DEFINE(USE_LIBMESH_CXX_FLAGS,0,[Define if libmesh cxxflags enabled])
+   CXXFLAGS="-O0 -g -fno-unsafe-math-optimizations"
+fi
+
+# eigen
+CONFIGURE_EIGEN(2.3.0,yes)
+
+dnl -Wall warnings, -Wall the time.
+AX_CXXFLAGS_WARN_ALL
 
 dnl--------------------------
 dnl Even if no dependency needed it,
@@ -120,6 +129,13 @@ elif (test x$enablecxx11 = xoptional); then
   AX_CXX_COMPILE_STDCXX_11(noext, optional)
   AX_CXX_AUTO_THIS(optional)
 fi
+
+dnl--------------------------
+dnl Checks grvy, may want to
+dnl to brutally import grins
+dnl config
+dnl--------------------------
+AX_PATH_GRVY_NEW([0.30],[no])
 
 dnl--------------------------
 dnl Checks for code coverage
@@ -153,7 +169,19 @@ AC_CONFIG_FILES(doxygen/txt_common/about_vpath.page)
 dnl-----------------------------------------------
 dnl Generate files for unit and regression testing
 dnl-----------------------------------------------
-dnl AC_CONFIG_FILES(test/kinetics_unit_air_5sp.sh,           [chmod +x test/kinetics_unit_air_5sp.sh])
+AC_CONFIG_FILES(test/temperature_unit.sh,                     [chmod +x test/temperature_unit.sh])
+AC_CONFIG_FILES(test/photon_opacity_unit.sh,                  [chmod +x test/photon_opacity_unit.sh])
+AC_CONFIG_FILES(test/atmospheric_mixture_unit.sh,             [chmod +x test/atmospheric_mixture_unit.sh])
+AC_CONFIG_FILES(test/photon_evaluator_unit.sh,                [chmod +x test/photon_evaluator_unit.sh])
+AC_CONFIG_FILES(test/eddy_diffusion_evaluator_unit.sh,        [chmod +x test/eddy_diffusion_evaluator_unit.sh])
+AC_CONFIG_FILES(test/molecular_diffusion_evaluator_unit.sh,   [chmod +x test/molecular_diffusion_evaluator_unit.sh])
+AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/diffusion_evaluator_unit.sh])
+AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/physics_helper_unit.sh])
+AC_CONFIG_FILES(test/solver_test.sh,                          [chmod +x test/solver_test.sh])
+AC_CONFIG_FILES(test/ionospheric_test.sh,                     [chmod +x test/ionospheric_test.sh])
+
+AC_CONFIG_FILES(test/input/solver_test.in)
+AC_CONFIG_FILES(test/input/grins_input_physics_helper.in)
 
 dnl-----------------------------------------------
 dnl Generate header files

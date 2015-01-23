@@ -1,0 +1,126 @@
+# Options related to all Planet
+[Planet]
+
+species_input_file = '@abs_top_srcdir@/test/input/chemical_species.inp' 
+
+medium = 'N2 CH4'
+
+#neutral_species = 'N2 CH4 H H2 C CH (1)CH2 (3)CH2 CH3 C2H2 C2H4 C2H6 N(4S) NH CN
+#                   HCN H2CN C2N NCCN HC3N N(2D) N(2P) C2H2** HC3N* Ar C2 C2H
+#                   CH2C2H2 CH3C2H C4H2 C2H5 C3H2 C3H3 C3H5 C3H6 C3H7 C3H8 C4H3
+#                   C4H4 C4H6 C4H10 C6H2 C6H5 cC6H6 nC6H6 C6H6 nC6H7 cC6H7 C2H3
+#                   C2H3CN CH2NH CHCN CH3CN H2C3N HC5N C2N2 HC2N2 C4N2 [14]N[15]N
+#                   [15]N HC[15]N H2C[15]N C[15]N [15]NH [15]N(2D)'
+
+neutral_species = 'N2 CH4 H H2'
+
+# files ${input_cross_section_root}${absorbing_species} are what is searched for
+absorbing_species = 'N2 CH4 H2 H'
+
+# files ${input_photoreactions_root}${photo_reacting_species} are what is searched for
+photo_reacting_species = 'N2 CH4'
+
+# We want a simple case, adds too much troubles, we need
+# a much bigger system
+#ionic_species = 'N2+ CH4+ e'
+
+temperature_file = '@abs_top_srcdir@/test/input/temperature.dat'
+file_flyby = '@abs_top_srcdir@/test/input/T40_Flyby'
+root_input = '@abs_top_srcdir@/test/input/'
+file_neutral_charac = '@abs_top_srcdir@/test/input/neutrals.dat'
+input_cross_section_root = '@abs_top_srcdir@/test/input/hv_cross_section_low_res.'
+input_hv = '@abs_top_srcdir@/test/input/hv_SwRI_high_res.dat'
+input_reactions_elem = '@abs_top_srcdir@/test/input/neutral_reactions.bimol'
+input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
+input_photoreactions_root = '@abs_top_srcdir@/test/input/neutral_reactions_photochem.'
+input_reactions_fall = '@abs_top_srcdir@/test/input/neutral_reactions.falloff'
+#input_ions_reactions = '@abs_top_srcdir@/test/input/ionospheric_reactions.inp'
+
+zmin = '600.0'
+zmax = '1400.0'
+
+#for infos more than anything else at the moment
+radius = '2575.5'
+[]
+
+# Physics options
+[Physics]
+
+enabled_physics = 'Planet'
+
+[./Planet]
+
+species_FE_family = 'LAGRANGE'
+species_order = 'FIRST'
+
+species_bc_ids = '0 1'
+
+species_bc_types = 'lower_boundary_dirichlet upper_boundary_neumann'
+
+[]
+
+# Mesh related options
+[mesh-options]
+mesh_option = create_1D_mesh
+element_type = EDGE2
+
+# x are r = z + radius
+domain_x1_min = '3175.5'
+domain_x1_max = '3975.5'
+
+mesh_nx1 = 500
+
+[]
+
+
+#Linear and nonlinear solver options
+[linear-nonlinear-solver]
+max_nonlinear_iterations = 100 
+max_linear_iterations = 2500
+
+verify_analytic_jacobians = 0.0
+
+initial_linear_tolerance = 1.0e-6
+minimal_linear_tolerance = 1.0e-6
+
+relative_residual_tolerance = 1e-4
+
+use_numerical_jacobians_only = 'true'
+
+# Options for time solvers
+[unsteady-solver]
+transient = 'false' 
+theta = 1.0
+n_timesteps = 100
+deltat = 1000000
+target_tolerance = -1
+max_growth = 100
+
+[]
+
+# Visualization options
+[vis-options]
+output_vis = 'true'
+
+vis_output_file_prefix = 'planet' 
+
+output_residual = 'false' 
+
+output_format = 'ExodusII'
+
+[]
+
+# Options for print info to the screen
+[screen-options]
+
+system_name = 'Planet'
+
+print_equation_system_info = true
+print_mesh_info = true
+print_log_info = true
+solver_verbose = true
+solver_quiet = false
+
+print_element_jacobians = 'false'
+
+[]

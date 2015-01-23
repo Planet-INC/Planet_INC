@@ -22,28 +22,30 @@
 //-----------------------------------------------------------------------el-
 
 //Antioch
+#include "antioch/physical_constants.h"
 #include "antioch/cmath_shims.h"
 //Planet
-#include "planet/altitude.h"
+#include "planet/logu_pdf.h"
 //C++
-#include <iostream>
-#include <iomanip>
 #include <limits>
 #include <string>
 #include <vector>
+#include <iomanip>
+
 
 template<typename Scalar>
-int check(const Scalar &test, const Scalar &ref, const Scalar &tol, const std::string &model)
+int check(const Scalar &test, const Scalar &ref, const std::string &blabla)
 {
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
   if(Antioch::ant_abs(test - ref)/ref > tol)
   {
      std::cout << std::scientific << std::setprecision(20)
-               << "Error in binary diffusion calculations" << std::endl
-               << "model is " << model << std::endl
-               << "calculated coefficient = " << test << std::endl
-               << "solution = " << ref << std::endl
+               << "Error in pdf logu" << std::endl
+               << "test is "          << blabla << std::endl
+               << "given value = "    << test << std::endl
+               << "exact value = "    << ref << std::endl
                << "relative error = " << Antioch::ant_abs(test - ref)/ref << std::endl
-               << "tolerance = " << tol << std::endl;
+               << "tolerance = "      << tol << std::endl;
      return 1;
   }
   return 0;
@@ -52,22 +54,27 @@ int check(const Scalar &test, const Scalar &ref, const Scalar &tol, const std::s
 template<typename Scalar>
 int tester()
 {
-  Planet::Altitude<Scalar,std::vector<Scalar> > altitude(600,1400,10);
-
-  Scalar min(600.L),max(1400.L),step(10.L);  
+  Scalar min(1.5e3),max(3.2e8);
+  std::vector<Scalar> pars;
+  pars.push_back(min);
+  pars.push_back(max);
+  Planet::LogUPdf<Scalar> logu1(min,max);
+  Planet::LogUPdf<Scalar> logu2,logu3;
+  logu2.set_min(min);
+  logu2.set_max(max);
+  logu3.set_parameters(pars);
+  Scalar value = Antioch::ant_sqrt(min*max);
 
   int return_flag(0);
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
-  return_flag = check(altitude.alt_min(),min,tol,"minimum altitude") ||
-                check(altitude.alt_max(),max,tol,"maximum altitude") ||
-                check(altitude.alt_step(),step,tol,"step altitude");
-
-  unsigned int iz(0);
-  for(Scalar alt = min; alt <= max; alt += step)
-  {
-      return_flag = return_flag || check(altitude.altitudes()[iz],alt,tol,"altitude");
-      iz++;
-  }
+  return_flag = check(logu1.min(),min,"logu1 min") ||
+                check(logu1.max(),max,"logu1 max") ||
+                check(logu1.value(),value,"logu1 value") ||
+                check(logu2.min(),min,"logu2 min") ||
+                check(logu2.max(),max,"logu2 max") ||
+                check(logu2.value(),value,"logu2 value") ||
+                check(logu3.min(),min,"logu3 min") ||
+                check(logu3.max(),max,"logu3 max") ||
+                check(logu3.value(),value,"logu3 value");
 
   return return_flag;
 }
@@ -75,7 +82,8 @@ int tester()
 
 int main()
 {
-  return (tester<float>()  ||
-          tester<double>() ||
+
+  return (tester<float>()  || 
+          tester<double>() || 
           tester<long double>());
 }

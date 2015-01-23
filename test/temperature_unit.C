@@ -52,37 +52,23 @@ int check(const Scalar &test, const Scalar &ref, const Scalar &tol, const std::s
   return 0;
 }
 
-template<typename VectorScalar>
-void linear_interpolation(const VectorScalar &temp0, const VectorScalar &alt0,
-                          const VectorScalar &alt1, VectorScalar &temp1)
+template<typename Scalar>
+Scalar linear_interpolation(const Scalar &x0, const Scalar &x1,
+                            const Scalar &y0, const Scalar &y1,
+                            const Scalar &x)
 {
-  unsigned int j(0);
-  typename Antioch::value_type<VectorScalar>::type a;
-  typename Antioch::value_type<VectorScalar>::type b;
 
-  temp1.resize(alt1.size(),0.L);
-  for(unsigned int iz = 0; iz < alt1.size(); iz++)
-  {
-     while(alt0[j] < alt1[iz])
-     {
-        j++;
-        if(!(j < alt0.size()))break;
-     }
-     if(j == 0)
-     {
-        Antioch::set_zero(a);
-        b = temp0[j];
-     }else if(j < alt0.size() - 1)
-     {
-        a = (temp0[j] - temp0[j-1])/(alt0[j] - alt0[j-1]);
-        b = temp0[j] - a * alt0[j];
-     }else
-     {
-        Antioch::set_zero(a);
-        b = temp0.back();
-     }
-     temp1[iz] = a * alt1[iz] + b;
-  }
+   Scalar a = (y1 - y0)/(x1 - x0);
+   Scalar b = y0 - a * x0;
+   return (a * x + b);
+}
+
+template<typename Scalar>
+Scalar dlinear_interpolation(const Scalar &x0, const Scalar &x1,
+                             const Scalar &y0, const Scalar &y1)
+{
+
+   return (y1 - y0)/(x1 - x0);
 }
 
 template<typename Scalar>
@@ -112,7 +98,7 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
+     Scalar t(0.),tz(0.),dt(0.),dtz(0.);
      temp >> t >> tz >> dt >> dtz;
      T0.push_back(t);
      Tz.push_back(tz);
@@ -122,36 +108,44 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
 }
 
 template<typename Scalar>
-int tester()
+int tester(const std::string & input_file)
 {
-  Planet::Altitude<Scalar,std::vector<Scalar>> altitude(600,1400,10);
 //temperature
   std::vector<Scalar> T0,Tz;
-  read_temperature<Scalar>(T0,Tz,"./input/temperature.dat");
-  std::vector<Scalar> neutral_temperature;
-  linear_interpolation(T0,Tz,altitude.altitudes(),neutral_temperature);
-  Planet::AtmosphericTemperature<Scalar,std::vector<Scalar> > temperature(neutral_temperature,neutral_temperature,altitude);
+  read_temperature<Scalar>(T0,Tz,input_file);
+  Planet::AtmosphericTemperature<Scalar,std::vector<Scalar> > temperature(T0,T0,Tz,Tz); //neutral, ionic, altitude
 
   int return_flag(0);
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
 
-  for(unsigned int iz = 0; iz < altitude.altitudes().size(); iz++)
+  for(unsigned int iz = 0; iz < T0.size() - 1; iz++)
   {
-      Scalar neu_temp(neutral_temperature[iz]);
-      Scalar e_temp = electron_temperature(altitude.altitudes()[iz]);
+      Scalar z = (T0[iz] + T0[iz + 1]) / Scalar(2.L);
+      Scalar neu_temp  = linear_interpolation(Tz[iz],Tz[iz+1],T0[iz],T0[iz+1],z);
+      Scalar neu_dtemp = dlinear_interpolation(Tz[iz],Tz[iz+1],T0[iz],T0[iz+1]);
+      Scalar e_temp    = electron_temperature(z);
       return_flag = return_flag && 
-                    check(temperature.neutral_temperature()[iz],neu_temp,tol,"neutral temperature") &&
-                    check(temperature.ionic_temperature()[iz],neu_temp,tol,"ionic temperature")     &&
-                    check(temperature.electronic_temperature()[iz],e_temp,tol,"electron temperature");
+                    check(temperature.neutral_temperature(z)   ,neu_temp,tol,"neutral temperature") &&
+                    check(temperature.dneutral_temperature_dz(z)   ,neu_dtemp,tol,"neutral temperature differentiate") &&
+                    check(temperature.ionic_temperature(z)     ,neu_temp,tol,"ionic temperature")   &&
+                    check(temperature.electronic_temperature(z),e_temp  ,tol,"electron temperature");
   }
 
   return return_flag;
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
-  return (tester<float>() &&
-          tester<double>() &&
-          tester<long double>());
+  // Check command line count.
+  if( argc < 2 )
+    {
+      // TODO: Need more consistent error handling.
+      std::cerr << "Error: Must specify input file." << std::endl;
+      antioch_error();
+    }
+
+  return (tester<float>(std::string(argv[1])) ||
+          tester<double>(std::string(argv[1])) ||
+          tester<long double>(std::string(argv[1])));
 }

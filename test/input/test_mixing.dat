@@ -1,0 +1,9 @@
+Species Mixing at 600 km        Mixing at 1050 km       Mixing at 1050 km error
+H           4.00E-03        0               0
+H2          5.00E-03        3.36E-03        2.91E-05
+(1)CH2      2.50E-4         0               0
+(3)CH2      2.50E-4         0               0
+CH3         2.50E-4         0               0
+CH4         0.04            0.016           3.00E-05
+N(4S)       2.50E-4        0               0
+N2          0.95            0.969           6.87E-04

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROG="@top_builddir@/test/physics_helper_unit"
+
+INPUT="@top_srcdir@/test/input/T40_temp.profile @top_srcdir@/test/input/hv_SwRI_high_res.dat @top_srcdir@/test/input/neutral_reactions.bimol @top_srcdir@/test/input/neutral_reactions.falloff @top_srcdir@/test/input/neutral_reactions_photochem.N2 @top_srcdir@/test/input/neutral_reactions_photochem.CH4 @top_srcdir@/test/input/hv_cross_section_high_res.N2 @top_srcdir@/test/input/hv_cross_section_high_res.CH4 @top_srcdir@/test/input/grins_input_physics_helper.in @top_srcdir@/test/input/chemical_species.inp"
+
+$PROG $INPUT
+

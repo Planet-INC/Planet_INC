@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROG="@top_builddir@/test/atmospheric_mixture_unit"
+
+INPUT="@top_srcdir@/test/input/temperature.dat @top_srcdir@/test/input/chemical_species.inp"
+
+$PROG $INPUT
+

@@ -5,7 +5,7 @@ AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS  = -I m4 -I m4/common
 
 SUBDIRS          = src test doxygen
-EXTRA_DIST       = CHANGES LICENSE COPYING share docs
+EXTRA_DIST       = LICENSE COPYING share docs
 
 aclocaldir = $(prefix)/share/aclocal
 aclocal_DATA = $(top_srcdir)/share/aclocal/*
@@ -115,7 +115,7 @@ lcov-report:
 	$(top_srcdir)/src/common/lcov/lcov -q -r $(lcov_dir)/lcov.info `cat $(lcov_dir)/remove` > $(lcov_dir)/lcov.cleaned.info
 	@rm $(lcov_dir)/remove
 	@mv $(lcov_dir)/lcov.cleaned.info $(lcov_dir)/lcov.info
-	$(top_srcdir)/src/common/lcov/genhtml -t "Antioch" -o $(lcov_dir) $(lcov_dir)/lcov.info
+	$(top_srcdir)/src/common/lcov/genhtml -t "PLANET" -o $(lcov_dir) $(lcov_dir)/lcov.info
 
 lcov-reset:
 	@rm -rf $(lcov_dir)

@@ -58,9 +58,9 @@ int tester()
   Scalar p21(1.04e-5),p22(1.76);
   Scalar p31(5.73e16),p32(0.5);
 
-  Planet::BinaryDiffusion<Scalar> N2N2(   Antioch::Species::N2,  Antioch::Species::N2 , p11, p12, Planet::DiffusionType::Massman);
-  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, p21, p22, Planet::DiffusionType::Wakeham);
-  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, p31, p32, Planet::DiffusionType::Wilson);
+  Planet::BinaryDiffusion<Scalar> N2N2(   0,  0, p11, p12, Planet::DiffusionType::Massman);
+  Planet::BinaryDiffusion<Scalar> N2CH4(  0,  1, p21, p22, Planet::DiffusionType::Wakeham);
+  Planet::BinaryDiffusion<Scalar> CH4CH4( 1,  1, p31, p32, Planet::DiffusionType::Wilson);
 
   Scalar T(1500.),P(1e5);
   Scalar n = P / (T * Planet::Constants::Universal::kb<Scalar>());

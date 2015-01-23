@@ -25,14 +25,12 @@
 #define PLANET_PHOTON_EVALUATOR_H
 
 //Antioch
-#include "antioch/species_enum.h"
 #include "antioch/particle_flux.h"
+#include "antioch/reaction_set.h"
 
 //Planet
 #include "planet/photon_opacity.h"
-#include "planet/cross_section.h"
 #include "planet/atmospheric_mixture.h"
-#include "planet/photon_evaluator.h"
 
 //C++
 #include <vector>
@@ -47,71 +45,35 @@ namespace Planet
         //! no default constructor authorized
         PhotonEvaluator(){antioch_error();return;}
 
-//parameters & output
-        Antioch::ParticleFlux<VectorCoeffType> _phy_at_top;
-        std::vector<Antioch::ParticleFlux<VectorCoeffType> > _phy; //alt
-
-//store
-        std::map<Antioch::Species, unsigned int> _cross_sections_map;
-        std::vector<CrossSection<VectorCoeffType> > _absorbing_species_cs;
-        std::vector<Antioch::Species> _absorbing_species;
-
 //dependencies
-        PhotonOpacity<CoeffType,VectorCoeffType> &_hv_tau;
-        Altitude<CoeffType,VectorCoeffType> &_altitude;
-        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
-
-        //! cross-section on flux grid
-        template<typename VectorStateType>
-        void update_cross_section(const VectorStateType &custom_grid);
+        const Antioch::ParticleFlux<VectorCoeffType>                        & _phy_at_top;
+        const PhotonOpacity<CoeffType,VectorCoeffType>                      & _hv_tau;
+        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> & _mixture;
 
      public:
-        PhotonEvaluator(Altitude<CoeffType,VectorCoeffType> &alt,
-                        PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
-                        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix);
+        PhotonEvaluator(const Antioch::ParticleFlux<VectorCoeffType>                        &phy_at_top,
+                        const PhotonOpacity<CoeffType,VectorCoeffType>                      &hv_tau, 
+                        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix);
         ~PhotonEvaluator();
-
-        //!sets the photon flux at the top of the atmosphere
-        template<typename StateType, typename VectorStateType>
-        void set_photon_flux_at_top(const VectorStateType &lambda, const VectorStateType &hv, const StateType &d = 1.L);
-
-        //!\return const ref photon flux
-        const std::vector<Antioch::ParticleFlux<VectorCoeffType> > &photon_flux() const;
-
-        //!\return pointer to photon flux
-        Antioch::ParticleFlux<VectorCoeffType> *photon_flux_ptr(unsigned int iz);
-
-        //!calculate photon flux
-        void update_photon_flux();
-
-        //!\return absorbing species
-        const std::vector<Antioch::Species> absorbing_species() const;
-
-        //!\return absorbing species cross-section map
-        const std::vector<CrossSection<VectorCoeffType> > &absorbing_species_cs() const;
 
         //!\return photon flux at top of atmosphere
         const Antioch::ParticleFlux<VectorCoeffType> &photon_flux_at_top() const;
 
-        //!adds a photon cross-section
-        template<typename VectorStateType>
-        void add_cross_section(const VectorStateType &lambda, const VectorStateType &cs, const Antioch::Species &sp);
-
-        //!
-        const std::map<Antioch::Species, unsigned int> cross_sections_map() const;
-
-        //!
-        void initialize();
+        //!calculate photon flux
+        template<typename StateType, typename VectorStateType>
+        void update_photon_flux(const VectorStateType &molar_densities, const VectorStateType &sum_dens, 
+                                const StateType &z, VectorStateType & flux_at_z) const;
 
   };
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonEvaluator(Altitude<CoeffType,VectorCoeffType> &alt,
-                                                              PhotonOpacity<CoeffType,VectorCoeffType> &hv_tau, 
-                                                              AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix):
+  PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::PhotonEvaluator(
+                                                              const Antioch::ParticleFlux<VectorCoeffType>                        &phy_at_top,
+                                                              const PhotonOpacity<CoeffType,VectorCoeffType>                      &hv_tau, 
+                                                              const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix):
+  _phy_at_top(phy_at_top),
   _hv_tau(hv_tau),
-  _altitude(alt),
   _mixture(mix)
   {
      return;
@@ -125,159 +87,39 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::initialize()
-  {
-    this->update_photon_flux();
-    return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_photon_flux_at_top(const VectorStateType &lambda, const VectorStateType &hv, const StateType &d)
+  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::update_photon_flux(const VectorStateType &molar_densities, 
+                                                                      const VectorStateType &sum_dens, const StateType &z,
+                                                                      VectorStateType & flux_at_z) const
   {
-     antioch_assert_equal_to(lambda.size(),hv.size());
-
-//phy at top
-     _phy_at_top.set_abscissa(lambda);
-     VectorCoeffType flux;
-     for(unsigned int i = 0; i < hv.size(); i++)
-     {
-        flux.push_back(hv[i]/(d * d));
-     }
-     _phy_at_top.set_flux(flux);
-
-//phy at all altitudes
-     _phy.clear();
-     _phy.resize(_altitude.altitudes().size());
-     for(unsigned int iz = 0; iz < _phy.size(); iz++)
-     {
-        _phy[iz].set_abscissa(lambda);
-     }
-//cross sections
-     this->update_cross_section(lambda);
-
-     return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename VectorStateType>
-  inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::add_cross_section(const VectorStateType &lambda, const VectorStateType &cs, const Antioch::Species &sp)
-  {
-     _absorbing_species.push_back(sp);
-     _absorbing_species_cs.push_back(CrossSection<VectorCoeffType>(lambda,cs));
-     _cross_sections_map[sp] = _absorbing_species.size() - 1;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const Antioch::ParticleFlux<VectorCoeffType> &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_at_top() const
-  {
-    return _phy_at_top;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const std::vector<Antioch::ParticleFlux<VectorCoeffType> > &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux() const
-  {
-     return _phy;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  Antioch::ParticleFlux<VectorCoeffType> *PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_ptr(unsigned int iz)
-  {
-     antioch_assert_less(iz,_phy.size());
-     return &(_phy[iz]);
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const std::vector<Antioch::Species> PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::absorbing_species() const
-  {
-     return _absorbing_species;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const std::vector<CrossSection<VectorCoeffType> > &PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::absorbing_species_cs() const
-  {
-      return _absorbing_species_cs;
-  }
-
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  const std::map<Antioch::Species, unsigned int> PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::cross_sections_map() const
-  {
-     return _cross_sections_map;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  template<typename VectorStateType>
-  inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::update_cross_section(const VectorStateType &custom_grid)
-  {
-     for(unsigned int i = 0; i < _absorbing_species.size(); i++)
-     {
-        _absorbing_species_cs[i].update_cross_section(custom_grid);
-     }
-
-     return;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  inline
-  void PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::update_photon_flux()
-  {
+     antioch_assert_equal_to(molar_densities.size(), _mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(sum_dens.size(), _mixture.neutral_composition().n_species());
      antioch_assert(!_phy_at_top.abscissa().empty());
      antioch_assert(!_phy_at_top.flux().empty());
+     antioch_assert_equal_to(_phy_at_top.flux().size(),flux_at_z.size());
 
-     MatrixCoeffType sigma;
-     sigma.resize(_absorbing_species.size());
-     for(unsigned int s = 0; s < sigma.size(); s++)
+     VectorCoeffType tau;
+     _hv_tau.compute_tau(_mixture.a(molar_densities,z),sum_dens,tau);
+
+     antioch_assert_equal_to(tau.size(), _phy_at_top.abscissa().size());
+
+     for(unsigned int ilambda = 0; ilambda < _phy_at_top.abscissa().size(); ilambda++)
      {
-        sigma[s] =  _absorbing_species_cs[s].cross_section_on_custom_grid();
+       flux_at_z[ilambda] = _phy_at_top.flux()[ilambda] * Antioch::ant_exp(- tau[ilambda]);
      }
 
-//
-     MatrixCoeffType totdens;
-     totdens.resize(_absorbing_species.size());
-     for(unsigned int s = 0; s < _absorbing_species.size(); s++)
-     {
-       unsigned int is = _mixture.neutral_composition().species_list_map().at(_absorbing_species[s]);
-       totdens[s].resize(_altitude.altitudes().size(),0.L);
-//from top to bottom
-       unsigned int iz = _altitude.altitudes_map().at(_altitude.alt_max());
-       totdens[s][iz]  = _mixture.neutral_molar_fraction()[is][iz] * _mixture.total_density()[iz];
-       unsigned int izb = iz;
-       for(CoeffType z = _altitude.alt_max() - _altitude.alt_step(); z >= _altitude.alt_min(); z -= _altitude.alt_step())
-       {
-         iz = _altitude.altitudes_map().at(z);
-         totdens[s][iz] = totdens[s][izb] + _mixture.neutral_molar_fraction()[is][iz] * _mixture.total_density()[iz];
-         izb = iz;
-       }
-     }
-
-//tau
-     _hv_tau.update_tau(_mixture.a_factor(), totdens, sigma);
-
-//finally
-     for(unsigned int iz = 0; iz < _altitude.altitudes().size(); iz++)
-     {
-       VectorCoeffType flux;
-       flux.resize(_phy_at_top.abscissa().size());
-       for(unsigned int ilambda = 0; ilambda < _phy_at_top.abscissa().size(); ilambda++)
-       {
-         flux[ilambda] = _phy_at_top.flux()[ilambda] * Antioch::ant_exp(- _hv_tau.tau()[iz][ilambda]);
-       }
-       _phy[iz].set_flux(flux);
-     }
 
      return; 
   }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  const Antioch::ParticleFlux<VectorCoeffType> & PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::photon_flux_at_top() const
+  {
+     return _phy_at_top;
+  }
+  
 
 }
 

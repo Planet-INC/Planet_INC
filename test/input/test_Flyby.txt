@@ -1,0 +1,9 @@
+test
+date: 01 Feb 2008
+zenith angle: 120 deg
+subsolar latitude: -8.8 deg
+lower boundary temperature: 206.9 K
+isothermal temperature: 142.8 K
+lower boundary total density: 1.0e12 molecule/cm3
+K0: 4.3e6 cm2/s
+file mix: test_mixing.dat

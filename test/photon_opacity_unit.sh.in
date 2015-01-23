@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROG="@top_builddir@/test/photon_opacity_unit"
+
+INPUT="@top_srcdir@/test/input/temperature.dat @top_srcdir@/test/input/hv_cross_section_high_res.N2 @top_srcdir@/test/input/hv_cross_section_high_res.CH4"
+
+$PROG $INPUT
+

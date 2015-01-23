@@ -28,7 +28,6 @@
 #include "antioch/cmath_shims.h"
 
 //Planet
-#include "planet/altitude.h"
 #include "planet/atmospheric_mixture.h"
 
 //C++
@@ -36,40 +35,48 @@
 
 namespace Planet{
 
-  template<typename CoeffType = double, 
-           typename VectorCoeffType = std::vector<double>, 
-           typename MatrixCoeffType = std::vector<std::vector<double> >
-           >
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   class EddyDiffusionEvaluator
   {
         private:
          CoeffType _K0;
-         VectorCoeffType _K;
 
 //dependencies
-         AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
-         Altitude<CoeffType,VectorCoeffType> &_altitude;
+         const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_mixture;
 
          EddyDiffusionEvaluator() {antioch_error();return;}
 
 
         public:
-         //!\return eddy coefficient vector
-         const VectorCoeffType& K() const;
 
          //!\return K0
          const CoeffType K0() const;
-
-         //!calculate eddy coefficient
-         void make_eddy_diffusion();
 
          //!sets K0
          template<typename StateType>
          void set_K0(const StateType &K0);
 
+         //! \return eddy coefficient in cm2.s-1
+         template<typename StateType>
+         ANTIOCH_AUTO(StateType)
+         K(const StateType &ntot) const
+         ANTIOCH_AUTOFUNC(StateType,_K0 * Antioch::ant_sqrt(Antioch::ant_abs(_mixture.total_bottom_density()/ntot)))
+
+         //! \return deddy_dT coefficient in cm2.s-1.K-1
+         template<typename StateType>
+         ANTIOCH_AUTO(StateType)
+         K_deriv_T(const StateType &T) const
+         ANTIOCH_AUTOFUNC(StateType,Antioch::zero_clone(T))
+
+         //! \return deddy_dn coefficient in cm2.s-1.K-1.(cm-3)-1
+         template<typename StateType>
+         ANTIOCH_AUTO(StateType)
+         K_deriv_ns(const StateType &ntot) const
+         ANTIOCH_AUTOFUNC(StateType,- this->K(ntot) / (ntot * Antioch::constant_clone(ntot,2)))
+
+
          //!
-         EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
-                                Altitude<CoeffType,VectorCoeffType> &alt,
+         EddyDiffusionEvaluator(const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                 const CoeffType &K0 = -1.);
 
          //!
@@ -78,12 +85,10 @@ namespace Planet{
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
 inline
-EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
-                                                                          Altitude<CoeffType,VectorCoeffType> &alt,
+EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::EddyDiffusionEvaluator(const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &mix, 
                                                                           const CoeffType &K0):
   _K0(K0),
-  _mixture(mix),
-  _altitude(alt)
+  _mixture(mix)
 {
   return;
 }
@@ -101,30 +106,7 @@ inline
 void EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::set_K0(const StateType &K0)
 {
    _K0 = K0;
-   this->make_eddy_diffusion();
    return;
-}
-
-template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-inline
-void EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::make_eddy_diffusion()
-{
-
-  antioch_assert_greater(_K0,0.);
-  _K.resize(_altitude.altitudes().size(),0.L);
-  CoeffType nbottom = _mixture.total_density()[_altitude.altitudes_map().at(_altitude.alt_min())];
-  for(unsigned int ialt = 0; ialt < _altitude.altitudes().size(); ialt++)
-  {
-     _K[ialt] = _K0 * Antioch::ant_sqrt(nbottom/_mixture.total_density()[ialt]);
-  }
-  return;
-}
-
-template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-inline
-const VectorCoeffType &EddyDiffusionEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::K() const
-{
-  return _K;
 }
 
 template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
