@@ -135,11 +135,11 @@ int tester(const std::string & input_file)
   Planet::AtmosphericTemperature<Scalar,std::vector<Scalar> > temperature(Tz,T0); //neutral, ionic, altitude
 
   int return_flag(0);
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.;
+  const Scalar tol = (std::numeric_limits<Scalar>::epsilon() * 100. < 6e-17)?6e-17:
+                      std::numeric_limits<Scalar>::epsilon() * 100.;
 
-  for(unsigned int iz = 0; iz < T0.size() - 1; iz++)
+  for(Scalar z = 600.; z < 1401.; z += 10)
   {
-      Scalar z = (T0[iz] + T0[iz + 1]) / Scalar(2.L);
       Scalar neu_temp  = gsl_spline_eval(spline,z,acc);
       Scalar neu_dtemp = gsl_spline_eval_deriv(spline,z,acc);
       Scalar ion_temp  = gsl_spline_eval(spline,z,acc);
