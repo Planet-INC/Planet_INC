@@ -28,7 +28,6 @@
 #include "antioch/antioch_asserts.h"
 
 //Planet
-#include "planet/math_functions.h"
 
 //C++
 
