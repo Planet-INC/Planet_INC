@@ -100,10 +100,13 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
-     temp >> t >> tz >> dt >> dtz;
-     T0.push_back(t);
-     Tz.push_back(tz);
+     Scalar t,tz;
+     temp >> t >> tz;
+     if(temp.good())
+     {
+       T0.push_back(t);
+       Tz.push_back(tz);
+     }
   }
   temp.close();
   return;
@@ -300,7 +303,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
