@@ -25,12 +25,14 @@
 #define PLANET_ATMOSPHERIC_KINETICS_H
 
 //Antioch
+#include "antioch/kinetics_conditions.h"
 #include "antioch/kinetics_evaluator.h"
 
 //Planet
 #include "planet/atmospheric_temperature.h"
 #include "planet/atmospheric_mixture.h"
 #include "planet/photon_evaluator.h"
+#include "planet/atmospheric_steady_state.h"
 
 //eigen
 #include <Eigen/Dense>
@@ -50,19 +52,21 @@ namespace Planet
         Antioch::KineticsEvaluator<CoeffType> &_ionic_reactions;
 
         bool _ionic_coupling;
-        std::vector<Antioch::Species> _ions_species;
+        std::vector<Antioch::Species>                     _ions_species;
+        AtmosphericSteadyState<CoeffType,VectorCoeffType> _newton_solver;
         
 //
-        AtmosphericTemperature<CoeffType,VectorCoeffType>             &_temperature;
-        PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &_photon;
-        AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &_composition;
+        const AtmosphericTemperature<CoeffType,VectorCoeffType>             & _temperature;
+        PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>          & _photon;
+        const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> & _composition;
       public:
         //!
-        AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                         &neu,
-                            Antioch::KineticsEvaluator<CoeffType>                         &ion,
-                            AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
-                            PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
-                            AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition);
+        AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>                               &neu,
+                            Antioch::KineticsEvaluator<CoeffType>                               &ion,
+                            const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
+                            PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>          &photon,
+                            const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition,
+                            std::vector<Antioch::Species>                                       ionic_species = std::vector<Antioch::Species>());
         //!
         ~AtmosphericKinetics();
 
@@ -74,37 +78,49 @@ namespace Planet
 
         //! compute chemical net rate and provide them in kin_rates
         template<typename StateType, typename VectorStateType>
-        void chemical_rate(const VectorStateType &molar_concentrations, const VectorStateType &sum_concentrations, 
-                           const StateType &z, VectorStateType &kin_rates) const;
+        void chemical_rate(const VectorStateType &molar_concentrations, 
+                           const Antioch::KineticsConditions<StateType> &KC, 
+                           const StateType & z, VectorStateType &kin_rates);
+
+        template<typename StateType, typename VectorStateType, typename MatrixStateType>
+        void chemical_rate_and_derivs(const VectorStateType &molar_concentrations,
+                                      const Antioch::KineticsConditions<StateType> &KC, 
+                                      const StateType & z,
+                                      VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn);
 
         //! Newton solver for the ionic system
         template<typename StateType, typename VectorStateType>
-        void add_ionic_contribution(const VectorStateType &molar_concentrations, const StateType &z, VectorStateType &kin_rates) const;
+        void add_ionic_contribution(const VectorStateType &molar_concentrations, const Antioch::KineticsConditions<StateType> &KC, 
+                                    const StateType & z, VectorStateType &kin_rates);
+
+        //! Newton solver for the ionic system
+        template<typename StateType, typename VectorStateType, typename MatrixStateType>
+        void add_ionic_contribution_and_derivs(const VectorStateType &neutral_concentrations, 
+                                               const Antioch::KineticsConditions<StateType> & KC, const StateType &z, 
+                                               VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn);
   };
 
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   inline
-  AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>         &neu,
-                                                                      Antioch::KineticsEvaluator<CoeffType>                         &ion,
-                                                                      AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
-                                                                      PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>    &photon,
-                                                                      AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition):
+  AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::AtmosphericKinetics(Antioch::KineticsEvaluator<CoeffType>               &neu,
+                                                                      Antioch::KineticsEvaluator<CoeffType>                               &ion,
+                                                                      const AtmosphericTemperature<CoeffType,VectorCoeffType>             &temperature,
+                                                                      PhotonEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>          &photon,
+                                                                      const AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType> &composition,
+                                                                      std::vector<Antioch::Species>                                       ionic_species ):
    _neutral_reactions(neu),
    _ionic_reactions(ion),
+   _ions_species(ionic_species),
+   _newton_solver(_ions_species,ion),
    _temperature(temperature),
    _photon(photon),
    _composition(composition)
   {
-    _ionic_coupling = (_ionic_reactions.n_reactions() != 0);
+    _ionic_coupling = !ionic_species.empty();
     if(_ionic_coupling)
     {
-       for(unsigned int s = 0; s < _composition.ionic_composition().n_species(); s++)
-       {
-           if(!_composition.neutral_composition().species_list_map().count(_composition.ionic_composition().species_list()[s])) //if not in the neutral system
-                        _ions_species.push_back(_composition.ionic_composition().species_list()[s]); // then adds here
-       }
-       if(_ions_species.empty())_ionic_coupling = false;
+      _newton_solver.build_map();        //ionospheric solver maps
     }
     
     return;
@@ -135,104 +151,135 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   inline
   void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate(const VectorStateType &molar_concentrations, 
-                                                                     const VectorStateType &sum_concentrations, 
-                                                                     const StateType &z,
-                                                                     VectorStateType &kin_rates) const
+                                                                     const Antioch::KineticsConditions<StateType> &KC,
+                                                                     const StateType & z,
+                                                                     VectorStateType &kin_rates)
   {
-     kin_rates.resize(_composition.neutral_composition().n_species(),0.L);
-     VectorCoeffType dummy;
+     antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
+     VectorStateType dummy;
      dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
-     _photon.update_photon_flux(molar_concentrations, sum_concentrations, z);
-     _neutral_reactions.compute_mole_sources(_temperature.neutral_temperature(z),
+     _neutral_reactions.compute_mole_sources(KC,
                                              molar_concentrations,dummy,kin_rates);
 
-     this->add_ionic_contribution(molar_concentrations,z,kin_rates);
+     if(_ionic_coupling)this->add_ionic_contribution(molar_concentrations,KC,z,kin_rates);
 
      return;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  inline
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::chemical_rate_and_derivs(const VectorStateType &molar_concentrations,
+                                      const Antioch::KineticsConditions<StateType> & kinetics_conditions, 
+                                      const StateType & z, VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn)
+  {
+     antioch_assert_equal_to(kin_rates.size(),_composition.neutral_composition().n_species());
+     antioch_assert_equal_to(dkin_rates_dn.size(),_composition.neutral_composition().n_species());
+#ifdef NDEBUG
+#else
+     for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
+     {
+       antioch_assert_equal_to(dkin_rates_dn[s].size(),_composition.neutral_composition().n_species());
+     }
+#endif
+     VectorStateType dummy;
+     VectorStateType ddummy_dT;
+     VectorStateType dkin_dT;
+     dummy.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
+     ddummy_dT.resize(_composition.neutral_composition().n_species(),0.L); //everything is irreversible
+     dkin_dT.resize(_composition.neutral_composition().n_species(),0.L); //no temp
+     _neutral_reactions.compute_mole_sources_and_derivs(kinetics_conditions,molar_concentrations,dummy,ddummy_dT,
+                                                        kin_rates,dkin_dT,dkin_rates_dn);
+
+     if(_ionic_coupling)this->add_ionic_contribution_and_derivs(molar_concentrations,kinetics_conditions,z,kin_rates,dkin_rates_dn);
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution(const VectorStateType &neutral_concentrations, const StateType &z, 
-                                                                                              VectorStateType &kin_rates) const
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution(const VectorStateType &neutral_concentrations, 
+                                                                                              const Antioch::KineticsConditions<StateType> &KC, 
+                                                                                              const StateType & z,
+                                                                                              VectorStateType &kin_rates)
   {
-    if(!_ionic_coupling)return;
-    
-// Newton solver here
-// Ax + b = 0
-// A is jacobian, b is what goes to 0 (dc/dt here)
-    Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> A;
-    Eigen::Matrix<CoeffType,Eigen::Dynamic,1> b;
 
+//    if(z < 800. || z > 1200.)return;
 
-    VectorCoeffType molar_concentrations;
-    molar_concentrations.resize(_ionic_reactions.n_species(),0.L); //full system
-    for(unsigned int s = 0; s < neutral_concentrations.size(); s++)// full system
+ // neutrals resized
+    VectorStateType full_concentrations;
+    full_concentrations.resize(_composition.ionic_composition().n_species(),0.L);
+    for(unsigned int s = 0; s < neutral_concentrations.size(); s++)
     {
-       unsigned int i = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
-       molar_concentrations[i] = neutral_concentrations[s]; // add it
+       unsigned int i = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
+       full_concentrations[i] = neutral_concentrations[s];
     }
 
+//solve for ions
+    VectorCoeffType source_ions;
+    source_ions.resize(_ionic_reactions.n_species(),0.L);
+//all temperature conditions, solver deal with it
 
-    VectorCoeffType h_RT_minus_s_R;
-    VectorCoeffType dh_RT_minus_s_R_dT;
-    VectorCoeffType mole_sources;
-    VectorCoeffType dmole_dT;
-    MatrixCoeffType dmole_dX_s;
-    h_RT_minus_s_R.resize(_ionic_reactions.n_species(),0.L); //irreversible
-    dh_RT_minus_s_R_dT.resize(_ionic_reactions.n_species());
-    mole_sources.resize(_ionic_reactions.n_species());
-    dmole_dT.resize(_ionic_reactions.n_species());
-    dmole_dX_s.resize(_ionic_reactions.n_species());
-
-    CoeffType lim(1.L);
-    CoeffType thresh = std::numeric_limits<CoeffType>::epsilon();
-    if(thresh < 1e-10)thresh = 1e-10; // physically this precision is ridiculous, which is nice
-    unsigned int loop_max(50);
-    unsigned int nloop(0);
-    while(lim > thresh)
+    _newton_solver.precompute_rates(full_concentrations,KC, KC.T(), _temperature.electronic_temperature(z)); 
+    if(_newton_solver.steady_state(source_ions))
     {
 
-      _ionic_reactions.compute_mole_sources_and_derivs(_temperature.neutral_temperature(z), molar_concentrations,
-                                                       h_RT_minus_s_R, dh_RT_minus_s_R_dT,
-                                                       mole_sources, dmole_dT, dmole_dX_s );
-
-
-      for(unsigned int i = 0; i < _ions_species.size(); i++)
+//     std::cout << "Ionospheric activity at " << z << " km" << std::endl;
+// update sources
+      for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
       {
-        unsigned int i_ion = _composition.ionic_composition().species_list_map().at(_ions_species[i]);
-        for(unsigned int j = 0; j < _ions_species.size(); j++)
+        unsigned int i_neu = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
+        kin_rates[s] += source_ions[i_neu];
+      }
+    }
+  }
+
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType, typename MatrixStateType>
+  inline
+  void AtmosphericKinetics<CoeffType,VectorCoeffType,MatrixCoeffType>::add_ionic_contribution_and_derivs(const VectorStateType &neutral_concentrations, 
+                                                                                                         const Antioch::KineticsConditions<StateType> & KC, const StateType &z, 
+                                                                                              VectorStateType &kin_rates, MatrixStateType &dkin_rates_dn)
+  {
+
+//    if(z < 800. || z > 1200.)return;
+
+ // neutrals resized
+    VectorStateType full_concentrations;
+    full_concentrations.resize(_composition.ionic_composition().n_species(),0.L);
+    for(unsigned int s = 0; s < neutral_concentrations.size(); s++)
+    {
+       unsigned int i = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
+       full_concentrations[i] = neutral_concentrations[s];
+    }
+
+//solve for ions
+    VectorCoeffType source_ions;
+    MatrixCoeffType drate_dn;
+    source_ions.resize(_ionic_reactions.n_species(),0.L);
+    drate_dn.resize(_ionic_reactions.n_species());
+    for(unsigned int s = 0; s < _ionic_reactions.n_species(); s++)
+    {
+      drate_dn[s].resize(_ionic_reactions.n_species(),0.L);
+    }
+//all temperature conditions, solver deal with it
+    _newton_solver.precompute_rates(full_concentrations,KC, KC.T(), _temperature.electronic_temperature(z)); 
+    if(_newton_solver.steady_state_and_derivs(source_ions,drate_dn))
+    {
+
+//       std::cout << "Ionospheric activity at " << z << " km" << std::endl;
+// update sources and derivs
+      for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
+      {
+        unsigned int i_neu = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[s]];
+        kin_rates[s] += source_ions[i_neu];
+        for(unsigned int q = 0; q < _composition.neutral_composition().n_species(); q++)
         {
-           unsigned int j_ion = _composition.ionic_composition().species_list_map().at(_ions_species[j]);
-           A(i,j) = dmole_dX_s[i_ion][j_ion];
+           unsigned int j_neu = _composition.ionic_composition().species_list()[_composition.neutral_composition().species_list()[q]];
+           dkin_rates_dn[s][q] += drate_dn[i_neu][j_neu];
         }
-        b(i) = - mole_sources[i_ion];
       }
-    
-      Eigen::PartialPivLU<Eigen::Matrix<CoeffType,Eigen::Dynamic,Eigen::Dynamic> > mypartialPivLu(A);
-      Eigen::Matrix<CoeffType,Eigen::Dynamic,1> x(_ions_species.size());
-      x = mypartialPivLu.solve(b);
-
-      Antioch::set_zero(lim);
-      for(unsigned int s = 0; s < _ions_species.size(); s++)
-      {
-        unsigned int i_ion = _composition.ionic_composition().species_list_map().at(_ions_species[s]);
-        molar_concentrations[i_ion] += x(s);
-        lim += (x(s) < 0.)?-x(s):x(s);
-      }
-
-      nloop++;
-      if(nloop > loop_max)antioch_error();
-
     }
-
-    for(unsigned int s = 0; s < _composition.neutral_composition().n_species(); s++)
-    {
-        unsigned int i_neu = _composition.ionic_composition().species_list_map().at(_composition.neutral_composition().species_list()[s]);
-        kin_rates[s] += mole_sources[i_neu];
-    }
-      
   }
 }
 

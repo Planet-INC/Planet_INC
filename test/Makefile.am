@@ -1,6 +1,6 @@
 BUILT_SOURCES   = .license.stamp
 
-EXTRA_DIST = input_files
+EXTRA_DIST = input
 
 check_PROGRAMS  = 
 check_PROGRAMS += binary_diffusion_unit
@@ -14,6 +14,18 @@ check_PROGRAMS += molecular_diffusion_evaluator_unit
 check_PROGRAMS += diffusion_evaluator_unit
 check_PROGRAMS += physics_helper_unit
 check_PROGRAMS += solver_test
+check_PROGRAMS += pdf_norm_unit
+check_PROGRAMS += pdf_nort_unit
+check_PROGRAMS += pdf_logn_unit
+check_PROGRAMS += pdf_logu_unit
+check_PROGRAMS += pdf_unif_unit
+check_PROGRAMS += pdf_diri_unit
+check_PROGRAMS += pdf_diun_unit
+check_PROGRAMS += pdf_diut_unit
+check_PROGRAMS += pdf_dirg_unit
+check_PROGRAMS += pdf_dirw_unit
+check_PROGRAMS += pdf_dior_unit
+check_PROGRAMS += ionospheric_test
 
 AM_CPPFLAGS  = 
 AM_CPPFLAGS += -I$(top_srcdir)/src/core/include
@@ -22,26 +34,22 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/kinetics/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/temperature/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/photon_flux/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/absorption/include
-AM_CPPFLAGS += -I$(top_srcdir)/src/sampling/include
+AM_CPPFLAGS += -I$(top_srcdir)/src/pdf_management/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/diffusion/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/utilities/include
 AM_CPPFLAGS += -I$(top_srcdir)/src/grins_interface/include
 AM_CPPFLAGS += -I$(top_builddir)/src/utilities/include #planet_version.h
 
-AM_LDFLAGS = 
-
-LIBS = 
-
-#Planet
-LIBS += $(LIBPLANET_LIBS)
+AM_LDFLAGS = $(top_builddir)/src/libplanet.la
 
 #Antioch
 AM_CPPFLAGS += $(ANTIOCH_CPPFLAGS)
 
 #GRINS
 AM_CPPFLAGS += $(GRINS_CPPFLAGS)
-AM_LDFLAGS += $(GRINS_LDFLAGS)
-LIBS += $(LIBGRINS_LIBS)
+
+#GRVY
+AM_CPPFLAGS += $(GRVY_CFLAGS)
 
 # Sources for these tests
 binary_diffusion_unit_SOURCES = binary_diffusion_unit.C
@@ -54,7 +62,19 @@ eddy_diffusion_evaluator_unit_SOURCES = eddy_diffusion_evaluator_unit.C
 molecular_diffusion_evaluator_unit_SOURCES = molecular_diffusion_evaluator_unit.C
 diffusion_evaluator_unit_SOURCES = diffusion_evaluator_unit.C
 physics_helper_unit_SOURCES = physics_helper_unit.C
+pdf_norm_unit_SOURCES = pdf_norm_unit.C
+pdf_nort_unit_SOURCES = pdf_nort_unit.C
+pdf_logn_unit_SOURCES = pdf_logn_unit.C
+pdf_logu_unit_SOURCES = pdf_logu_unit.C
+pdf_unif_unit_SOURCES = pdf_unif_unit.C
+pdf_diri_unit_SOURCES = pdf_diri_unit.C
+pdf_diun_unit_SOURCES = pdf_diun_unit.C
+pdf_diut_unit_SOURCES = pdf_diut_unit.C
+pdf_dirg_unit_SOURCES = pdf_dirg_unit.C
+pdf_dirw_unit_SOURCES = pdf_dirw_unit.C
+pdf_dior_unit_SOURCES = pdf_dior_unit.C
 solver_test_SOURCES = solver_test.C
+ionospheric_test_SOURCES = ionospheric_test.C
 
 #Define tests to actually be run
 TESTS = 
@@ -69,6 +89,18 @@ TESTS += molecular_diffusion_evaluator_unit.sh
 TESTS += diffusion_evaluator_unit.sh
 TESTS += physics_helper_unit.sh
 TESTS += solver_test.sh
+TESTS += pdf_norm_unit
+TESTS += pdf_nort_unit
+TESTS += pdf_logn_unit
+TESTS += pdf_logu_unit
+TESTS += pdf_unif_unit
+TESTS += pdf_diri_unit
+TESTS += pdf_diun_unit
+TESTS += pdf_diut_unit
+TESTS += pdf_dirg_unit
+TESTS += pdf_dirw_unit
+TESTS += pdf_dior_unit
+TESTS += ionospheric_test.sh
 
 CLEANFILES =
 if CODE_COVERAGE_ENABLED

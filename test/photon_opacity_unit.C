@@ -59,18 +59,18 @@ int check(const Scalar &test, const Scalar &ref, const Scalar &tol, const std::s
 }
 
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
-void read_crossSection(VectorScalar & lambda, const std::string &file, unsigned int nbr, VectorScalar &sigma)
+void read_crossSection(VectorScalar & lambda, const std::string &file, VectorScalar &sigma)
 {
   std::string line;
   std::ifstream sig_f(file);
   getline(sig_f,line);
   while(!sig_f.eof())
   {
-     Scalar wv,sigt,sigbr;
-     sig_f >> wv >> sigt;
-     for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
-     lambda.push_back(wv/10.);//A -> nm
-     sigma.push_back(sigt*10.);//cm-2/A -> m-2/nm
+     Scalar wv(-1),sigt,dsig;
+     sig_f >> wv >> sigt >> dsig;
+     if(!sig_f.good())break;
+     lambda.push_back(wv);//A -> nm
+     sigma.push_back(sigt);//cm-2/A -> m-2/nm
   }
   sig_f.close();
 
@@ -98,6 +98,7 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   {
      Scalar t,tz,dt,dtz;
      temp >> t >> tz >> dt >> dtz;
+     if(!temp.good())break;
      T0.push_back(t);
      Tz.push_back(tz);
   }
@@ -168,13 +169,14 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
   std::vector<std::vector<Scalar> > lambdas;
   sigmas.resize(2);
   lambdas.resize(2);
-  read_crossSection<Scalar>(lambdas[0],input_N2,3,sigmas[0]);
-  read_crossSection<Scalar>(lambdas[1],input_CH4,9,sigmas[1]);
+  read_crossSection<Scalar>(lambdas[0],input_N2,sigmas[0]);
+  read_crossSection<Scalar>(lambdas[1],input_CH4,sigmas[1]);
   std::vector<std::vector<Scalar> > sigma_ref;
   sigma_ref.resize(2);
   Antioch::SigmaBinConverter<std::vector<Scalar> > binconv;
   for(unsigned int i = 0; i < 2; i++)
   {
+    sigma_ref[i].resize(lambda.size());
     binconv.y_on_custom_grid(lambdas[i],sigmas[i],lambda,sigma_ref[i]);
   }
 
@@ -182,15 +184,15 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
   Planet::Chapman<Scalar> chapman(chi);
 /////
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
-  tau.add_cross_section(lambdas[0],sigmas[0],Antioch::Species::N2, 0);
-  tau.add_cross_section(lambdas[1],sigmas[1],Antioch::Species::CH4, 1);
+  tau.add_cross_section(lambdas[0],sigmas[0],0, 0);
+  tau.add_cross_section(lambdas[1],sigmas[1],1, 1);
   tau.update_cross_section(lambda);
+
 
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
-
 
 ////////////////////:
   molar_frac.pop_back();
@@ -214,13 +216,13 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
         Scalar tau_exact(0.L);
         for(unsigned int s = 0; s < 2; s++)
         {
-           tau_exact += sigma_ref[s][il] * sum_dens[s];
+           tau_exact += sigma_ref[s][il] * sum_dens[s]; // cm-3.km
            
            return_flag = check(tau.absorbing_species_cs()[s].cross_section_on_custom_grid()[il],
                                sigma_ref[s][il],tol,"sigma ref of species at altitude and wavelength") ||
                          return_flag;
         }
-        tau_exact *= chapman(x) * 1e3; //to m
+        tau_exact *= chapman(x) * 1e5; //cm-1.km to no unit
         return_flag = check(tau_cal[il],tau_exact,tol,"tau at altitude and wavelength") ||
                       return_flag;
                       

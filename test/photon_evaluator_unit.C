@@ -43,9 +43,10 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() < 1e-12)?1e5:1e3;
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
-  Scalar criteria = (theory < tol)?std::abs(theory-cal):std::abs((theory-cal)/theory);
+  const Scalar tol = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?2e-14: std::numeric_limits<Scalar>::epsilon() * 2000;
+  const Scalar zero = std::numeric_limits<Scalar>::epsilon();
+  Scalar criteria = (theory <= zero)?std::abs(theory-cal): // zero
+                                     std::abs((theory-cal)/theory); // non-zero
   if(criteria < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
@@ -109,16 +110,17 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
 }
 
 template<typename Scalar, typename VectorScalar = std::vector<Scalar> >
-void read_crossSection(const std::string &file, unsigned int nbr, VectorScalar &lambda, VectorScalar &sigma)
+void read_crossSection(const std::string &file, VectorScalar &lambda, VectorScalar &sigma)
 {
   std::string line;
   std::ifstream sig_f(file);
   getline(sig_f,line);
   while(!sig_f.eof())
   {
-     Scalar wv,sigt,sigbr;
+     Scalar wv(-1.),sigt;
      sig_f >> wv >> sigt;
-     for(unsigned int i = 0; i < nbr; i++)sig_f >> sigbr;
+     if(!getline(sig_f,line))break;
+     if(wv < 0.)break;
      lambda.push_back(wv);//A
      sigma.push_back(sigt);//cm-2/A
   }
@@ -132,15 +134,23 @@ void read_hv_flux(VectorScalar &lambda, VectorScalar &phy1AU, const std::string 
 {
   std::string line;
   std::ifstream flux_1AU(file);
+  VectorScalar tmplambda,tmpphy1AU;
   getline(flux_1AU,line);
   while(!flux_1AU.eof())
   {
      Scalar wv,ir,dirr;
      flux_1AU >> wv >> ir >> dirr;
-     if(!lambda.empty() && wv == lambda.back())continue;
-     lambda.push_back(wv * 10.L);//nm -> A
-     phy1AU.push_back(ir * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<Scalar>() * 
+     if(!flux_1AU.good())break;
+     tmplambda.push_back(wv * 10.L);//nm -> A
+     tmpphy1AU.push_back(ir * 1e3L * (wv*1e-9L) / (Antioch::Constants::Planck_constant<Scalar>() * 
                                         Antioch::Constants::light_celerity<Scalar>()));//W/m2/nm -> J/s/cm2/A -> s-1/cm-2/A
+  }
+  lambda.resize(tmplambda.size());
+  phy1AU.resize(tmplambda.size());
+  for(unsigned int i = 0; i < tmplambda.size(); i++)
+  {
+     phy1AU[i] = tmpphy1AU[tmpphy1AU.size() - 1 -i];
+     lambda[i] = tmplambda[tmpphy1AU.size() - 1 -i];
   }
   flux_1AU.close();
   return;
@@ -191,14 +201,14 @@ Scalar a(const Scalar &T, const Scalar &Mmean, const Scalar &z)
 template<typename Scalar, typename VectorScalar>
 void calculate_tau(VectorScalar &opacity, const Planet::Chapman<Scalar> &chapman, 
                    const std::vector<VectorScalar*> &cs, const VectorScalar &lambda_ref,
-                   const VectorScalar &sum_dens, const Scalar &z, const Scalar &a)
+                   const VectorScalar &sum_dens, const Scalar &a)
 {
   opacity.resize(lambda_ref.size());
   Antioch::SigmaBinConverter<VectorScalar> bin_converter;
 
   for(unsigned int s = 0; s < sum_dens.size(); s++)
   {
-      VectorScalar sigma_process;
+      VectorScalar sigma_process(lambda_ref.size(),0);
       bin_converter.y_on_custom_grid(*(cs[2*s]),*(cs[2*s+1]),lambda_ref,sigma_process);
       for(unsigned int il = 0; il < lambda_ref.size(); il++)
       {
@@ -207,7 +217,7 @@ void calculate_tau(VectorScalar &opacity, const Planet::Chapman<Scalar> &chapman
   }
   for(unsigned int il = 0; il < lambda_ref.size(); il++)
   {
-      opacity[il] *= chapman(a) * 1e3; //to m
+      opacity[il] *= chapman(a) * 1e5; //cm-1.km to no unit
   }
 
 }
@@ -225,7 +235,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
 //ionic system contains neutral system
   ions = neutrals;
   ions.push_back("N2+");
-  Scalar MN(14.008L), MC(12.011), MH(1.008L);
+  Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
@@ -242,7 +252,6 @@ int tester(const std::string &input_T, const std::string &input_hv,
   {
      Mmean += Mm[s] * molar_frac[s];
   }
-  Mmean *= 1e-3; //to kg
 
 //zenith angle
   Scalar chi(120);
@@ -250,12 +259,20 @@ int tester(const std::string &input_T, const std::string &input_hv,
 //photon flux
   std::vector<Scalar> lambda_hv,phy1AU;
   read_hv_flux<Scalar>(lambda_hv,phy1AU,input_hv);
+  Antioch::ParticleFlux<std::vector<Scalar> > phy_at_top;
+  phy_at_top.set_abscissa(lambda_hv);
+  std::vector<Scalar> flux_at_top(phy1AU.size(),0.);
+  for(unsigned int il = 0; il < phy1AU.size(); il++)
+  {
+     flux_at_top[il] = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>());
+  }
+  phy_at_top.set_flux(flux_at_top);
 
 ////cross-section
   std::vector<Scalar> lambda_N2,sigma_N2;
   std::vector<Scalar> lambda_CH4, sigma_CH4;
-  read_crossSection<Scalar>(input_N2,3,lambda_N2,sigma_N2);
-  read_crossSection<Scalar>(input_CH4,9,lambda_CH4,sigma_CH4);
+  read_crossSection<Scalar>(input_N2,lambda_N2,sigma_N2);
+  read_crossSection<Scalar>(input_CH4,lambda_CH4,sigma_CH4);
 
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
@@ -287,8 +304,8 @@ int tester(const std::string &input_T, const std::string &input_hv,
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);
-  tau.add_cross_section(lambda_N2,  sigma_N2,  Antioch::Species::N2, neutral_species.active_species_name_map().at("N2"));
-  tau.add_cross_section(lambda_CH4, sigma_CH4, Antioch::Species::CH4, neutral_species.active_species_name_map().at("CH4"));
+  tau.add_cross_section(lambda_N2,  sigma_N2,  0, neutral_species.species_name_map().at("N2"));
+  tau.add_cross_section(lambda_CH4, sigma_CH4, 1, neutral_species.species_name_map().at("CH4"));
   tau.update_cross_section(lambda_hv);
 
 //reaction sets
@@ -310,8 +327,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
  ************************/
 
 //photon evaluator
-  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(tau,composition);
-  photon.set_photon_flux_at_top(lambda_hv, phy1AU, Planet::Constants::Saturn::d_Sun<Scalar>());
+  Planet::PhotonEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > photon(phy_at_top,tau,composition);
 //here, don't you forget to set the photon flux pointers to the reaction set
 
 //molecular diffusion
@@ -334,8 +350,13 @@ int tester(const std::string &input_T, const std::string &input_hv,
 
   int return_flag(0);
 
+  std::vector<Scalar> flux_at_z(lambda_hv.size(),0.);
+
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
+    std::stringstream alt;
+    alt << z;
+
     std::vector<Scalar> densities, sum_dens;
 
     calculate_densities(densities, sum_dens, dens_tot, molar_frac, Mmean, zmin, zmax, z, temperature);
@@ -343,20 +364,22 @@ int tester(const std::string &input_T, const std::string &input_hv,
     Scalar T = temperature.neutral_temperature(z);
     Scalar x = a(T,Mmean,z);
     std::vector<Scalar> opacity;
-    calculate_tau(opacity,chapman,cs,lambda_hv,sum_dens,z,x);
+    calculate_tau(opacity,chapman,cs,lambda_hv,sum_dens,x);
 
-
-    photon.update_photon_flux(densities,sum_dens,z);
-    
+    photon.update_photon_flux(densities,sum_dens,z,flux_at_z);
 
     for(unsigned int il = 0; il < lambda_hv.size(); il++)  
     {
+        std::stringstream wave;
+        wave << lambda_hv[il];
+
         Scalar phy_top  = phy1AU[il] / (Planet::Constants::Saturn::d_Sun<Scalar>() * Planet::Constants::Saturn::d_Sun<Scalar>());
         Scalar phy_theo = phy_top * Antioch::ant_exp(-opacity[il]);
-   
-        int flag_phy_top = check_test(phy_top, photon.photon_flux_at_top().flux()[il], "phy at top at altitude and wavelength");
-        int flag_phy     =  check_test(phy_theo, photon.photon_flux().flux()[il], "phy at altitude and wavelength");
-        return_flag = flag_phy_top || flag_phy  || return_flag;
+
+        int flag_phy_top = check_test(phy_top, photon.photon_flux_at_top().flux()[il], "phy at top at altitude " + alt.str() + " and wavelength " + wave.str());
+        int flag_phy     = check_test(phy_theo, flux_at_z[il], "phy at altitude " + alt.str() + " and wavelength " + wave.str());
+
+        return_flag = flag_phy_top || flag_phy || return_flag;
     }
   }
 

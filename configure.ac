@@ -46,8 +46,6 @@ AC_DEFINE_UNQUOTED([MAJOR_VERSION],$GENERIC_MAJOR_VERSION,[Major version])
 AC_DEFINE_UNQUOTED([MINOR_VERSION],$GENERIC_MINOR_VERSION,[Minor version])
 AC_DEFINE_UNQUOTED([MICRO_VERSION],$GENERIC_MICRO_VERSION,[Micro version])
 
-
-
 dnl------------------------------
 dnl Checks for compilers
 dnl------------------------------
@@ -57,9 +55,6 @@ AC_PROG_CXX
 
 dnl Added for AX_CODE_COVERAGE macro to work correctly, even though there's no Fortran here.
 AC_PROG_FC
-
-dnl -Wall warnings, -Wall the time.
-AX_CXXFLAGS_WARN_ALL
 
 dnl Allow users to make vectorized tests larger
 AC_ARG_WITH([n_tuples],
@@ -84,6 +79,34 @@ dnl--------------------------
 # Check for Antioch
 AX_PATH_ANTIOCH(0.0.0,yes)
 
+# GRINS
+AX_PATH_GRINS(0.4.0,yes)
+
+# Libmesh flags
+AC_ARG_ENABLE([libmesh-flags],
+               AC_HELP_STRING([--disable-libmesh-flags],[disable use of libmesh cxxflags for CXXFLAGS]),
+               [case "${enableval}" in
+                   yes) USE_LIBMESH_CXX_FLAGS=1 ;;
+                    no) USE_LIBMESH_CXX_FLAGS=0 ;;
+                     *) AC_MSG_ERROR(bad value ${enableval} for libmesh-flags) ;;
+                esac],
+               [USE_LIBMESH_CXX_FLAGS=1])
+
+if test "$USE_LIBMESH_CXX_FLAGS" = "1"; then
+   AC_DEFINE(USE_LIBMESH_CXX_FLAGS,1,[Define if libmesh cxxflags enabled])
+   CXXFLAGS=`$LIBMESH_CONFIG --cppflags --cxxflags`
+else
+ dnl TODO: WE NEED TO DISTINGUISH BETWEEN COMPILERS IN A BETTER WAY
+   AC_DEFINE(USE_LIBMESH_CXX_FLAGS,0,[Define if libmesh cxxflags enabled])
+   CXXFLAGS="-O0 -g -fno-unsafe-math-optimizations"
+fi
+
+# eigen
+CONFIGURE_EIGEN(2.3.0,yes)
+
+dnl -Wall warnings, -Wall the time.
+AX_CXXFLAGS_WARN_ALL
+
 dnl--------------------------
 dnl Even if no dependency needed it,
 dnl C++11 makes our asserts nicer,
@@ -107,9 +130,12 @@ elif (test x$enablecxx11 = xoptional); then
   AX_CXX_AUTO_THIS(optional)
 fi
 
-AX_PATH_GRINS(0.4.0,yes)
-
-CONFIGURE_EIGEN(2.3.0,yes)
+dnl--------------------------
+dnl Checks grvy, may want to
+dnl to brutally import grins
+dnl config
+dnl--------------------------
+AX_PATH_GRVY_NEW([0.30],[no])
 
 dnl--------------------------
 dnl Checks for code coverage
@@ -152,6 +178,10 @@ AC_CONFIG_FILES(test/molecular_diffusion_evaluator_unit.sh,   [chmod +x test/mol
 AC_CONFIG_FILES(test/diffusion_evaluator_unit.sh,             [chmod +x test/diffusion_evaluator_unit.sh])
 AC_CONFIG_FILES(test/physics_helper_unit.sh,                  [chmod +x test/physics_helper_unit.sh])
 AC_CONFIG_FILES(test/solver_test.sh,                          [chmod +x test/solver_test.sh])
+AC_CONFIG_FILES(test/ionospheric_test.sh,                     [chmod +x test/ionospheric_test.sh])
+
+AC_CONFIG_FILES(test/input/solver_test.in)
+AC_CONFIG_FILES(test/input/grins_input_physics_helper.in)
 
 dnl-----------------------------------------------
 dnl Generate header files

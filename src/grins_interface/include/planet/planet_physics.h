@@ -26,22 +26,25 @@
 // GRINS
 #include "grins/physics.h"
 #include "grins/var_typedefs.h"
-
-namespace GRINS
-{
-  class AssemblyContext;
-  class CachedValues;
-}
+#include "grins/assembly_context.h"
+#include "grins/cached_values.h"
+#include "grins/bc_handling_base.h"
+#include "grins/assembly_context.h"
+#include "grins/generic_ic_handler.h"
 
 // Planet
 #include "planet/planet_physics_helper.h"
+#include "planet/planet_physics_evaluator.h"
+#include "planet/planet_bc_handling.h"
+#include "planet/planet_initial_guess.h"
 
 // libMesh
-class GetPot;
-namespace libMesh
-{
-  class FEMSystem;
-}
+#include "libmesh/enum_fe_family.h"
+#include "libmesh/enum_order.h"
+#include "libmesh/getpot.h"
+#include "libmesh/fem_system.h"
+#include "libmesh/string_to_enum.h"
+#include "libmesh/quadrature.h"
 
 namespace Planet
 {
@@ -72,9 +75,9 @@ namespace Planet
                                 GRINS::AssemblyContext& context,
                                 GRINS::CachedValues& cache );
 
-    virtual void Physics::side_time_derivative( bool /*compute_jacobian*/,
-				      AssemblyContext& /*context*/,
-				      CachedValues& /*cache*/ );
+    virtual void side_time_derivative( bool /*compute_jacobian*/,
+                                       GRINS::AssemblyContext& /*context*/,
+                                       GRINS::CachedValues& /*cache*/ );
 
   protected:
 
@@ -88,34 +91,42 @@ namespace Planet
     std::vector<std::string> _species_var_names;
 
     //! Element type, read from input
-    libMeshEnums::FEFamily _species_FE_family;
+    libMesh::FEFamily _species_FE_family;
 
     //! Element orders, read from input
-    libMeshEnums::Order _species_order;
+    libMesh::Order _species_order;
 
     PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType> _helper;
 
   private:
 
     PlanetPhysics();
-    
 
   };
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::PlanetPhysics( const GRINS::PhysicsName& physics_name, const GetPot& input )
     : GRINS::Physics(physics_name,input), 
-      _n_species( input.vector_variable_size("Physics/Chemistry/species") ),
-      _species_FE_family( libMesh::Utility::string_to_enum<libMeshEnums::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
-      _species_order( libMesh::Utility::string_to_enum<libMeshEnums::Order>( input("Physics/Planet/species_order", "FIRST") ) )
+      _n_species( input.vector_variable_size("Planet/neutral_species") ),
+      _species_FE_family( libMesh::Utility::string_to_enum<libMesh::FEFamily>( input("Physics/Planet/species_FE_family", "LAGRANGE") ) ),
+      _species_order( libMesh::Utility::string_to_enum<libMesh::Order>( input("Physics/Planet/species_order", "FIRST") ) ),
+      _helper(input)
   {
      _species_var_names.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
-	/*! \todo Make this prefix string an input option */
-	std::string var_name = "n_"+std::string(input( "Physics/Chemistry/species", "DIE!", i ));
-	_species_var_names.push_back( var_name );
+        /*! \todo Make this prefix string an input option */
+        std::string var_name = "n_"+std::string(input( "Planet/neutral_species", "DIE!", i ));
+        _species_var_names.push_back( var_name );
       }
+
+    this->_bc_handler = new PlanetBCHandling<CoeffType,VectorCoeffType,MatrixCoeffType>(physics_name,input,_helper);
+
+    /*
+    this->_ic_handler = new GRINS::GenericICHandler( physics_name, input );
+    PlanetInitialGuess<CoeffType,VectorCoeffType,MatrixCoeffType> initial_func(_helper);
+    _ic_handler->attach_initial_func(initial_func);
+    */
 
     return;
   }
@@ -132,8 +143,8 @@ namespace Planet
     _species_vars.reserve(this->_n_species);
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
-	_species_vars.push_back( system->add_variable( _species_var_names[i], 
-						       this->_species_order, _species_FE_family) );
+        _species_vars.push_back( system->add_variable( _species_var_names[i], 
+                                                       this->_species_order, _species_FE_family) );
       }
 
     return;
@@ -144,7 +155,7 @@ namespace Planet
   {
     for( unsigned int i = 0; i < this->_n_species; i++ )
       {
-	system->time_evolving( _species_vars[i] );
+        system->time_evolving( _species_vars[i] );
       }
 
     return;
@@ -163,8 +174,8 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::element_time_derivative( bool compute_jacobian,
-                                               GRINS::AssemblyContext& context,
-                                               GRINS::CachedValues& cache )
+                                                                                          GRINS::AssemblyContext& context,
+                                                                                          GRINS::CachedValues& /*cache*/ )
   {
     unsigned int n_qpoints = context.get_element_qrule().n_points();
 
@@ -187,43 +198,77 @@ namespace Planet
     const std::vector<libMesh::Point>& s_qpoint = 
       context.get_element_fe(var)->get_xyz();
 
+    // We shouldn't have to create this for every element and put it in a context,
+    // but just getting this going for now.
+    PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType> evaluator(_helper);
+
+//    std::cout << "Element #" << context.get_elem().id() << std::endl;
     for (unsigned int qp=0; qp != n_qpoints; qp++)
       {
         const libMesh::Number r = s_qpoint[qp](0);
+        const libMesh::Number z = r - Constants::Titan::radius<libMesh::Number>();
         
-        libMesh::Real jac = r*r*JxW[qp];
+        libMesh::Real jac = r  * r * JxW[qp];
 
         std::vector<libMesh::Number> molar_concentrations(this->_n_species, 0);
         std::vector<libMesh::Number> dmolar_concentrations_dz(this->_n_species, 0);
+
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
             molar_concentrations[s] = context.interior_value(this->_species_vars[s],qp);
             dmolar_concentrations_dz[s] = context.interior_gradient(this->_species_vars[s],qp)(0);
           }
 
+        evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
+                              z );//- Constants::Titan::radius<double>() ) ; // z
+
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
-            const libMesh::Real n_s = context.interior_value(this->_species_vars[s],qp);
-
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
-            _helper.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
-                            r - Constants::Titan::radius<double>() ) ; // z
+            libMesh::Number n_s = molar_concentrations[s];
 
-            libMesh::Real omega = _helper.diffusion_term(s);
+            libMesh::Number dns_dz = dmolar_concentrations_dz[s];
 
-            libMesh::Real omega_dot = _helper.chemical_term(s);
+            libMesh::Real omega_A_term = evaluator.diffusion_A_term(s);
+
+            libMesh::Real omega_B_term = evaluator.diffusion_B_term(s);
+
+            libMesh::Real omega_dot = evaluator.chemical_term(s);
+/*std::cout << "omega A = " << omega_A_term 
+          << ", omega B = " << omega_B_term 
+          << ", omega_dot = " << omega_dot << std::endl;*/
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
-                Fs(i) += (  omega_dot*s_phi[i][qp] 
- //                         + 2*omega*n_s*s_phi[i][qp] 
-                            - omega*n_s*s_grad_phi[i][qp](0) )*jac;
+                Fs(i) += (  omega_dot * s_phi[i][qp]  // chemistry
+                          + (n_s * omega_B_term + dns_dz * omega_A_term) * s_grad_phi[i][qp](0) //diffusion
+                          )*jac;
 
                 if( compute_jacobian )
                   {
-                    libmesh_not_implemented();
+                    //libmesh_not_implemented();
+                    for(unsigned int t=0; t < this->_n_species; t++ )
+                      {
+                        libMesh::DenseSubMatrix<libMesh::Number> &J =
+                          context.get_elem_jacobian(this->_species_vars[s], this->_species_vars[t]); // R_{s},{t}
+
+                        libMesh::Real domega_dot_dns = evaluator.dchemical_term_dn_i(s,t);
+
+                        libMesh::Real domega_B_term_dns = evaluator.ddiffusion_B_term_dn(s,t);
+
+                        libMesh::Real domega_A_term_dns = evaluator.ddiffusion_A_term_dn(s,t);
+
+                        for(unsigned int j=0; j != n_s_dofs; j++)
+                          {
+                            J(i,j) += jac*( domega_dot_dns*s_phi[i][qp]*s_phi[j][qp]
+                                            + omega_B_term*s_grad_phi[i][qp](0)*s_phi[j][qp]
+                                            + n_s*domega_B_term_dns*s_grad_phi[i][qp](0)*s_phi[j][qp]
+                                            + omega_A_term*s_grad_phi[i][qp](0)*s_grad_phi[j][qp](0)
+                                            + dns_dz*domega_A_term_dns*s_grad_phi[i][qp](0)*s_phi[j][qp] );
+                          }
+                      }
                   }
               }
 
@@ -236,8 +281,8 @@ namespace Planet
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::mass_residual( bool compute_jacobian,
-                                     GRINS::AssemblyContext& context,
-                                     GRINS::CachedValues& cache )
+                                                                                GRINS::AssemblyContext& context,
+                                                                                GRINS::CachedValues& /*cache*/ )
   {
     unsigned int n_qpoints = context.get_element_qrule().n_points();
 
@@ -273,7 +318,7 @@ namespace Planet
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
-                Fs(i) += ( n_s_dot*phi[i][qp] )*jac;
+                Fs(i) += ( n_s_dot*s_phi[i][qp] )*jac;
 
                 if( compute_jacobian )
                   {
@@ -291,16 +336,14 @@ namespace Planet
                                                                        GRINS::AssemblyContext& context,
                                                                        GRINS::CachedValues& cache )
   {
-    /*! \todo Need to implement thermodynamic pressure calcuation for cases where it's needed. */
-
     std::vector<GRINS::BoundaryID> ids = context.side_boundary_ids();
 
     for( std::vector<GRINS::BoundaryID>::const_iterator it = ids.begin();
-	 it != ids.end(); it++ )
+         it != ids.end(); it++ )
       {
-	libmesh_assert (*it != libMesh::BoundaryInfo::invalid_id);
+        libmesh_assert (*it != libMesh::BoundaryInfo::invalid_id);
 
-	this->_bc_handler->apply_neumann_bcs( context, cache, compute_jacobian, *it );
+        this->_bc_handler->apply_neumann_bcs( context, cache, compute_jacobian, *it );
       }
 
     return;

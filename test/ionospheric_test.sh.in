@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PROG="@top_builddir@/test/ionospheric_test"
+
+INPUT="@top_srcdir@/test/input/ionospheric_species.inp @top_srcdir@/test/input/ionospheric_reactions.inp @top_srcdir@/test/input/ionospheric_neutral_comp.inp @top_srcdir@/test/input/chemical_species.inp"
+
+$PROG $INPUT
+

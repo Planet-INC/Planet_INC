@@ -43,7 +43,7 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 100.L;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
@@ -66,6 +66,7 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   {
      Scalar t,tz,dt,dtz;
      temp >> t >> tz >> dt >> dtz;
+     if(!temp.good())break;
      T0.push_back(t);
      Tz.push_back(tz);
   }
@@ -93,7 +94,7 @@ void calculate_densities(VectorScalar &densities, const Scalar &tot_dens, const 
    {
       Mm += molar_frac[s] * mm[s];
    }
-   Mm *= 1e-3;//to kg
+
    densities.clear();
    densities.resize(molar_frac.size());
    for(unsigned int s = 0; s < molar_frac.size(); s++)
@@ -136,7 +137,7 @@ int tester(const std::string &input_T)
 //ionic system contains neutral system
   ions = neutrals;
   ions.push_back("N2+");
-  Scalar MN(14.008L), MC(12.011), MH(1.008L);
+  Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH, MC2H = 2.L * MC + MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
@@ -188,11 +189,11 @@ int tester(const std::string &input_T)
 //not needed
 
 //binary diffusion
-  Planet::BinaryDiffusion<Scalar> N2N2(   Antioch::Species::N2,  Antioch::Species::N2 , bNN1, bNN2, NN_model);
-  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, bCN1, bCN2, CN_model);
-  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, bCC1, bCC2, CC_model);
-  Planet::BinaryDiffusion<Scalar> N2C2H( Antioch::Species::N2, Antioch::Species::C2H);
-  Planet::BinaryDiffusion<Scalar> CH4C2H( Antioch::Species::CH4, Antioch::Species::C2H);
+  Planet::BinaryDiffusion<Scalar> N2N2(   0, 0 , bNN1, bNN2, NN_model);
+  Planet::BinaryDiffusion<Scalar> N2CH4(  0, 1, bCN1, bCN2, CN_model);
+  Planet::BinaryDiffusion<Scalar> CH4CH4( 1, 1, bCC1, bCC2, CC_model);
+  Planet::BinaryDiffusion<Scalar> N2C2H(  0, 2);
+  Planet::BinaryDiffusion<Scalar> CH4C2H( 1, 2);
   std::vector<std::vector<Planet::BinaryDiffusion<Scalar> > > bin_diff_coeff;
   bin_diff_coeff.resize(2);
   bin_diff_coeff[0].push_back(N2N2);
@@ -237,8 +238,7 @@ int tester(const std::string &input_T)
 //not needed
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
-  molecular_diffusion.set_medium_species(medium);
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature,medium);
 
 //eddy diffusion
 //not needed
@@ -253,7 +253,6 @@ int tester(const std::string &input_T)
   {
      Matm += molar_frac[s] * composition.neutral_composition().M(s);
   }
-  Matm *= 1e-3L; //to kg
 
 //N2, CH4, C2H
   std::vector<std::vector<Scalar> > Dij;
@@ -274,7 +273,6 @@ int tester(const std::string &input_T)
       std::vector<Scalar> molecular_diffusion_Dtilde;
       molecular_diffusion.Dtilde(densities,z,molecular_diffusion_Dtilde);
 
-        std::cout << z << ": " << T << ", " << P << ", " << bNN1 << ", " << bNN2 << std::endl;
       Dij[0][0] = binary_coefficient(T,P,bNN1,bNN2); //N2 N2
       Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
       Dij[0][2] = binary_coefficient(Dij[0][0],Mm[0],Mm[2]); //N2 C2H

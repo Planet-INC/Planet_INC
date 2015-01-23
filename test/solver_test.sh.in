@@ -2,7 +2,7 @@
 
 PROG="@top_builddir@/test/solver_test"
 
-INPUT="@top_srcdir@/test/input/temperature.dat @top_srcdir@/test/input/hv_SSI.dat @top_srcdir@/test/input/neutral_reactions.bimol @top_srcdir@/test/input/neutral_reactions.falloff @top_srcdir@/test/input/N2_hv_cross-sections.dat @top_srcdir@/test/input/CH4_hv_cross-sections.dat @top_srcdir@/test/input/neutral_list.dat @top_srcdir@/test/input/T40_Flyby @top_srcdir@/test/input/neutrals.dat @top_srcdir@/test/input/"
+INPUT="@abs_top_srcdir@/test/input/solver_test.in"
 
 $PROG $INPUT
 

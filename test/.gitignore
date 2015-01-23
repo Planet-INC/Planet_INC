@@ -1,0 +1,13 @@
+.*.swp
+*.o
+*.log
+*.aux
+*.tex
+*.pdf
+*.trs
+Makefile
+Makefile.in
+tests
+photon_tests
+atmosphere_tests
+chapman_tests

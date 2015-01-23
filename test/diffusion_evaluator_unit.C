@@ -97,12 +97,14 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
+     Scalar t(0.),tz(0.),dt(0.),dtz(0.);
      temp >> t >> tz >> dt >> dtz;
+     if(tz < 1.)continue;
      T0.push_back(t);
      Tz.push_back(tz);
   }
   temp.close();
+
   return;
 }
 
@@ -111,7 +113,7 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
 {
    return botdens * Antioch::ant_exp(-(z - zmin)/((Planet::Constants::Titan::radius<Scalar>() + z) * (Planet::Constants::Titan::radius<Scalar>() + zmin) * 1e3 *
                                              Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T / 
-                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm))
+                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm * 1e-3))
                               );
 }
 
@@ -120,7 +122,7 @@ Scalar dbarometry_dz(const Scalar &zmin, const Scalar &z, const Scalar &T, const
 {
    return barometry(zmin, z, T, Mm, botdens) / ((Planet::Constants::Titan::radius<Scalar>() + z) * (Planet::Constants::Titan::radius<Scalar>() + zmin) * 1e6 *
                                              Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T / 
-                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm))
+                                                        (Planet::Constants::Universal::G<Scalar>() * Planet::Constants::Titan::mass<Scalar>() * Mm * 1e-3))
           * (Scalar(1.L) - Scalar(2.L) * (z - zmin)/(Planet::Constants::Titan::radius<Scalar>() + zmin));
 }
 
@@ -207,11 +209,11 @@ int tester(const std::string &input_T)
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
 //binary diffusion
-  Scalar bCN1(1.04e-5 * 1e-4),bCN2(1.76); //cm2 -> m2
+  Scalar bCN1(1.04e-5),bCN2(1.76); //cm2.s-1
   Planet::DiffusionType CN_model(Planet::DiffusionType::Wakeham);
-  Scalar bCC1(5.73e16 * 1e-4),bCC2(0.5); //cm2 -> m2
+  Scalar bCC1(5.73e16),bCC2(0.5); //cm2.s-1
   Planet::DiffusionType CC_model(Planet::DiffusionType::Wilson);
-  Scalar bNN1(0.1783 * 1e-4),bNN2(1.81); //cm2 -> m2
+  Scalar bNN1(0.1783),bNN2(1.81); //cm2.s-1
   Planet::DiffusionType NN_model(Planet::DiffusionType::Massman);
 
 //thermal coefficient
@@ -220,7 +222,7 @@ int tester(const std::string &input_T)
   tc.push_back(0.L); //CH4
 
 //eddy
-  Scalar K0(4.3e6L * 1e-4);//cm2 -> m2
+  Scalar K0(4.3e6L);//cm2.s-1
 
 /************************
  * first level
@@ -236,9 +238,9 @@ int tester(const std::string &input_T)
 //not needed
 
 //binary diffusion
-  Planet::BinaryDiffusion<Scalar> N2N2(   Antioch::Species::N2,  Antioch::Species::N2 , bNN1, bNN2, NN_model);
-  Planet::BinaryDiffusion<Scalar> N2CH4(  Antioch::Species::N2,  Antioch::Species::CH4, bCN1, bCN2, CN_model);
-  Planet::BinaryDiffusion<Scalar> CH4CH4( Antioch::Species::CH4, Antioch::Species::CH4, bCC1, bCC2, CC_model);
+  Planet::BinaryDiffusion<Scalar> N2N2(   0, 0, bNN1, bNN2, NN_model);
+  Planet::BinaryDiffusion<Scalar> N2CH4(  0, 1, bCN1, bCN2, CN_model);
+  Planet::BinaryDiffusion<Scalar> CH4CH4( 1, 1, bCC1, bCC2, CC_model);
   std::vector<std::vector<Planet::BinaryDiffusion<Scalar> > > bin_diff_coeff;
   bin_diff_coeff.resize(2);
   for(unsigned int n = 0; n < 2; n++)
@@ -286,8 +288,7 @@ int tester(const std::string &input_T)
 //not needed
 
 //molecular diffusion
-  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature);
-  molecular_diffusion.set_medium_species(medium);
+  Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature, medium);
 
 //eddy diffusion
   Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diffusion(composition,K0);
@@ -309,7 +310,6 @@ int tester(const std::string &input_T)
   {
     mean_M += molar_frac[s] * Mm[s];
   }
-  mean_M *= 1e-3;//to kg
 
   std::vector<std::vector<Scalar> > Dij;
   Dij.resize(2);
@@ -374,17 +374,17 @@ int tester(const std::string &input_T)
                             (Scalar(1.L) - Mm[s] / M_diff)
                             );
 //
-       Scalar Hs = scale_height(T,z,Mm[s] * Scalar(1e-3));
-
+       Scalar Hs = scale_height(T,z,Mm[s]); //km
        Scalar omega_theo = - Dtilde * ( dns_dz[s] /densities[s]
                                       + Scalar(1.L)/Hs 
                                       + dT_dz /T * (Scalar(1.L) + (Scalar(1.L) - molar_frac[s]) * tc[s]))
                            - K      * ( dns_dz[s] /densities[s]
                                       + Scalar(1.L)/Ha
                                       + dT_dz/T);
+       omega_theo *= Scalar(1e-10) * densities[s];
 
-       return_flag = return_flag ||
-                        check_test(omega_theo,total_diffusion[s],"omega of species at altitude");
+       return_flag = check_test(omega_theo,total_diffusion[s],"omega of species at altitude") || return_flag;
+                        
      }
   }
 

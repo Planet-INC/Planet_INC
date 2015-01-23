@@ -2,7 +2,7 @@
 
 PROG="@top_builddir@/test/photon_evaluator_unit"
 
-INPUT="@top_srcdir@/test/input/temperature.dat @top_srcdir@/test/input/hv_SSI.dat @top_srcdir@/test/input/N2_hv_cross-sections.dat @top_srcdir@/test/input/CH4_hv_cross-sections.dat"
+INPUT="@top_srcdir@/test/input/temperature.dat @top_srcdir@/test/input/hv_SwRI_high_res.dat @top_srcdir@/test/input/hv_cross_section_high_res.N2 @top_srcdir@/test/input/hv_cross_section_high_res.CH4"
 
 $PROG $INPUT
 
