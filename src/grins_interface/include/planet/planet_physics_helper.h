@@ -422,7 +422,7 @@ namespace Planet
     std::string input_T = input( "Planet/temperature_file", "DIE!" );
     std::vector<CoeffType> T0,Tz;
     this->read_temperature(T0,Tz,input_T);
-    _temperature = new AtmosphericTemperature<CoeffType,VectorCoeffType>(T0,T0,Tz,Tz);
+    _temperature = new AtmosphericTemperature<CoeffType,VectorCoeffType>(Tz,T0);
 
     return;
   }
