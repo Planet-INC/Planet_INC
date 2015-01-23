@@ -66,12 +66,11 @@ void read_crossSection(VectorScalar & lambda, const std::string &file, VectorSca
   getline(sig_f,line);
   while(!sig_f.eof())
   {
-     Scalar wv(-1),sigt;
-     sig_f >> wv >> sigt;
-     if(!getline(sig_f,line))break;
-     if(wv < 0.)break;
-     lambda.push_back(wv/10.);//A -> nm
-     sigma.push_back(sigt*10.);//cm-2/A -> m-2/nm
+     Scalar wv(-1),sigt,dsig;
+     sig_f >> wv >> sigt >> dsig;
+     if(!sig_f.good())break;
+     lambda.push_back(wv);//A -> nm
+     sigma.push_back(sigt);//cm-2/A -> m-2/nm
   }
   sig_f.close();
 
@@ -99,6 +98,7 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   {
      Scalar t,tz,dt,dtz;
      temp >> t >> tz >> dt >> dtz;
+     if(!temp.good())break;
      T0.push_back(t);
      Tz.push_back(tz);
   }
