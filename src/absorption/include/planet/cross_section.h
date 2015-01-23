@@ -118,8 +118,14 @@ namespace Planet
   void CrossSection<VectorCoeffType>::update_cross_section(const VectorStateType &custom_x)
   {
     _cross_section_on_custom_grid.resize(custom_x.size());
-     _converter.y_on_custom_grid(_abscissa, _cross_section,
+    _converter.y_on_custom_grid(_abscissa, _cross_section,
                                  custom_x, _cross_section_on_custom_grid);
+
+    for(unsigned int i = 0; i < _cross_section_on_custom_grid.size(); i++)
+    {
+       if(_cross_section_on_custom_grid[i] < typename Antioch::value_type<VectorStateType>::type(0.L))
+                _cross_section_on_custom_grid[i] *= typename Antioch::value_type<VectorStateType>::type(-1.L);
+    }
 
      return;
   }
