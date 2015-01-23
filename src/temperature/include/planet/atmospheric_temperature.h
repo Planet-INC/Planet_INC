@@ -32,241 +32,282 @@
 
 //C++
 
+
+/*before it is merged in Antioch*/
+// GSL
+#include <gsl/gsl_spline.h>
+#include <gsl/gsl_errno.h>
+
 namespace Planet
 {
-  template<typename CoeffType, typename VectorCoeffType>
+
+  /* We copy/paste here the gsl_spliner.h header file of Antioch
+     Once it is merged, we need to delete all those lines
+  */
+  class GSLSpliner;
+
+
+  /*! \class AtmosphericTemperature
+      
+      This class contains the models for three temperatures:
+        - the neutral species temperature
+        - the ionic species temperature
+        - the electrons temperature
+
+      We use a spline for the neutral temperature, it is read from
+      an input file.
+      We use the hypothesis \f$T_\text{ion} = T_\text{neu}\f$.
+      We use the simple Titan model:
+      \f[
+           \begin{split}
+             T_\text{e} = 180~\text{K}                             & \text{ if }         z  < 900~\text{km}\\
+             T_\text{e} = 180 + \frac{z - 900}{500} * (1150 - 180) & \text{ if } 900 \le z < 1400~\text{km} \\
+             T_\text{e} = 1150 + 0.1 * (z - 1400)                  & \text{ else}\\
+           \end{split}
+      \f]
+   */
+  template<typename CoeffType, typename VectorCoeffType, typename Spliner = GSLSpliner>
   class AtmosphericTemperature
   {
       private:
         //!no default constructor
         AtmosphericTemperature(){antioch_error();return;}
 
-        VectorCoeffType _neutral_altitude;
-        VectorCoeffType _neutral_temperature;
-        VectorCoeffType _ionic_altitude;
-        VectorCoeffType _ionic_temperature;
-        VectorCoeffType _electronic_altitude;
-        VectorCoeffType _electronic_temperature;
+        Spliner spline;
 
       public:
-        AtmosphericTemperature(const VectorCoeffType &neu, const VectorCoeffType &ion, const VectorCoeffType &alt_neu, const VectorCoeffType &alt_ion);
+        AtmosphericTemperature(const VectorCoeffType &alt_neu, const VectorCoeffType &T_neu);
         ~AtmosphericTemperature();
-
-        //!\return neutral temperature
-        const VectorCoeffType &neutral_temperature() const;
-
-        //!\return neutral temperature altitude
-        const VectorCoeffType &neutral_altitude() const;
-
-        //!\return ionic temperature
-        const VectorCoeffType &ionic_temperature()   const;
-
-        //!\return ionic temperature altitude
-        const VectorCoeffType &ionic_altitude()   const;
-
-        //!\return electronic temperature
-        const VectorCoeffType &electronic_temperature()   const;
-
-        //!\return electronic temperature altitude
-        const VectorCoeffType &electronic_altitude()   const;
 
         //!\return neutral temperature at custom altitude
         template <typename StateType>
-        const CoeffType neutral_temperature(const StateType &z) const;
+        const ANTIOCH_AUTO(StateType)
+        neutral_temperature(const StateType &z) const
+        ANTIOCH_AUTOFUNC(StateType, spline.interpolated_value(z))
+
+        //!\return derivative neutral temperature at custom altitude
+        template <typename StateType>
+        const ANTIOCH_AUTO(StateType)
+        dneutral_temperature_dz(const StateType &z) const
+        ANTIOCH_AUTOFUNC(StateType, spline.dinterp_dx(z))
 
         //!\return ionic temperature at custom altitude
         template <typename StateType>
-        const CoeffType ionic_temperature(const StateType &z)   const;
+        const ANTIOCH_AUTO(StateType)
+        ionic_temperature(const StateType &z)   const
+        ANTIOCH_AUTOFUNC(StateType, neutral_temperature(z))
+
+        //!\return derivative ionic temperature at custom altitude
+        template <typename StateType>
+        const ANTIOCH_AUTO(StateType)
+        dionic_temperature_dz(const StateType &z)   const
+        ANTIOCH_AUTOFUNC(StateType, dneutral_temperature_dz(z))
 
         //!\return electronic temperature at custom altitude
         template <typename StateType>
-        const CoeffType electronic_temperature(const StateType &z)   const;
+        const ANTIOCH_AUTO(StateType)
+        electronic_temperature(const StateType &z)   const
+        ANTIOCH_AUTOFUNC(StateType, (z < Antioch::constant_clone(z,900.))?Antioch::constant_clone(z,180.):
+                                         (z < Antioch::constant_clone(z,1400.))?Antioch::constant_clone(z,180.) + Antioch::constant_clone(z,2e-3) * (z - Antioch::constant_clone(z,900.)) * Antioch::constant_clone(z,(1150. - 180.)):
+                                                                                Antioch::constant_clone(z,1150.) + Antioch::constant_clone(z,0.1) * (z - Antioch::constant_clone(z,1400.))
+                        )
 
-        //!
-        template<typename VectorStateType>
-        void set_neutral_temperature(const VectorStateType &neu);
+        //!\return derivative electronic temperature at custom altitude
+        template <typename StateType>
+        const ANTIOCH_AUTO(StateType)
+        delectronic_temperature_dz(const StateType &z)   const
+        ANTIOCH_AUTOFUNC(StateType, (z < Antioch::constant_clone(z,900.))?Antioch::zero_clone(z):
+                                         (z < Antioch::constant_clone(z,1400.))?Antioch::constant_clone(z,2e-3):
+                                                                                Antioch::constant_clone(z,0.1)
+                        )
 
-        //!
-        template<typename VectorStateType>
-        void set_ionic_temperature(const VectorStateType &ion);
-
-        template<typename VectorStateType>
-        void set_electronic_temperature(const VectorStateType &electron);
+        //! reset neutral temperature
+        void set_neutral_temperature(const VectorCoeffType & alt, const VectorCoeffType &neu);
 
         //!
         void initialize();
 
-        //!\return derivative at an altitude
-        template<typename StateType>
-        const CoeffType dneutral_temperature_dz(const StateType &z) const;
-
-        //!\return derivative at an altitude
-        template<typename StateType>
-        const CoeffType dionic_temperature_dz(const StateType &z) const;
-
-        //!\return derivative at an altitude
-        template<typename StateType>
-        const CoeffType delectronic_temperature_dz(const StateType &z) const;
-
   };
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename Spliner>
   inline
-  AtmosphericTemperature<CoeffType,VectorCoeffType>::~AtmosphericTemperature()
+  AtmosphericTemperature<CoeffType,VectorCoeffType,Spliner>::~AtmosphericTemperature()
   {
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename Spliner>
   inline
-  AtmosphericTemperature<CoeffType,VectorCoeffType>::AtmosphericTemperature(const VectorCoeffType &neu, 
-                                                                            const VectorCoeffType &ion, 
-                                                                            const VectorCoeffType &alt_neu,
-                                                                            const VectorCoeffType &alt_ion):
-      _neutral_altitude(alt_neu),
-      _neutral_temperature(neu),
-      _ionic_altitude(alt_ion),
-      _ionic_temperature(ion)
+  AtmosphericTemperature<CoeffType,VectorCoeffType,Spliner>::AtmosphericTemperature(const VectorCoeffType &alt_neu, 
+                                                                            const VectorCoeffType &T_neu)
+        :spline(alt_neu,T_neu)
   {
-    _electronic_altitude = _neutral_altitude;
-    _electronic_temperature.resize(_electronic_altitude.size());
-    for(unsigned int iz = 0; iz < _electronic_altitude.size(); iz++)
-    {
-      if(_electronic_altitude[iz] < 900.)
-      {
-         _electronic_temperature[iz] = 180.L;
-      }else if(_electronic_altitude[iz] < 1400.)
-      {
-         _electronic_temperature[iz] = CoeffType(180.L) + (_electronic_altitude[iz] - CoeffType(900.L))/CoeffType(500.L) * CoeffType(1150.L - 180.L) ;
-      }else
-      {
-         _electronic_temperature[iz] = CoeffType(1150.L) + CoeffType(0.1L) * (_electronic_altitude[iz] - CoeffType(1400.L));
-      }
-    }
     return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
+  template<typename CoeffType, typename VectorCoeffType, typename Spliner>
   inline
-  void AtmosphericTemperature<CoeffType,VectorCoeffType>::initialize()
+  void AtmosphericTemperature<CoeffType,VectorCoeffType,Spliner>::initialize()
   {
-     return;//nothing right now
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_temperature() const
-  {
-    return _ionic_temperature;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_altitude() const
-  {
-    return _ionic_altitude;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::neutral_temperature() const
-  {
-    return _neutral_temperature;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::neutral_altitude() const
-  {
-    return _neutral_altitude;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_temperature() const
-  {
-    return _electronic_temperature;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  inline
-  const VectorCoeffType &AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_altitude() const
-  {
-    return _electronic_altitude;
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename StateType>
-  inline
-  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::ionic_temperature(const StateType &z) const
-  {
-    return Functions::linear_evaluation(_ionic_altitude,_ionic_temperature,z);
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename StateType>
-  inline
-  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::neutral_temperature(const StateType &z) const
-  {
-    return Functions::linear_evaluation(_neutral_altitude,_neutral_temperature,z);
-  }
-
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename StateType>
-  inline
-  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::electronic_temperature(const StateType &z) const
-  {
-    return Functions::linear_evaluation(_electronic_altitude,_electronic_temperature,z);
+     return; //nothing
   }
 
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename VectorStateType>
+  template<typename CoeffType, typename VectorCoeffType, typename Spliner>
   inline
-  void AtmosphericTemperature<CoeffType,VectorCoeffType>::set_neutral_temperature(const VectorStateType &neu)
+  void AtmosphericTemperature<CoeffType,VectorCoeffType,Spliner>::set_neutral_temperature(const VectorCoeffType & alt_neu, const VectorCoeffType & T_neu)
   {
-     _neutral_temperature = neu;
+    spline.spline_delete();
+    spline.init(alt_neu,T_neu);
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename VectorStateType>
-  inline
-  void AtmosphericTemperature<CoeffType,VectorCoeffType>::set_ionic_temperature(const VectorStateType &ion)
+
+
+/*
+   Here come the gsl_spliner.h header file
+*/
+
+  template<bool B>
+  struct GSLInterp
   {
-     _ionic_temperature = ion;
+      template <typename Scalar>
+      Scalar interpolation(const Scalar & x, gsl_spline * spline, gsl_interp_accel * acc)
+                {return gsl_spline_eval(spline,x,acc);}
+
+      template <typename Scalar>
+      Scalar dinterpolation(const Scalar & x, gsl_spline * spline, gsl_interp_accel * acc)
+                {return gsl_spline_eval_deriv(spline,x,acc);}
+  };
+
+  template <>
+  struct GSLInterp<true>
+  {
+      template <typename VectorScalar>
+      VectorScalar interpolation(const VectorScalar & x, gsl_spline * spline, gsl_interp_accel * acc)
+                {
+                  VectorScalar out = zero_clone(x);
+                  for(unsigned int i =0; i < x.size(); ++i)
+                  {
+                    out[i] = gsl_spline_eval(spline,x[i],acc);
+                  }
+                  return out;
+                }
+
+      template <typename VectorScalar>
+      VectorScalar dinterpolation(const VectorScalar & x, gsl_spline * spline, gsl_interp_accel * acc)
+                {
+                  VectorScalar out = zero_clone(x);
+                  for(unsigned int i =0; i < x.size(); ++i)
+                  {
+                    out[i] = gsl_spline_eval_deriv(spline,x[i],acc);
+                  }
+                  return out;
+                }
+  };
+
+  class GSLSpliner
+  {
+     public:
+       GSLSpliner();
+       template <typename VectorCoeffType>
+       GSLSpliner(const VectorCoeffType & data_x_point, const VectorCoeffType & data_y_point);
+       ~GSLSpliner();
+
+     template <typename VectorCoeffType>
+     void spline_init(const VectorCoeffType & data_x_point, const VectorCoeffType & data_y_point);
+
+     void spline_delete();
+
+     template <typename StateType>
+     StateType interpolated_value(const StateType & x) const;
+
+     template <typename StateType>
+     StateType dinterp_dx(const StateType & x) const;
+
+     private:
+
+       gsl_interp_accel * _acc;
+       gsl_spline       * _spline;
+  };
+
+  inline
+  GSLSpliner::GSLSpliner()
+      :_acc(NULL),_spline(NULL)
+  {
+    _acc =  gsl_interp_accel_alloc();
+    return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename VectorStateType>
+  template <typename VectorCoeffType>
   inline
-  void AtmosphericTemperature<CoeffType,VectorCoeffType>::set_electronic_temperature(const VectorStateType &electron)
+  GSLSpliner::GSLSpliner(const VectorCoeffType & data_x_point, const VectorCoeffType & data_y_point)
+        :_acc(NULL),_spline(NULL)
   {
-     _electronic_temperature = electron;
+    _acc =  gsl_interp_accel_alloc();
+    spline_init(data_x_point, data_y_point);
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename StateType>
-  inline
-  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::dneutral_temperature_dz(const StateType &z) const
+  GSLSpliner::~GSLSpliner()
   {
-     return Functions::linear_evaluation_dz(_neutral_altitude,_neutral_temperature,z);
+    this->spline_delete();
+    gsl_interp_accel_free(_acc);
+    return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename StateType>
   inline
-  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::dionic_temperature_dz(const StateType &z) const
+  void GSLSpliner::spline_delete()
   {
-     return Functions::linear_evaluation_dz(_ionic_altitude,_ionic_temperature,z);
+    gsl_spline_free(_spline);
+    return;
   }
 
-  template<typename CoeffType, typename VectorCoeffType>
-  template<typename StateType>
+  template <typename VectorCoeffType>
   inline
-  const CoeffType AtmosphericTemperature<CoeffType,VectorCoeffType>::delectronic_temperature_dz(const StateType &z) const
+  void GSLSpliner::spline_init(const VectorCoeffType & data_x_point, const VectorCoeffType & data_y_point)
   {
-     return Functions::linear_evaluation_dz(_electronic_altitude,_electronic_temperature,z);
+     antioch_assert_equal_to(data_x_point.size(), data_y_point.size());
+
+     _spline = gsl_spline_alloc(gsl_interp_cspline, data_x_point.size());
+
+   // GLS takes only double, raaaaahhhh
+     typedef typename Antioch::rebind<VectorCoeffType,double>::type VectorGSLType;
+     VectorGSLType gsl_x_point(data_x_point.size(),0);
+     VectorGSLType gsl_y_point(data_y_point.size(),0);
+     for(unsigned int i = 0; i < data_x_point.size(); i++)
+     {
+        gsl_x_point[i] = (const double)data_x_point[i];
+        gsl_y_point[i] = (const double)data_y_point[i];
+     }
+
+     const double * x = &gsl_x_point[0];
+     const double * y = &gsl_y_point[0];
+
+     gsl_spline_init(_spline, x, y, data_x_point.size());
   }
+
+  template <typename StateType>
+  inline
+  StateType GSLSpliner::interpolated_value(const StateType & x) const
+  {
+     return GSLInterp<Antioch::has_size<StateType>::value>().interpolation(x, _spline, _acc);
+  }
+
+  template <typename StateType>
+  inline
+  StateType GSLSpliner::dinterp_dx(const StateType & x) const
+  {
+     return GSLInterp<Antioch::has_size<StateType>::value>().dinterpolation(x, _spline, _acc);
+  }
+
+
+
+
+
+
+
+
+
+
 
 }
 
