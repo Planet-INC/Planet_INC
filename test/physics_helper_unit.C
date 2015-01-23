@@ -276,12 +276,12 @@ void read_photochemistry_reac(const std::string &hv_file, const std::string &rea
      unsigned int j(0);
      for(int i = start; i < (int)datas[0].size() && i > -1; i += istep)
      {
-       dataf[j] = datas[ibr + 1][i];
+       dataf[j] = datas[0][i];
        j++;
      }
      for(int i = start; i < (int)datas[0].size() && i > -1; i += istep)
      {
-       dataf[j] = datas[0][i];
+       dataf[j] = datas[ibr + 1][i];
        j++;
      }
 
@@ -360,8 +360,8 @@ void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
         dataf1.push_back(1.); //Tref
         dataf2.push_back(1.); //Tref
       }
-      dataf1.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
-      dataf2.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
+      dataf1.push_back(1.L); // Ea_R provided
+      dataf2.push_back(1.L); // Ea_R provided
 
       Antioch::KineticsType<Scalar, VectorScalar>* rate1 = Antioch::build_rate<Scalar,VectorScalar>(dataf1,kineticsModel); //kinetics rate
       Antioch::KineticsType<Scalar, VectorScalar>* rate2 = Antioch::build_rate<Scalar,VectorScalar>(dataf2,kineticsModel); //kinetics rate
@@ -455,14 +455,14 @@ void fill_neutral_reactions(const std::string &neutral_reactions_elem,
       }else if(temp == 0) //Arrhenius
       {
          kineticsModel = Antioch::KineticsModel::ARRHENIUS;
-         dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-         dataf.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
+         dataf.push_back(std::atof(str_data[2].c_str()));//Ea_R
+         dataf.push_back(1.L);
       }else
       {
         dataf.push_back(std::atof(str_data[1].c_str())); //beta
-        dataf.push_back(std::atof(str_data[2].c_str()));//Ea
+        dataf.push_back(std::atof(str_data[2].c_str()));//Ea_R
         dataf.push_back(1.); //Tref
-        dataf.push_back(Antioch::Constants::R_universal<Scalar>() * Scalar(1e-3L)); //scale (R in kJ/mol/K)
+        dataf.push_back(1.L); //
       }
 
       Antioch::KineticsType<Scalar, VectorScalar>* rate = Antioch::build_rate<Scalar,VectorScalar>(dataf,kineticsModel); //kinetics rate

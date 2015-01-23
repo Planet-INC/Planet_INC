@@ -755,14 +755,14 @@ namespace Planet
           }else if(temp == 0)
           {
             kineticsModel = Antioch::KineticsModel::ARRHENIUS;
-            dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-            dataf.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
+            dataf.push_back(std::atof(str_data[2].c_str()));//Ea_R
+            dataf.push_back(1.L);
           }else
           {
             dataf.push_back(std::atof(str_data[1].c_str())); //beta
-            dataf.push_back(std::atof(str_data[2].c_str()));//Ea
-            dataf.push_back(1.); //Tref
-            dataf.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
+            dataf.push_back(std::atof(str_data[2].c_str()));//Ea_R
+            dataf.push_back(1.L); //Tref
+            dataf.push_back(1.L);// factor from Ea to Ea_R
           }
 
 
@@ -844,8 +844,8 @@ namespace Planet
             dataf1.push_back(1.); //Tref
             dataf2.push_back(1.); //Tref
           }
-        dataf1.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
-        dataf2.push_back(Antioch::Constants::R_universal<CoeffType>() * Antioch::Constants::R_universal_unit<CoeffType>().factor_to_some_unit("kJ/mol/K")); //scale (R in kJ/mol/K)
+        dataf1.push_back(1.L); //Ea_R provided
+        dataf2.push_back(1.L); //Ea_R provided
 
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate1 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf1,kineticsModel); //kinetics rate
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate2 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf2,kineticsModel); //kinetics rate
@@ -1397,9 +1397,8 @@ namespace Planet
     getline(sig_f,line);
     while(!sig_f.eof())
       {
-        CoeffType wv(-1.),sigt(-1.);
-        sig_f >> wv >> sigt;
-        if(!getline(sig_f,line))break;
+        CoeffType wv(-1.),sigt(-1.),dsig;
+        sig_f >> wv >> sigt >> dsig;
         if(!sig_f.good())break;
         lambda.push_back(wv);//A
         sigma.push_back(sigt);//cm-2/A
@@ -1756,15 +1755,15 @@ namespace Planet
            start = datas[0].size() - 1;
         }
         unsigned int j(0);
-        for(int i = start; i < (int)datas[0].size() && i > -1; i += istep) //cs first
-        {
-          dataf[j] = datas[ibr + 1][i];
-          j++;
-        }
-        for(int i = start; i < (int)datas[0].size() && i > -1; i += istep) //\lambda then
+        for(int i = start; i < (int)datas[0].size() && i > -1; i += istep) //\lambda first
         {
            dataf[j] = datas[0][i];
            j++;
+        }
+        for(int i = start; i < (int)datas[0].size() && i > -1; i += istep) //cs then
+        {
+          dataf[j] = datas[ibr + 1][i];
+          j++;
         }
 
         Antioch::KineticsType<CoeffType,VectorCoeffType> * rate  = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf,kineticsModel); //kinetics rate
