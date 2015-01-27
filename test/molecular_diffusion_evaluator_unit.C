@@ -46,7 +46,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
-            << "failed test: " << words << "\n"
+            << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -263,6 +263,8 @@ int tester(const std::string &input_T)
   int return_flag(0);
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
+      std::stringstream walt;
+      walt << z;
       Scalar T    = temperature.neutral_temperature(z);
       Scalar nTot = barometry(zmin,z,T,Matm,dens_tot);
       Scalar P    = pressure(nTot,T);
@@ -271,7 +273,7 @@ int tester(const std::string &input_T)
       calculate_densities(densities, dens_tot, molar_frac, zmin, z, T, Mm);
 
       std::vector<Scalar> molecular_diffusion_Dtilde;
-      molecular_diffusion.Dtilde(densities,z,molecular_diffusion_Dtilde);
+      molecular_diffusion.Dtilde(densities,T,molecular_diffusion_Dtilde);
 
       Dij[0][0] = binary_coefficient(T,P,bNN1,bNN2); //N2 N2
       Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
@@ -282,12 +284,12 @@ int tester(const std::string &input_T)
                                               / Planet::Constants::Convention::P_normal<Scalar>(),bCC2 + Scalar(1.L)); //CH4 CH4
       Dij[1][2] = binary_coefficient(Dij[1][1],Mm[1],Mm[2]); //CH4 C2H
 
-      return_flag = return_flag ||
-                    check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude") || 
-                    check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude") || 
-                    check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 C2H at altitude") || 
+      return_flag = check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude")   || 
+                    check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude")  || 
+                    check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 C2H at altitude")  || 
                     check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude") || 
-                    check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 C2H at altitude");
+                    check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 C2H at altitude") ||
+                    return_flag;
 
       for(unsigned int s = 0; s < molar_frac.size(); s++)
       {
@@ -309,8 +311,7 @@ int tester(const std::string &input_T)
         }
         M_diff /= totdens_diff;
         Scalar Dtilde = Ds / (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
-        return_flag = return_flag ||
-                      check_test(Dtilde,molecular_diffusion_Dtilde[s],"Dtilde of species at altitude");
+        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],"Dtilde of species " + neutrals[s] + " at altitude " + walt.str()) || return_flag;
 
       }
   }
