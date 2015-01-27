@@ -262,15 +262,15 @@ namespace Planet
 // Wilke part
 /////////////
 
-
-        //D_s = (nT - ns) / (sum_{medium} n_{medium}/D_{medium,s})
-        StateType Ds = nTot - molar_concentrations[s];
-        StateType dDs_dni = (s == i)?Antioch::zero_clone(T):Antioch::constant_clone(T,1);
-//Ds denominator : sum_{j_m} n_{j_m}/D_{s,j_m}
-        StateType n_D;
-        StateType dn_D_dni;
-        Antioch::set_zero(n_D);
-        Antioch::set_zero(dn_D_dni);
+// Ds derivative
+        StateType dDs_dni;
+        Antioch::set_zero(dDs_dni);
+///// temp
+// Ds denominator : sum_{j_m} n_{j_m}/D_{s,j_m}
+// D_s = (nT - ns) / (sum_{medium} n_{medium}/D_{medium,s})
+        StateType nTot_diff = nTot - molar_concentrations[s];
+        StateType sum_bimol;
+        Antioch::set_zero(sum_bimol);
         StateType p = nTot * Antioch::constant_clone(nTot,1e6) //cm-3 -> m-3
                            * Constants::Universal::kb<CoeffType>() * T;
 
@@ -281,43 +281,47 @@ namespace Planet
           StateType Dsjm = this->binary_coefficient(m,s,T,p);
           StateType dDsjm_dni = this->binary_coefficient_deriv_n(m,s,i,T, p, nTot, molar_concentrations[i]);
 
-          n_D += molar_concentrations[_i_medium[m]] / Dsjm;
-          dn_D_dni -= molar_concentrations[_i_medium[m]] / (Dsjm * Dsjm) * dDsjm_dni;
-          if(_i_medium[m] == i)dn_D_dni += StateType(1.L) / Dsjm;
+          sum_bimol += molar_concentrations[_i_medium[m]] / Dsjm;
+          dDs_dni -= molar_concentrations[_i_medium[m]] / (Dsjm * Dsjm) * dDsjm_dni;
+          if(_i_medium[m] == i)dDs_dni += StateType(1.L) / Dsjm;
         }
-        Ds /= n_D;
-        dDs_dni /= n_D; // D(nT - ns)/Dni part
-
-        dDs_dni -= (nTot - molar_concentrations[i]) * dn_D_dni / (n_D * n_D); // sum part
+// Ds
+        StateType Ds = nTot_diff / sum_bimol;
+        dDs_dni *= Ds / sum_bimol;
+        if(s == i)dDs_dni += Ds / nTot_diff;
 
 ///////////
 // Dtilde, De La Haye modification
 //////
 
+//// temp
         StateType meanM;
-        StateType dmeanM_dni = (i == s)?Antioch::zero_clone(meanM):_mixture.neutral_composition().M(i);
+        StateType dmeanM_dni;
         Antioch::set_zero(meanM);
         Antioch::set_zero(dmeanM_dni);
         for(unsigned int j = 0; j < _mixture.neutral_composition().n_species(); j++)
         {
           if(j == s)continue;
           meanM += _mixture.neutral_composition().M(j) * molar_concentrations[j]; 
+          if(s == i)dmeanM_dni += _mixture.neutral_composition().M(j); 
         }
-        StateType ntot_s = nTot - molar_concentrations[s]; //ntot - ns
-        StateType dntot_s_dni = (s == i)?Antioch::zero_clone(ntot_s):Antioch::constant_clone(ntot_s,1); //ntot - ns
-        dmeanM_dni /= ntot_s;
-        dmeanM_dni -= meanM * dntot_s_dni / (ntot_s * ntot_s);
-
-        meanM /=  ntot_s; //x_i without s: ni/(ntot - ns)
-
+        meanM      /= nTot_diff;
+        dmeanM_dni -= meanM;
+        dmeanM_dni /= nTot_diff;
+        
         StateType denom = (Antioch::constant_clone(nTot,1) - molar_concentrations[s]/nTot * 
-                        (Antioch::constant_clone(nTot,1) - _mixture.neutral_composition().M(s)/meanM));
-        StateType ddenom_dni = (i == s)?StateType(1.)/nTot:Antioch::zero_clone(nTot);
-        ddenom_dni -= molar_concentrations[s] / (nTot / nTot);
-        ddenom_dni *= (StateType(1.) - _mixture.neutral_composition().M(s)/meanM);
-        ddenom_dni += molar_concentrations[s]/nTot * _mixture.neutral_composition().M(s)/(meanM * meanM) * dmeanM_dni;
+                             (Antioch::constant_clone(nTot,1) - _mixture.neutral_composition().M(s)/meanM)
+                          );
 
-        dDtilde_s_dni = dDs_dni / denom - Ds * ddenom_dni / (denom * denom);
+        StateType Dtilde = Ds / denom;
+
+        dDtilde_s_dni  = (s == i)?-StateType(1.L)/nTot:Antioch::zero_clone(nTot);
+        dDtilde_s_dni += molar_concentrations[s] / (nTot * nTot);
+        dDtilde_s_dni *= (StateType(1.L) - _mixture.neutral_composition().M(s)/meanM );
+        dDtilde_s_dni += molar_concentrations[s] / nTot * _mixture.neutral_composition().M(s)/(meanM * meanM ) * dmeanM_dni;
+        dDtilde_s_dni /= - denom;
+        dDtilde_s_dni += dDs_dni / Ds;
+        dDtilde_s_dni *= Dtilde;
 
         return;
   }
