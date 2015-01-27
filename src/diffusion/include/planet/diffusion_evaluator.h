@@ -231,9 +231,10 @@ namespace Planet{
                                                                              ( (nTot - molar_concentrations[s]) / nTot ) * _mixture.thermal_coefficient()[s]
                                                                           )
                                                             )
-                                      - Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] /nTot * (Antioch::constant_clone(nTot,1) - molar_concentrations[s] / nTot)
+                                      + Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] * molar_concentrations[s] / (nTot * nTot)
                                       - dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz / T)
                                       - K * dHa_dn_i[i] / (Ha * Ha);
+        if(i == s)domegas_dn_i_B_TERM[s][i] -= Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s]  / nTot;
 // in cm-3.km.s-1
          domegas_dn_i_A_TERM[s][i] *= Antioch::constant_clone(T,1e-10);
        }
