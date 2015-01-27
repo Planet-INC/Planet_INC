@@ -200,8 +200,9 @@ namespace Planet
         for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
         {
           if(i == s)continue;
-          meanM += _mixture.neutral_composition().M(i) * molar_concentrations[i] / ntot_s; //x_i without s: ni/(ntot - ns)
+          meanM += _mixture.neutral_composition().M(i) * molar_concentrations[i]; //x_i without s: ni/(ntot - ns)
         }
+        meanM /= ntot_s;
 //Ds denominator : sum_{j_m} n_{j_m}/D_{s,j_m}
         StateType n_D;
         Antioch::set_zero(n_D);

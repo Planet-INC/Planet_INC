@@ -114,9 +114,13 @@ namespace Planet{
      antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
      antioch_assert_equal_to(dmolar_concentrations_dz.size(),_mixture.neutral_composition().n_species());
 
+// temperature
+     CoeffType T = _temperature.neutral_temperature(z);
+     CoeffType dT_dz = _temperature.dneutral_temperature_dz(z);
+
 // Dtilde
      VectorCoeffType molecular;
-     _molecular_diffusion.Dtilde(molar_concentrations,z,molecular);// Dtilde
+     _molecular_diffusion.Dtilde(molar_concentrations,T,molecular);// Dtilde
 
 // nTot
      CoeffType nTot(0.L);
@@ -131,9 +135,6 @@ namespace Planet{
      //mean
      CoeffType Ha = _mixture.atmospheric_scale_height(molar_concentrations,z);
 
-// temperature
-     CoeffType T = _temperature.neutral_temperature(z);
-     CoeffType dT_dz = _temperature.dneutral_temperature_dz(z);
 
      omegas.resize(_mixture.neutral_composition().n_species(),0.L);
 // eddy diff
@@ -174,12 +175,18 @@ namespace Planet{
 
      antioch_assert_equal_to(_mixture.neutral_composition().n_species(),molar_concentrations.size());
      antioch_assert_equal_to(_mixture.neutral_composition().n_species(),dmolar_concentrations_dz.size());
+     antioch_assert_equal_to(_mixture.neutral_composition().n_species(),omegas_A_TERM.size());
+     antioch_assert_equal_to(_mixture.neutral_composition().n_species(),omegas_B_TERM.size());
+     antioch_assert_equal_to(_mixture.neutral_composition().n_species(),domegas_dn_i_A_TERM.size());
+     antioch_assert_equal_to(_mixture.neutral_composition().n_species(),domegas_dn_i_B_TERM.size());
 //params
      StateType nTot;
      Antioch::set_zero(nTot);
      for(unsigned int s = 0; s < molar_concentrations.size();s++)
      {
         nTot += molar_concentrations[s];
+        antioch_assert_equal_to(_mixture.neutral_composition().n_species(),domegas_dn_i_A_TERM[s].size());
+        antioch_assert_equal_to(_mixture.neutral_composition().n_species(),domegas_dn_i_B_TERM[s].size());
      }
      StateType T       = _temperature.neutral_temperature(z);
      StateType dT_dz   = _temperature.dneutral_temperature_dz(z);
@@ -221,8 +228,6 @@ namespace Planet{
         - K/Ha // + 1/Ha
         - K  * dT_dz_T; //+1/T * dT_dz )
 
-       domegas_dn_i_A_TERM[s].clear();
-       domegas_dn_i_A_TERM[s].resize(_mixture.neutral_composition().n_species());
        for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
        {
           domegas_dn_i_A_TERM[s][i] = - (dDtilde_dn[s][i] + dK_dn) * Antioch::constant_clone(T,1e-10); //to cm-3.km.s-1
