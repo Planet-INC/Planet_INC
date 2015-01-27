@@ -236,7 +236,7 @@ namespace Planet{
                                       - K * dHa_dn_i[i] / (Ha * Ha);
         if(i == s)domegas_dn_i_B_TERM[s][i] -= Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s]  / nTot;
 // in cm-3.km.s-1
-         domegas_dn_i_A_TERM[s][i] *= Antioch::constant_clone(T,1e-10);
+         domegas_dn_i_B_TERM[s][i] *= Antioch::constant_clone(T,1e-10);
        }
 // in cm-3.km.s-1
        omegas_A_TERM[s] *= Antioch::constant_clone(T,1e-10);
