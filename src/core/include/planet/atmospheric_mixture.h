@@ -69,10 +69,10 @@ namespace Planet
 
         void precompute_mean_free_path();
 
-        /*! \return scale height of species s at altitude z, H = kb * T / (g * Ms)
+        /*! \return scale height of species s at altitude z, H = R * T / (g * Ms)
          *
          * \param  Ms: molar mass in kg/mol
-         * \param  temp: temperature in K
+         * \param  T: temperature in K
          * \param  alt: altitude in km
          * \return scale height in km
          */
@@ -80,7 +80,7 @@ namespace Planet
         ANTIOCH_AUTO(StateType)
         H(const CoeffType &Ms, const StateType &T, const StateType &alt) const
         ANTIOCH_AUTOFUNC(StateType, Antioch::constant_clone(T,1e-3) * // m -> km
-                                    Constants::Universal::kb<StateType>() * Antioch::Constants::Avogadro<StateType>() * T / 
+                                    Antioch::Constants::R_universal<StateType>() * T / 
                                     ( Ms * Constants::g(Constants::Titan::radius<StateType>(), alt, Constants::Titan::mass<StateType>()))
                         )
 
@@ -378,12 +378,12 @@ namespace Planet
       Mm   += molar_densities[s] * _neutral_composition.M(s);
       nTot += molar_densities[s];
     }
-    Mm /= nTot;
 
-    Ha = this->H(Mm,_temperature.neutral_temperature(z),z); 
+    Ha = this->H(Mm / nTot,_temperature.neutral_temperature(z),z); 
+
     for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
     {
-      dHa_dn_i[s] = (_neutral_composition.M(s) - Ha) / nTot;
+      dHa_dn_i[s] = Ha / nTot;
     }
   }
 
