@@ -54,7 +54,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   if(theory != 0.)test = std::abs(test/cal);
   if(test < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
-            << "failed test: " << words << "\n"
+            << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -688,9 +688,8 @@ Scalar pressure(const Scalar &n, const Scalar &T)
 template<typename Scalar>
 Scalar scale_height(const Scalar &T, const Scalar &z, const Scalar &Mm)
 {
-  return Scalar(1e-3) * Planet::Constants::Universal::kb<Scalar>() * T /  // in km
-         (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) *
-          Mm/Antioch::Constants::Avogadro<Scalar>());
+  return Scalar(1e-3) * Antioch::Constants::R_universal<Scalar>() * T /  // in km
+         (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) * Mm);
 }
 
 template<typename Scalar, typename VectorScalar, typename TensorScalar>
@@ -1022,7 +1021,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
   }
 
   int return_flag(0);
-  const Scalar nTot_virtual(dens_tot);
+  const Scalar nTot_virtual(helper.scaling_factor());
   std::vector<Scalar> flux_at_z(lambda_hv.size(),0.);
   std::vector<Scalar> sum_densities;
 

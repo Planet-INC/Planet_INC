@@ -174,9 +174,9 @@ int tester(const std::string & input_T, const std::string & input_species)
 
     for(unsigned int s = 0; s < neutrals.size(); s++)
     {
-       Scalar scale_height = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T / 
+       Scalar scale_height = 1e-3L * Antioch::Constants::R_universal<Scalar>() * T / 
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                        Mm[s]/Antioch::Constants::Avogadro<Scalar>());
+                        Mm[s]);
 
        Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>(), //mass (kg)
                                  neutral_molar_concentration[s], //n
@@ -198,9 +198,9 @@ int tester(const std::string & input_T, const std::string & input_species)
        M_the += Mm[s] * molar_frac[s];
     }
 
-    Scalar H_the = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T /
+    Scalar H_the = 1e-3L * Antioch::Constants::R_universal<Scalar>() * T /
                    (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                   M_the / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
+                   M_the); //kb*T/(g(z) * M/Navo)
 
     Scalar a_the = (Planet::Constants::Titan::radius<Scalar>() + z) / H_the;
 

@@ -49,7 +49,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
                                      std::abs((theory-cal)/theory); // non-zero
   if(criteria < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
-            << "failed test: " << words << "\n"
+            << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -198,7 +198,7 @@ template<typename Scalar>
 Scalar a(const Scalar &T, const Scalar &Mmean, const Scalar &z)
 {
   return Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) * Mmean * 
-            (Planet::Constants::Titan::radius<Scalar>() + z) * Scalar(1e3) / (Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T);
+            (Planet::Constants::Titan::radius<Scalar>() + z) * Scalar(1e3) / (Antioch::Constants::R_universal<Scalar>() * T);
 }
 
 template<typename Scalar, typename VectorScalar>

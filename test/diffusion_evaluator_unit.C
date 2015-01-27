@@ -46,7 +46,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 6000.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
-            << "failed test: " << words << "\n"
+            << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -165,9 +165,8 @@ Scalar pressure(const Scalar &n, const Scalar &T)
 template<typename Scalar>
 Scalar scale_height(const Scalar &T, const Scalar &z, const Scalar &Mm)
 {
-  return Planet::Constants::Universal::kb<Scalar>() * T / 
-         (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) *
-          Mm/Antioch::Constants::Avogadro<Scalar>());
+  return Antioch::Constants::R_universal<Scalar>() * T / 
+         (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) * Mm);
 }
 
 
@@ -326,6 +325,8 @@ int tester(const std::string &input_T)
   int return_flag(0);
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
+     std::stringstream walt;
+     walt << z;
 
      Scalar T        = temperature.neutral_temperature(z);
      Scalar dT_dz    = temperature.dneutral_temperature_dz(z);
@@ -385,7 +386,7 @@ int tester(const std::string &input_T)
                                       + dT_dz/T);
        omega_theo *= Scalar(1e-10) * densities[s];
 
-       return_flag = check_test(omega_theo,total_diffusion[s],"omega of species at altitude") || return_flag;
+       return_flag = check_test(omega_theo,total_diffusion[s],"omega of species " + neutrals[s] + " at altitude " + walt.str()) || return_flag;
                         
      }
   }
