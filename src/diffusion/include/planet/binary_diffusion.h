@@ -92,18 +92,18 @@ class BinaryDiffusion{
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         binary_coefficient_deriv_T(const StateType &T, const StateType &P) const
-        ANTIOCH_AUTOFUNC(StateType,this->binary_coefficient(T,P) / T * _beta)
+        ANTIOCH_AUTOFUNC(StateType,this->binary_coefficient(T,P) / T * (_beta - CoeffType(1.L)) )
 
         //!
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
-        binary_coefficient_deriv_n(const StateType &T, const StateType &P, const StateType &nTot) const
-        ANTIOCH_AUTOFUNC(StateType, - this->binary_coefficient(T,P) / nTot)
+        binary_coefficient_deriv_n(const StateType &T, const StateType &P, const StateType &nTot, const StateType & ns) const
+        ANTIOCH_AUTOFUNC(StateType, - this->binary_coefficient(T,P) * nTot / (ns *ns))
 
         //!
         template<typename StateType>
         void binary_coefficient_and_derivatives(const StateType &T, const StateType &P, const StateType &nTot,
-                                                StateType &Dij, StateType &Dij_dT, StateType &Dij_dP) const;
+                                                const StateType &ns, StateType &Dij, StateType &Dij_dT, StateType &Dij_dP) const;
        
         //!
         CoeffType D01()  const;
@@ -274,11 +274,12 @@ template<typename CoeffType>
 template<typename StateType>
 inline
 void BinaryDiffusion<CoeffType>::binary_coefficient_and_derivatives(const StateType &T, const StateType &P, const StateType &nTot,
-                                                StateType &Dij, StateType &Dij_dT, StateType &Dij_dns) const
+                                                                    const StateType & ns, StateType &Dij, StateType &Dij_dT, 
+                                                                    StateType &Dij_dns) const
 {
-  Dij = this->binary_coefficient(T,P);
-  Dij_dT  = this->binary_coefficient_deriv_T(T,P);
-  Dij_dns = this->binary_coefficient_deriv_P(T,P,nTot);
+  Dij     = this->binary_coefficient(T,P);
+  Dij_dT  = Dij * (_beta - CoeffType(1.L)) / T;
+  Dij_dns = Dij * nTot / (ns * ns) ;
   return;
 }
 
