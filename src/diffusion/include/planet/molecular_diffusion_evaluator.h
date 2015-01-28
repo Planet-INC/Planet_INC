@@ -106,11 +106,11 @@ namespace Planet
         ANTIOCH_AUTOFUNC(StateType,(_diffusion[m][s].diffusion_model() != DiffusionType::NoData)?
                                              _diffusion[m][s].binary_coefficient_deriv_n(T,P,nTot,ni):
                                                 (_mixture.neutral_composition().M(_i_medium[m]) < _mixture.neutral_composition().M(s))?
-                                                    Antioch::ant_sqrt((_mixture.neutral_composition().M(_i_medium[m]) / _mixture.neutral_composition().M(s) + 
-                                                                        Antioch::constant_clone(T,1))/Antioch::constant_clone(T,2)) * 
-                                                                        _diffusion[m][m].binary_coefficient_deriv_n(T,P,nTot,ni):
-                                                    Antioch::ant_sqrt(_mixture.neutral_composition().M(_i_medium[m]) / _mixture.neutral_composition().M(s)) * 
-                                                                        _diffusion[m][m].binary_coefficient_deriv_n(T,P,nTot,ni)
+                                                    Antioch::ant_sqrt( _mixture.neutral_composition().M(s) /( Antioch::constant_clone(T,2) * _mixture.neutral_composition().M(_i_medium[m])) + 
+                                                                        Antioch::constant_clone(T,0.5) ) * 
+                                                                        _diffusion[m][_i_medium[m]].binary_coefficient_deriv_n(T,P,nTot,ni):
+                                                    Antioch::ant_sqrt(_mixture.neutral_composition().M(s) / _mixture.neutral_composition().M(_i_medium[m])) * 
+                                                                        _diffusion[m][_i_medium[m]].binary_coefficient_deriv_n(T,P,nTot,ni)
                         )
 
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
@@ -288,7 +288,7 @@ namespace Planet
 // Ds
         StateType Ds = nTot_diff / sum_bimol;
         dDs_dni *= Ds / sum_bimol;
-        if(s == i)dDs_dni += Ds / nTot_diff;
+        if(s != i)dDs_dni += Ds / nTot_diff;
 
 ///////////
 // Dtilde, De La Haye modification
