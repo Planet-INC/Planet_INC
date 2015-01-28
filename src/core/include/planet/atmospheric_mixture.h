@@ -138,7 +138,7 @@ namespace Planet
 
         //! \return Jeans' escape flux (cm-3.km.s-1)
         //
-        // \param ms: mass of molecule (kg)
+        // \param ms: mass of molecule (kg/mol)
         // \param ns: molecular density (density)
         // \param T: temperature (K)
         // \param z: altitude (km)
@@ -147,32 +147,32 @@ namespace Planet
         ANTIOCH_AUTO(StateType)
         Jeans_flux(const StateType &ms, const StateType &ns, const StateType &T, const StateType &z) const
         ANTIOCH_AUTOFUNC(StateType, Antioch::constant_clone(T,1e-3) * // m -> km
-                                    ns * Antioch::ant_sqrt(Constants::Universal::kb<StateType>() * T / (Antioch::constant_clone(T,2.) * ms * Constants::pi<StateType>())) 
+                                    ns * Antioch::ant_sqrt(Antioch::Constants::R_universal<StateType>() * T / (Antioch::constant_clone(T,2.) * ms * Constants::pi<StateType>())) 
                                        * Antioch::ant_exp(- ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() 
-                                                         / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T)
+                                                         / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Antioch::Constants::R_universal<StateType>() * T)
                                                          )
                                        * (Antioch::constant_clone(T,1.) + 
                                            ((ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>())
-                                                / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T))
+                                                / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Antioch::Constants::R_universal<StateType>() * T))
                                          ))
 
         //! \return the derivative of Jeans' escape flux (km.s-1)
         //
-        // \param ms: mass of molecule (kg)
+        // \param ms: mass of molecule (kg/mol)
         // \param T: temperature (K)
         // \param z: altitude (km)
         // \return Jeans' escape speed in km/s
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
-        Jeans_velocity(const StateType &ms, const StateType &T, const StateType &z) const
+        Jeans_velocity(const CoeffType &ms, const StateType &T, const CoeffType &z) const
         ANTIOCH_AUTOFUNC(StateType, //Antioch::constant_clone(T,1e-3) * //ns m -> km
-                                         Antioch::ant_sqrt(Constants::Universal::kb<StateType>() * T / (Antioch::constant_clone(T,2.) * ms * Constants::pi<StateType>())) 
+                                         Antioch::ant_sqrt(Antioch::Constants::R_universal<StateType>() * T / (Antioch::constant_clone(T,2.) * ms * Constants::pi<StateType>())) 
                                        * Antioch::ant_exp(- ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() 
-                                                         / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T)
+                                                         / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Antioch::Constants::R_universal<StateType>() * T)
                                                          )
                                        * (Antioch::constant_clone(T,1.) + 
                                            ((ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>())
-                                                / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Constants::Universal::kb<StateType>() * T))
+                                                / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Antioch::Constants::R_universal<StateType>() * T))
                                          ))
 
         //!use isobaric equation and molar fractions at bottom
@@ -195,10 +195,13 @@ namespace Planet
         void upper_boundary_fluxes(VectorStateType &upper_fluxes, const VectorStateType &molar_concentrations) const;
 
         //!upper boundary condition
-        CoeffType upper_boundary_flux(const VectorCoeffType &molar_concentrations, unsigned int s) const;
+        template <typename VectorStateType>
+        typename Antioch::value_type<VectorStateType>::type
+          upper_boundary_flux(const VectorStateType &molar_concentrations, unsigned int s) const;
 
         //!upper boundary derived condition
-        CoeffType upper_boundary_velocity(unsigned int s) const;
+        template <typename StateType>
+        StateType upper_boundary_velocity(unsigned int s, const StateType & /*ex*/) const;
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -529,35 +532,34 @@ namespace Planet
       {
           if(_neutral_composition.species_list()[s] != iH &&
              _neutral_composition.species_list()[s] != iH2)continue;
-          CoeffType ms = _neutral_composition.M(s) / Antioch::Constants::Avogadro<CoeffType>(); //from kg.mol-1 to kg
-          upper_fluxes[s] = - this->Jeans_flux(ms,molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax); // cm-3.km/s, escaping flux, term < 0
+          upper_fluxes[s] = - this->Jeans_flux(_neutral_composition.M(s),molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax); // cm-3.km/s, escaping flux, term < 0
       }
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename VectorStateType>
   inline
-  CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_flux(const VectorCoeffType &molar_concentrations, unsigned int s) const
+  typename Antioch::value_type<VectorStateType>::type
+    AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_flux(const VectorStateType &molar_concentrations, unsigned int s) const
   {
       antioch_assert_less(s,_neutral_composition.n_species());
       antioch_assert_less(s,molar_concentrations.size());
 
-      CoeffType ms = _neutral_composition.M(s) / Antioch::Constants::Avogadro<CoeffType>(); //from kg.mol-1 to kg
-      CoeffType value = (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
+      return (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
                         0.:
-                        - this->Jeans_flux(ms, molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax); // cm-3.km.s-1, escaping flux, term < 0;
-      return value;
+                        - this->Jeans_flux(_neutral_composition.M(s), molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax); // cm-3.km.s-1, escaping flux, term < 0;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template <typename StateType>
   inline
-  CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_velocity(unsigned int s) const
+  StateType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_velocity(unsigned int s, const StateType & /*ex*/) const
   {
+      antioch_assert_less(s,_neutral_composition.n_species());
 
-      CoeffType ms = _neutral_composition.M(s) / Antioch::Constants::Avogadro<CoeffType>(); //from kg.mol-1 to kg
-      CoeffType value =  (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
+      return (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
                         0.:
-                        - this->Jeans_velocity(ms, _temperature.neutral_temperature(_zmax),_zmax); // cm-3.km.s-1, escaping flux, term < 0
-      return value;
+                        - this->Jeans_velocity(_neutral_composition.M(s), _temperature.neutral_temperature(_zmax),_zmax); // cm-3.km.s-1, escaping flux, term < 0
   }
 
 

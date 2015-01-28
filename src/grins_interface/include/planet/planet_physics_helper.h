@@ -87,7 +87,8 @@ namespace Planet
     void upper_boundary_neumann(VectorStateType & upper_boundary, const VectorStateType &molar_densities) const;
 
     //!return upper boundary derivatives of s with respect to i
-    CoeffType dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i) const;
+    template <typename StateType>
+    StateType dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i, const StateType & ex) const;
 
     CoeffType upper_boundary_neumann(const VectorCoeffType &molar_densities, unsigned int s) const;
 
@@ -252,7 +253,7 @@ namespace Planet
       _ionic_reaction_set(NULL),
       _chapman(NULL),
       _tau(NULL),
-      _scaling_factor(1.L) // sensible default
+      _scaling_factor(-1.L)
   {
     this->build(input);
     this->sanity_check_chemical_system();
@@ -328,6 +329,10 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
+    // Let's start with the scaling factor
+    _scaling_factor = input("Planet/scale_factor", -1.);
+
+
     // Parse medium
     if( !input.have_variable("Planet/medium") )
       {
@@ -647,7 +652,7 @@ namespace Planet
     _composition->set_thermal_coefficient(tc);
     _composition->set_hard_sphere_radius(hard_sphere_radius);
 
-    _scaling_factor = dens_tot;
+    if(_scaling_factor < 0.)_scaling_factor = dens_tot;
 
     return;
   }
@@ -1946,9 +1951,11 @@ namespace Planet
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  CoeffType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i) const
+  template <typename StateType>
+  inline
+  StateType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::dupper_boundary_neumann_s_dn_i(unsigned int s, unsigned int i, const StateType & ex) const
   {
-    return (i == s)?_composition->upper_boundary_velocity(s):Antioch::zero_clone(_K0);
+      return (i == s)?_composition->upper_boundary_velocity(s,ex):StateType(0.);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
