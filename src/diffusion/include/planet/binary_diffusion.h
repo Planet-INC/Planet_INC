@@ -98,7 +98,7 @@ class BinaryDiffusion{
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         binary_coefficient_deriv_n(const StateType &T, const StateType &P, const StateType &nTot, const StateType & ns) const
-        ANTIOCH_AUTOFUNC(StateType, - this->binary_coefficient(T,P) * nTot / (ns *ns))
+        ANTIOCH_AUTOFUNC(StateType, - this->binary_coefficient(T,P) / nTot)
 
         //!
         template<typename StateType>
