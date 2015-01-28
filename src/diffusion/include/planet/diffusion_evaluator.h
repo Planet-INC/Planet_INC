@@ -237,7 +237,7 @@ namespace Planet{
                                                                           )
                                                             )
                                       + Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] * molar_concentrations[s] / (nTot * nTot)
-                                      - dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz / T)
+                                      - dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz_T)
                                       - K * dHa_dn_i[i] / (Ha * Ha);
         if(i == s)domegas_dn_i_B_TERM[s][i] -= Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s]  / nTot;
 // in cm-3.km.s-1
