@@ -48,7 +48,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   if(std::abs((theory-cal)/theory) < tol)return 0;
 
   std::cout << std::scientific  << std::setprecision(20)
-            << "failed test: "  << words << "\n"
+            << "\nfailed test: "  << words << "\n"
             << "theory: "       << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -93,9 +93,9 @@ template <typename Scalar>
 Scalar Jeans(const Scalar &m, const Scalar &n, const Scalar &T, const Scalar &z)
 {
   Scalar lambda =  Planet::Constants::Universal::G<Scalar>()  * Planet::Constants::Titan::mass<Scalar>() * m / 
-                  (Planet::Constants::Universal::kb<Scalar>() * T * (z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
+                  (Antioch::Constants::R_universal<Scalar>() * T * (z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
 
-  return 1e-3 * n * Antioch::ant_sqrt(Planet::Constants::Universal::kb<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
+  return 1e-3 * n * Antioch::ant_sqrt(Antioch::Constants::R_universal<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
               * Antioch::ant_exp(-lambda) * (Scalar(1.) + lambda);
 }
 
@@ -178,13 +178,13 @@ int tester(const std::string & input_T, const std::string & input_species)
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
                         Mm[s]);
 
-       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>(), //mass (kg)
+       Scalar Jeans_flux = Jeans(Mm[s], //mass (kg/mol)
                                  neutral_molar_concentration[s], //n
                                  T,z); //T,alt
 
        std::stringstream wordsJ;
        return_flag = check_test(Jeans_flux,composition.Jeans_flux(
-                                        composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>(), //g/mol -> kg/mol
+                                        composition.neutral_composition().M(s), //kg/mol
                                         neutral_molar_concentration[s], //n, cm-3
                                         T,// T (K)
                                         z), //km 
