@@ -39,8 +39,8 @@
 template<typename Scalar>
 int check(const Scalar &test, const Scalar &ref, const Scalar &tol, const std::string &model)
 {
-  Scalar dist = (ref < tol)?Antioch::ant_abs(test - ref):
-                            Antioch::ant_abs(test - ref)/ref;
+  Scalar dist = (std::abs(ref) < tol)?Antioch::ant_abs(test - ref):
+                                      Antioch::ant_abs(test - ref)/ref;
   if(dist > tol)
   {
      std::cout << std::scientific << std::setprecision(20)
