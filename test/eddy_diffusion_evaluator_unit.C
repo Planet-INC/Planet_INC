@@ -43,9 +43,13 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() > 1e-18L)?100.L:1000.L;
+  Scalar coeff = (std::numeric_limits<Scalar>::epsilon() > 1e-18L)?10.L:20.L;
   const Scalar tol = std::numeric_limits<Scalar>::epsilon() * coeff;
-  if(std::abs((theory-cal)/theory) < tol)return 0;
+
+  Scalar dist = (std::abs(theory) < tol)?std::abs(cal - theory):
+                                         std::abs((theory-cal)/theory);
+
+  if(dist < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "failed test: " << words << "\n"
             << "theory: " << theory
@@ -89,6 +93,11 @@ Scalar barometry(const Scalar &zmin, const Scalar &z, const Scalar &T, const Sca
 template <typename Scalar>
 int tester(const std::string &input_T)
 {
+
+// we require an atmospheric mixture,
+// which require a temperature and two
+// chemical mixture
+
 //description
   std::vector<std::string> neutrals;
   std::vector<std::string> ions;
@@ -97,7 +106,7 @@ int tester(const std::string &input_T)
 //ionic system contains neutral system
   ions = neutrals;
   ions.push_back("N2+");
-  Scalar MN(14.008L), MC(12.011), MH(1.008L);
+  Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
@@ -110,29 +119,11 @@ int tester(const std::string &input_T)
   molar_frac.push_back(0.L);
   Scalar dens_tot(1e12L);
 
-//hard sphere radius
-  std::vector<Scalar> hard_sphere_radius;
-  hard_sphere_radius.push_back(2.0675e-8L * 1e-2L); //N2  in cm -> m
-  hard_sphere_radius.push_back(2.3482e-8L * 1e-2L); //CH4 in cm -> m
-
-//zenith angle
-//not needed
-
-//photon flux
-//not needed
-
-////cross-section
-//not needed
-
 //altitudes
   Scalar zmin(600.L),zmax(1400.L),zstep(10.L);
 
 //eddy
   Scalar K0(4.3e6L);//
-
-/************************
- * first level
- ************************/
 
 //neutrals
   Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
@@ -140,47 +131,14 @@ int tester(const std::string &input_T)
 //ions
   Antioch::ChemicalMixture<Scalar> ionic_species(ions); 
 
-//chapman
-//not needed
-
-//binary diffusion
-//not needed
-
-/************************
- * second level
- ************************/
-
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
-//photon opacity
-//not needed
-
-//reaction sets
-//not needed
-
-/************************
- * third level
- ************************/
-
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot,zmin,zmax);
-
-//kinetics evaluators
-//not needed
-
-/************************
- * fourth level
- ************************/
-
-//photon evaluator
-//not needed
-
-//molecular diffusion
-//not needed
 
 //eddy diffusion
   Planet::EddyDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > eddy_diff(composition,K0);
@@ -196,17 +154,38 @@ int tester(const std::string &input_T)
   {
     mean_M += molar_frac[s] * Mm[s];
   }
-  mean_M *= 1e-3;//to kg
 
   int return_flag(0);
 
+
+// along lines
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
-     Scalar nTot = barometry(zmin,z,temperature.neutral_temperature(z),mean_M,dens_tot);
-     Scalar K = K0 * Antioch::ant_sqrt(dens_tot/nTot);
-     return_flag = return_flag ||
-                   check_test(K, eddy_diff.K(nTot), "eddy diffusion at altitude");
+     std::stringstream walt;
+     walt << z;
+
+     Scalar T     = temperature.neutral_temperature(z);
+     Scalar nTot  = barometry(zmin,z,T,mean_M,dens_tot);
+     Scalar K     = K0 * Antioch::ant_sqrt(dens_tot/nTot);
+     Scalar dK_dT = 0.L;
+     Scalar dK_dn = - 0.5L * K / nTot;
+     return_flag  = check_test(K, eddy_diff.K(nTot), "eddy diffusion at altitude " + walt.str()) ||
+                    check_test(dK_dT, eddy_diff.K_deriv_T(T), "eddy diffusion derived by T at altitude " + walt.str()) ||
+                    check_test(dK_dn, eddy_diff.K_deriv_ns(nTot), "eddy diffusion derived by n at altitude " + walt.str()) ||
+                    return_flag;
   }
+
+// golden values
+  Scalar T    = 250.1L;
+  Scalar ntot = 2.75e9L;
+  Scalar K_theo     =  8.19977826751209391284227292513405759e7L;
+  Scalar dK_theo_dT =  0.L;
+  Scalar dK_theo_dn = -1.49086877591128980233495871366073774e-2L;
+
+  return_flag  = check_test(K_theo, eddy_diff.K(ntot), "eddy diffusion") ||
+                 check_test(dK_theo_dT, eddy_diff.K_deriv_T(T), "eddy diffusion derived by T") ||
+                 check_test(dK_theo_dn, eddy_diff.K_deriv_ns(ntot), "eddy diffusion derived by n") ||
+                 return_flag;
 
   return return_flag;
 }
