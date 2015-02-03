@@ -112,6 +112,18 @@ Scalar binary_coefficient(const Scalar &T, const Scalar &P, const Scalar &D01, c
 }
 
 template<typename Scalar>
+Scalar dbinary_coefficient_dn(const Scalar &T, const Scalar &P, const Scalar &D01, const Scalar &beta)
+{
+   return - binary_coefficient(T,P,D01,beta) / P * Planet::Constants::Universal::kb<Scalar>() * T * 1e6L;
+}
+
+template<typename Scalar>
+Scalar dbinary_coefficient_dT(const Scalar &T, const Scalar &P, const Scalar &D01, const Scalar &beta)
+{
+   return binary_coefficient(T,P,D01,beta) / T * (beta - Scalar(1.L));
+}
+
+template<typename Scalar>
 Scalar binary_coefficient(const Scalar &Dii, const Scalar &Mi, const Scalar &Mj)
 {
    return (Mj < Mi)?Dii * Antioch::ant_sqrt((Mj/Mi + Scalar(1.L))/Scalar(2.L))
@@ -153,31 +165,30 @@ int tester(const std::string &input_T)
   molar_frac.push_back(0.04000L);
   molar_frac.push_back(0.00001L);
   molar_frac.push_back(0.L);
-  Scalar dens_tot(1e12L);
-
-//zenith angle
-//not necessary
-
-//photon flux
-//not necessary
-
-////cross-section
-//not necessary
+  Scalar dens_tot(1e12L); // cm^-3
 
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
 //binary diffusion
-  Scalar bCN1(1.04e-5 * 1e-4),bCN2(1.76); //cm2 -> m2
+  Scalar bCN1(1.04e-5),bCN2(1.76); //cm2
   Planet::DiffusionType CN_model(Planet::DiffusionType::Wakeham);
-  Scalar bCC1(5.73e16 * 1e-4),bCC2(0.5); //cm2 -> m2
+  Scalar bCC1(5.73e16),bCC2(0.5); //cm2
   Planet::DiffusionType CC_model(Planet::DiffusionType::Wilson);
-  Scalar bNN1(0.1783 * 1e-4),bNN2(1.81); //cm2 -> m2
+  Scalar bNN1(0.1783),bNN2(1.81); //cm2
   Planet::DiffusionType NN_model(Planet::DiffusionType::Massman);
 
-/************************
- * first level
- ************************/
+  std::vector<std::vector<Scalar> > Massman(3,std::vector<Scalar>(2,0.) );
+// N2 - N2
+  Massman[0][0] = bNN1; 
+  Massman[0][1] = bNN2;
+// N2 - CH4
+  Massman[1][0] = bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2);
+  Massman[1][1] = bCN2;
+// CH4 - CH4
+  Massman[2][0] = bCC1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCC2 + Scalar(1.L)) * 
+                              Planet::Constants::Universal::kb<Scalar>() / Planet::Constants::Convention::P_normal<Scalar>();
+  Massman[2][1] = bCC2 + Scalar(1.L);
 
 //neutrals
   Antioch::ChemicalMixture<Scalar> neutral_species(neutrals); 
@@ -185,11 +196,8 @@ int tester(const std::string &input_T)
 //ions
   Antioch::ChemicalMixture<Scalar> ionic_species(ions); 
 
-//chapman
-//not needed
-
 //binary diffusion
-  Planet::BinaryDiffusion<Scalar> N2N2(   0, 0 , bNN1, bNN2, NN_model);
+  Planet::BinaryDiffusion<Scalar> N2N2(   0, 0, bNN1, bNN2, NN_model);
   Planet::BinaryDiffusion<Scalar> N2CH4(  0, 1, bCN1, bCN2, CN_model);
   Planet::BinaryDiffusion<Scalar> CH4CH4( 1, 1, bCC1, bCC2, CC_model);
   Planet::BinaryDiffusion<Scalar> N2C2H(  0, 2);
@@ -203,45 +211,17 @@ int tester(const std::string &input_T)
   bin_diff_coeff[1].push_back(CH4CH4);
   bin_diff_coeff[1].push_back(CH4C2H);
 
-
-/************************
- * second level
- ************************/
-
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
   Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
-//photon opacity
-//not needed
-
-//reaction sets
-//not needed
-
-/************************
- * third level
- ************************/
-
 //atmospheric mixture
   Planet::AtmosphericMixture<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > composition(neutral_species, ionic_species, temperature);
   composition.init_composition(molar_frac,dens_tot,zmin,zmax);
 
-//kinetics evaluators
-//not needed
-
-/************************
- * fourth level
- ************************/
-
-//photon evaluator
-//not needed
-
 //molecular diffusion
   Planet::MolecularDiffusionEvaluator<Scalar,std::vector<Scalar>, std::vector<std::vector<Scalar> > > molecular_diffusion(bin_diff_coeff,composition,temperature,medium);
-
-//eddy diffusion
-//not needed
 
 /************************
  * checks
@@ -260,6 +240,11 @@ int tester(const std::string &input_T)
   Dij[0].resize(3,0.L);
   Dij[1].resize(3,0.L);
 
+  std::vector<std::vector<std::vector<Scalar> > > dDij;
+  dDij.resize(2);
+  dDij[0].resize(3,std::vector<Scalar>(2,0.));
+  dDij[1].resize(3,std::vector<Scalar>(2,0.));
+
   int return_flag(0);
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
@@ -275,31 +260,58 @@ int tester(const std::string &input_T)
       std::vector<Scalar> molecular_diffusion_Dtilde;
       molecular_diffusion.Dtilde(densities,T,molecular_diffusion_Dtilde);
 
-      Dij[0][0] = binary_coefficient(T,P,bNN1,bNN2); //N2 N2
-      Dij[0][1] = binary_coefficient(T,P,bCN1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCN2),bCN2); //N2 CH4
+      Dij[0][0] = binary_coefficient(T,P,Massman[0][0],Massman[0][1]); //N2 N2
+      Dij[0][1] = binary_coefficient(T,P,Massman[1][0],Massman[1][1]); //N2 CH4
       Dij[0][2] = binary_coefficient(Dij[0][0],Mm[0],Mm[2]); //N2 C2H
       Dij[1][0] = Dij[0][1]; //CH4 N2
-      Dij[1][1] = binary_coefficient(T,P,bCC1 * Antioch::ant_pow(Planet::Constants::Convention::T_standard<Scalar>(),bCC2 + Scalar(1.L)) 
-                                              * Planet::Constants::Universal::kb<Scalar>()
-                                              / Planet::Constants::Convention::P_normal<Scalar>(),bCC2 + Scalar(1.L)); //CH4 CH4
+      Dij[1][1] = binary_coefficient(T,P,Massman[2][0],Massman[2][1]); //CH4 CH4
       Dij[1][2] = binary_coefficient(Dij[1][1],Mm[1],Mm[2]); //CH4 C2H
 
-      return_flag = check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude")   || 
-                    check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude")  || 
-                    check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 C2H at altitude")  || 
-                    check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude") || 
-                    check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 C2H at altitude") ||
-                    return_flag;
+      dDij[0][0][0] = dbinary_coefficient_dn(T,P,Massman[0][0],Massman[0][1]); //N2 N2 dn
+      dDij[0][0][1] = dbinary_coefficient_dT(T,P,Massman[0][0],Massman[0][1]); //N2 N2 dT
+      dDij[0][1][0] = dbinary_coefficient_dn(T,P,Massman[1][0],Massman[1][1]); //N2 CH4 dn
+      dDij[0][1][1] = dbinary_coefficient_dT(T,P,Massman[1][0],Massman[1][1]); //N2 CH4 dT
+      dDij[0][2][0] = binary_coefficient(dbinary_coefficient_dn(T,P,Massman[0][0],Massman[0][1]),Mm[0],Mm[2]); //N2 C2H dn
+      dDij[0][2][1] = binary_coefficient(dbinary_coefficient_dT(T,P,Massman[0][0],Massman[0][1]),Mm[0],Mm[2]); //N2 C2H dT
+      dDij[1][0][0] = dDij[0][1][0];
+      dDij[1][0][1] = dDij[0][1][1];
+      dDij[1][1][0] = dbinary_coefficient_dn(T,P,Massman[2][0],Massman[2][1]); //CH4 CH4 dn
+      dDij[1][1][1] = dbinary_coefficient_dT(T,P,Massman[2][0],Massman[2][1]); //CH4 CH4 dT
+      dDij[1][2][0] = binary_coefficient(dbinary_coefficient_dn(T,P,Massman[2][0],Massman[2][1]),Mm[1],Mm[2]); //CH4 C2H dn
+      dDij[1][2][1] = binary_coefficient(dbinary_coefficient_dT(T,P,Massman[2][0],Massman[2][1]),Mm[1],Mm[2]); //CH4 C2H dT
 
+      return_flag = check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude " + walt.str())   || 
+                    check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude " + walt.str())  || 
+                    check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 C2H at altitude " + walt.str())  || 
+                    check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude " + walt.str()) || 
+                    check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 C2H at altitude " + walt.str()) ||
+                    check_test(dDij[0][0][0],molecular_diffusion.binary_coefficient_deriv_n(0,0,0,T,P,nTot),"binary molecular coefficient N2 N2 derivative with respect to n at altitude " + walt.str()) ||
+                    check_test(dDij[0][0][1],molecular_diffusion.binary_coefficient_deriv_T(0,0,T,P),"binary molecular coefficient N2 N2 derivative with respect to T at altitude " + walt.str()) ||
+                    check_test(dDij[0][1][0],molecular_diffusion.binary_coefficient_deriv_n(0,1,0,T,P,nTot),"binary molecular coefficient N2 CH4 derivative with respect to n at altitude " + walt.str()) ||
+                    check_test(dDij[0][1][1],molecular_diffusion.binary_coefficient_deriv_T(0,1,T,P),"binary molecular coefficient N2 CH4 derivative with respect to T at altitude " + walt.str()) ||
+                    check_test(dDij[0][2][0],molecular_diffusion.binary_coefficient_deriv_n(0,2,0,T,P,nTot),"binary molecular coefficient N2 C2H derivative with respect to n at altitude " + walt.str()) ||
+                    check_test(dDij[0][2][1],molecular_diffusion.binary_coefficient_deriv_T(0,2,T,P),"binary molecular coefficient N2 C2H derivative with respect to T at altitude " + walt.str()) ||
+                    check_test(dDij[1][0][0],molecular_diffusion.binary_coefficient_deriv_n(1,0,0,T,P,nTot),"binary molecular coefficient CH4 N2 derivative with respect to n at altitude " + walt.str()) ||
+                    check_test(dDij[1][0][1],molecular_diffusion.binary_coefficient_deriv_T(1,0,T,P),"binary molecular coefficient CH4 N2 derivative with respect to T at altitude " + walt.str()) ||
+                    check_test(dDij[1][1][0],molecular_diffusion.binary_coefficient_deriv_n(1,1,0,T,P,nTot),"binary molecular coefficient CH4 CH4 derivative with respect to n at altitude " + walt.str()) ||
+                    check_test(dDij[1][1][1],molecular_diffusion.binary_coefficient_deriv_T(1,1,T,P),"binary molecular coefficient CH4 CH4 derivative with respect to T at altitude " + walt.str()) ||
+                    check_test(dDij[1][2][0],molecular_diffusion.binary_coefficient_deriv_n(1,2,0,T,P,nTot),"binary molecular coefficient CH4 C2H derivative with respect to n at altitude " + walt.str()) ||
+                    check_test(dDij[1][2][1],molecular_diffusion.binary_coefficient_deriv_T(1,2,T,P),"binary molecular coefficient CH4 C2H derivative with respect to T at altitude " + walt.str()) ||
+                    return_flag;
+// per species
       for(unsigned int s = 0; s < molar_frac.size(); s++)
       {
+
         Scalar tmp(0.L);
+        Scalar dDs_dT(0.L);
         for(unsigned int imedium = 0; imedium < medium.size(); imedium++)
         {
            if(s == imedium)continue;
-           tmp += densities[imedium]/Dij[imedium][s];
+           tmp    += densities[imedium] / Dij[imedium][s];
+           dDs_dT += densities[imedium] / (Dij[imedium][s] * Dij[imedium][s]) * dDij[imedium][s][1];
         }
         Scalar Ds = (nTot - densities[s]) / tmp;
+        dDs_dT *= Ds / tmp;
 
         Scalar M_diff(0.L);
         Scalar totdens_diff(0.L);
@@ -311,7 +323,20 @@ int tester(const std::string &input_T)
         }
         M_diff /= totdens_diff;
         Scalar Dtilde = Ds / (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
-        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],"Dtilde of species " + neutrals[s] + " at altitude " + walt.str()) || return_flag;
+        dDs_dT /= (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
+
+        Scalar Dtilde_2 = molecular_diffusion.Dtilde(s, nTot, T, P, densities);
+
+        for(unsigned int k = 0; k < molar_frac.size(); k++)
+        {
+             
+        }
+
+
+        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],"Dtilde of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                      check_test(Dtilde_2,molecular_diffusion_Dtilde[s],"Dtilde 2 of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                      check_test(dDs_dT,molecular_diffusion_Dtilde[s],"Dtilde of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                      return_flag;
 
       }
   }
