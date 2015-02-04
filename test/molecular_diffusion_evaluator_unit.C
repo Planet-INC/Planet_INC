@@ -43,7 +43,7 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words)
 {
-  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 500.L;
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 80.L;
   if(std::abs((theory-cal)/theory) < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "\nfailed test: " << words << "\n"
@@ -148,7 +148,6 @@ int tester(const std::string &input_T)
   neutrals.push_back("C2H");
 //ionic system contains neutral system
   ions = neutrals;
-  ions.push_back("N2+");
   Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH, MC2H = 2.L * MC + MH;
   std::vector<Scalar> Mm;
@@ -161,21 +160,20 @@ int tester(const std::string &input_T)
 
 //densities
   std::vector<Scalar> molar_frac;
-  molar_frac.push_back(0.95999L);
+  molar_frac.push_back(0.50000L);
   molar_frac.push_back(0.04000L);
-  molar_frac.push_back(0.00001L);
-  molar_frac.push_back(0.L);
+  molar_frac.push_back(0.46000L);
   Scalar dens_tot(1e12L); // cm^-3
 
 //altitudes
   Scalar zmin(600.),zmax(1400.),zstep(10.);
 
 //binary diffusion
-  Scalar bCN1(1.04e-5),bCN2(1.76); //cm2
+  Scalar bCN1(1.04e-5L),bCN2(1.76L); //cm2
   Planet::DiffusionType CN_model(Planet::DiffusionType::Wakeham);
-  Scalar bCC1(5.73e16),bCC2(0.5); //cm2
+  Scalar bCC1(5.73e16L),bCC2(0.5L); //cm2
   Planet::DiffusionType CC_model(Planet::DiffusionType::Wilson);
-  Scalar bNN1(0.1783),bNN2(1.81); //cm2
+  Scalar bNN1(0.1783L),bNN2(1.81L); //cm2
   Planet::DiffusionType NN_model(Planet::DiffusionType::Massman);
 
   std::vector<std::vector<Scalar> > Massman(3,std::vector<Scalar>(2,0.) );
@@ -227,7 +225,6 @@ int tester(const std::string &input_T)
  * checks
  ************************/
 
-  molar_frac.pop_back();//get the ion outta here
   Scalar Matm(0.L);
   for(unsigned int s = 0; s < molar_frac.size(); s++)
   {
@@ -257,8 +254,14 @@ int tester(const std::string &input_T)
       std::vector<Scalar> densities;
       calculate_densities(densities, dens_tot, molar_frac, zmin, z, T, Mm);
 
-      std::vector<Scalar> molecular_diffusion_Dtilde;
+      std::vector<Scalar> molecular_diffusion_Dtilde(densities.size(),0.);
+      std::vector<Scalar> molecular_diffusion_Dtilde_2(densities.size(),0.);
+      std::vector<Scalar> molecular_diffusion_dDtilde_dT(densities.size(),0.);
+      std::vector<std::vector<Scalar> > molecular_diffusion_dDtilde_dn(densities.size(), std::vector<Scalar>(densities.size(),0.));
+
       molecular_diffusion.Dtilde(densities,T,molecular_diffusion_Dtilde);
+      molecular_diffusion.Dtilde_and_derivs_dn(densities,T,nTot,molecular_diffusion_Dtilde_2,molecular_diffusion_dDtilde_dn);
+      molecular_diffusion.dDtilde_dT(densities, T, molecular_diffusion_dDtilde_dT);
 
       Dij[0][0] = binary_coefficient(T,P,Massman[0][0],Massman[0][1]); //N2 N2
       Dij[0][1] = binary_coefficient(T,P,Massman[1][0],Massman[1][1]); //N2 CH4
@@ -283,6 +286,7 @@ int tester(const std::string &input_T)
       return_flag = check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude " + walt.str())   || 
                     check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude " + walt.str())  || 
                     check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 C2H at altitude " + walt.str())  || 
+                    check_test(Dij[1][0],molecular_diffusion.binary_coefficient(1,0,T,P),"binary molecular coefficient CH4 N2 at altitude " + walt.str())  || 
                     check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude " + walt.str()) || 
                     check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 C2H at altitude " + walt.str()) ||
                     check_test(dDij[0][0][0],molecular_diffusion.binary_coefficient_deriv_n(0,0,0,T,P,nTot),"binary molecular coefficient N2 N2 derivative with respect to n at altitude " + walt.str()) ||
@@ -314,29 +318,56 @@ int tester(const std::string &input_T)
         dDs_dT *= Ds / tmp;
 
         Scalar M_diff(0.L);
-        Scalar totdens_diff(0.L);
+        Scalar totdens_diff = nTot - densities[s];
         for(unsigned int j = 0; j < molar_frac.size(); j++)
         {
            if(s == j)continue;
            M_diff += densities[j] * Mm[j];
-           totdens_diff += densities[j];
         }
         M_diff /= totdens_diff;
-        Scalar Dtilde = Ds / (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
-        dDs_dT /= (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - composition.neutral_composition().M(s)/M_diff));
 
-        Scalar Dtilde_2 = molecular_diffusion.Dtilde(s, nTot, T, P, densities);
+        Scalar Dtilde = Ds / (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - Mm[s]/M_diff));
+        dDs_dT /= (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - Mm[s]/M_diff));
 
+        Scalar Dtilde_3 = molecular_diffusion.Dtilde(s, nTot, T, P, densities);
+
+        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],     "Dtilde of species "   + neutrals[s] + " at altitude " + walt.str()) || 
+                      check_test(Dtilde,molecular_diffusion_Dtilde_2[s],   "Dtilde 2 of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                      check_test(Dtilde,Dtilde_3,                          "Dtilde 3 of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                      check_test(dDs_dT,molecular_diffusion_dDtilde_dT[s], "Dtilde derived with respect to T of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                      return_flag;
+
+// now the derivatives with n
         for(unsigned int k = 0; k < molar_frac.size(); k++)
         {
-             
+           Scalar dDs_dn;
+           Antioch::set_zero(dDs_dn);
+           Scalar dDs_dn_common;
+           Antioch::set_zero(dDs_dn_common);
+           for(unsigned int m = 0; m < medium.size(); m++)
+           {
+              if(m == s)continue;
+              dDs_dn += densities[m] / (Dij[m][s] * Dij[m][s]) * dDij[m][s][0];
+              dDs_dn_common += densities[m] / (Dij[m][s] * Dij[m][s]) * dDij[m][s][0];
+              if(m == k)dDs_dn -= Antioch::constant_clone(T,1) / Dij[m][s];
+           }
+           dDs_dn *= Ds / tmp;
+           if(s != k) dDs_dn += Ds / (nTot - densities[s]);
+
+
+           Scalar dDtilde_dn;
+           Antioch::set_zero(dDtilde_dn);
+           if(k == s)dDtilde_dn = -Antioch::constant_clone(T,1) / nTot;
+           dDtilde_dn += densities[s] / (nTot * nTot);
+           dDtilde_dn *= Antioch::constant_clone(T,1) - Mm[s] / M_diff;
+           if(k != s)dDtilde_dn += (Mm[k] - M_diff) / (nTot - densities[s]) * Mm[s] / (M_diff * M_diff) * densities[s] / nTot;
+           dDtilde_dn *= (- Antioch::constant_clone(T,1) / (Antioch::constant_clone(T,1) - molar_frac[s] * (Antioch::constant_clone(T,1) - Mm[s]/M_diff) ));
+           dDtilde_dn += dDs_dn / Ds;
+           dDtilde_dn *= Dtilde;
+
+           return_flag = check_test(dDtilde_dn,molecular_diffusion_dDtilde_dn[s][k],"Dtilde derivative with respect to " + neutrals[k] + " of species " + neutrals[s] + " at altitude " + walt.str()) || 
+                         return_flag;
         }
-
-
-        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],"Dtilde of species " + neutrals[s] + " at altitude " + walt.str()) || 
-                      check_test(Dtilde_2,molecular_diffusion_Dtilde[s],"Dtilde 2 of species " + neutrals[s] + " at altitude " + walt.str()) || 
-                      check_test(dDs_dT,molecular_diffusion_Dtilde[s],"Dtilde of species " + neutrals[s] + " at altitude " + walt.str()) || 
-                      return_flag;
 
       }
   }
@@ -355,6 +386,6 @@ int main(int argc, char** argv)
     }
 
   return (tester<float>(std::string(argv[1])) ||
-          tester<double>(std::string(argv[1])));//||
-          //tester<long double>(std::string(argv[1])));
+          tester<double>(std::string(argv[1])) ||
+          tester<long double>(std::string(argv[1])));
 }

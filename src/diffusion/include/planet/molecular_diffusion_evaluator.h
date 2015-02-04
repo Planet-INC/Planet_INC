@@ -59,7 +59,7 @@ namespace Planet
         ANTIOCH_AUTO(StateType)
         binary_coefficient_unknown_ji(unsigned int m, unsigned int j, const StateType &T, const StateType &P) const
         ANTIOCH_AUTOFUNC(StateType,_diffusion[m][m].binary_coefficient(T,P) * 
-                                   Antioch::ant_sqrt( (_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(_i_medium[m]) + StateType(1.L)) / StateType(2.L) )
+                                   Antioch::ant_sqrt( (_mixture.neutral_composition().M(j)/_mixture.neutral_composition().M(_i_medium[m]) + Antioch::constant_clone(T,1)) / Antioch::constant_clone(T,2) )
                                    )
         //! The coefficients are unknown, j heavier than i
         template<typename StateType>
@@ -129,13 +129,19 @@ namespace Planet
                                                                         _diffusion[m][_i_medium[m]].binary_coefficient_deriv_T(T,P)
                         )
 
+        //! \f$\tilde{D}\f$ and all the derivatives with respect to concentrations
         template<typename StateType, typename VectorStateType, typename MatrixStateType>
         void Dtilde_and_derivs_dn(const VectorStateType &molar_concentrations, const StateType &T, const StateType &nTot, 
                                   VectorStateType &Dtilde, MatrixStateType &dD_dns) const;
 
+        //! \f$\tilde{D}_s\f$ and all its derivatives with respect to concentrations
         template<typename StateType, typename VectorStateType>
         void Dtilde_and_derivative_n(unsigned int s, const VectorStateType &molar_concentrations, const StateType &T, const StateType &nTot,
                                      StateType & Dtilde, VectorStateType & dDtilde_dn) const;
+
+        //! derivative with respect to \f$T\f$, kept separated at the moment for efficiency
+        template<typename StateType, typename VectorStateType>
+        void dDtilde_dT(const VectorStateType &molar_concentrations, const StateType &T, VectorStateType & dDtilde_dT) const;
 
 
   };
@@ -294,7 +300,7 @@ namespace Planet
         {
           if(_i_medium[m] == s)continue;
 
-          StateType Dsjm = StateType(1.L) / this->binary_coefficient(m,s,T,p);
+          StateType Dsjm = Antioch::constant_clone(T,1) / this->binary_coefficient(m,s,T,p);
           StateType dDsjm_dni = this->binary_coefficient_deriv_n(m,s,0,T, p, nTot); // remark that dDij/dni is independant of i here, we speed things up
 
           sum_bimol += molar_concentrations[_i_medium[m]] * Dsjm;
@@ -323,6 +329,7 @@ namespace Planet
           meanM += _mixture.neutral_composition().M(j) * molar_concentrations[j]; 
         }
         meanM /= nTot_diff;
+
         
         StateType denom = (Antioch::constant_clone(nTot,1) - molar_concentrations[s]/nTot * 
                              (Antioch::constant_clone(nTot,1) - _mixture.neutral_composition().M(s)/meanM)
@@ -330,19 +337,21 @@ namespace Planet
 
         Dtilde = Ds / denom;
 // temporaries
-        StateType one_over_nTot = StateType(1.L)/nTot;
+        StateType one_over_nTot = Antioch::constant_clone(T,1)/nTot;
         StateType ns_over_nTot_square = molar_concentrations[s] * one_over_nTot / nTot;
-        StateType one_minus_Ms_over_mean = (StateType(1.L) - _mixture.neutral_composition().M(s)/meanM );
+        StateType one_minus_Ms_over_mean = (Antioch::constant_clone(T,1) - _mixture.neutral_composition().M(s)/meanM );
         StateType stuff = molar_concentrations[s] / (nTot * nTot_diff ) * _mixture.neutral_composition().M(s)/(meanM * meanM );
 
         for(unsigned int k = 0; k < _mixture.neutral_composition().n_species(); k++)
         {
 
         // finalizing dDs_dn, diagonal?
-          StateType dDs_dn = (s == k)?dDs_dn_common + Ds_over_sum_bimol:
-                                      dDs_dn_common;
+          StateType dDs_dn = (s == k)?dDs_dn_common:
+                                      dDs_dn_common + dDs_dn_k_not_equal_s;
+
         // k is a medium ?
-          if(Ds_medium_term.count(k))dDs_dn -= Ds_medium_term[k] * Ds_over_sum_bimol;
+          if(Ds_medium_term.count(k))
+             dDs_dn -= Ds_medium_term[k] * Ds_over_sum_bimol;
 
           dDtilde_dn[k]  = (s == k)?-one_over_nTot:
                                      Antioch::zero_clone(nTot);
@@ -355,6 +364,68 @@ namespace Planet
         }
 
         return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  template<typename StateType, typename VectorStateType>
+  inline
+  void MolecularDiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::dDtilde_dT(const VectorStateType &molar_concentrations, 
+                                                                                           const StateType &T, VectorStateType & dDtilde_dT) const
+  {
+     antioch_assert_equal_to(dDtilde_dT.size(),_mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
+
+
+// global
+     StateType nTot;
+     Antioch::set_zero(nTot);
+     for(unsigned int j = 0; j < _mixture.neutral_composition().n_species(); j++)
+     {
+        nTot += molar_concentrations[j]; 
+     }
+
+     StateType p = nTot * Antioch::constant_clone(nTot,1e6) //cm-3 -> m-3
+                        * Constants::Universal::kb<CoeffType>() * T;
+
+
+     for(unsigned int s = 0; s < molar_concentrations.size(); s++)
+     {
+
+// dDs_dT
+// Ds denominator : sum_{j_m} n_{j_m}/D_{s,j_m}
+// D_s = (nT - ns) / (sum_{medium} n_{medium}/D_{medium,s})
+        StateType nTot_diff = nTot - molar_concentrations[s];
+        StateType sum_bimol;
+        Antioch::set_zero(sum_bimol);
+        StateType numerator;
+        Antioch::set_zero(numerator);
+        for(unsigned int m = 0; m < _n_medium; m++)
+        {
+          if(_i_medium[m] == s)continue;
+
+          StateType Dsjm = Antioch::constant_clone(T,1) / this->binary_coefficient(m,s,T,p);
+          StateType dDsjm_dT = this->binary_coefficient_deriv_T(m,s,T, p);
+
+          sum_bimol += molar_concentrations[_i_medium[m]] * Dsjm;
+          numerator += molar_concentrations[_i_medium[m]] * Dsjm * Dsjm * dDsjm_dT;
+        }
+// Ds
+        StateType dDs_dT = nTot_diff /(sum_bimol * sum_bimol) * numerator;
+
+// DTilde, De La Haye version
+        StateType meanM;
+        Antioch::set_zero(meanM);
+        for(unsigned int j = 0; j < _mixture.neutral_composition().n_species(); j++)
+        {
+          if(j == s)continue;
+          meanM += _mixture.neutral_composition().M(j) * molar_concentrations[j]; 
+        }
+        meanM /= nTot_diff;
+
+        dDtilde_dT[s] = dDs_dT / (Antioch::constant_clone(T,1) - molar_concentrations[s] / nTot * 
+                                                                 (Antioch::constant_clone(T,1) - _mixture.neutral_composition().M(s) / meanM) );
+     }
+
   }
 
 }
