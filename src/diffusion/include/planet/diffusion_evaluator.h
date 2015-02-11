@@ -135,7 +135,6 @@ namespace Planet{
      //mean
      CoeffType Ha = _mixture.atmospheric_scale_height(molar_concentrations,z);
 
-
      omegas.resize(_mixture.neutral_composition().n_species(),0.L);
 // eddy diff
      CoeffType eddy_K = _eddy_diffusion.K(nTot);
@@ -218,33 +217,68 @@ namespace Planet{
      _mixture.datmospheric_scale_height_dn_i(molar_concentrations,z,Ha,dHa_dn_i);
      _mixture.scale_heights(z,Hs);
 
+// temporaries to limit computations
+        // K / Ha
+     StateType K_Ha(K / Ha);
+          // K / (Ha * Ha)
+     StateType K_Ha_2(K / (Ha * Ha));
+        // K * 1/T * dT_dz
+     StateType K_times_dT_dz_T(K * dT_dz_T);
+        // dK_dn * (1/Ha + dT_dz * 1/T)
+     StateType dK_dn_times_stuff(dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz_T));
+
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
+
+// temporaries to limit computations
+          // 1/T * dT_dz * (1 + (1 -xs) * alphas)
+        StateType dT_dz_T_times_stuff(dT_dz_T * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]));
+          // 1/Hs
+        StateType one_Hs(Antioch::constant_clone(Hs[s],1)/Hs[s]);
+          // Dtilde * 1/T * dT_dz * alphas / nTot
+        StateType Dtilde_times_stuff(Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] / nTot);
+          // Dtilde * 1/T * dT_dz * alphas * xs / nTot
+        StateType Dtilde_times_more_stuff(Dtilde_times_stuff * molar_concentrations[s] / nTot);
+
         omegas_A_TERM[s] = - Dtilde[s] - K ;
         omegas_B_TERM[s] = 
-         - Dtilde[s]/Hs[s]  // + D/Hs
-         - Dtilde[s] * dT_dz_T // + 1/T * dT_dz * (
-                * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) ]
-        - K/Ha // + 1/Ha
-        - K  * dT_dz_T; //+1/T * dT_dz )
+         - Dtilde[s] * one_Hs  // - D / Hs
+         - Dtilde[s] * dT_dz_T_times_stuff // - D * 1/T * dT_dz * (1 + (1 -xs) * alphas)
+        - K_Ha // - K / Ha
+        - K_times_dT_dz_T; //- K * 1 / T * dT_dz )
+
+
+/*
+    omega = omega_A * dn_dz + omega_B * n
+    [cm-3.cm2.s-1.km-1] = [cm2.s-1] * [cm-3.km-1] + [cm2.s-1.km-1] * [cm-3]
+    we want at the end
+    [cm-3.km.s-1], thus 
+        omega_A in [km2.s-1] and
+        omega_B in [km2.s-1.km-1]
+ */
 
        for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
        {
-          domegas_dn_i_A_TERM[s][i] = - (dDtilde_dn[s][i] + dK_dn) * Antioch::constant_clone(T,1e-10); //to cm-3.km.s-1
-          domegas_dn_i_B_TERM[s][i] = -  dDtilde_dn[s][i] * (   Antioch::constant_clone(Hs[s],1.)/Hs[s]
-                                                              + dT_dz_T * (Antioch::constant_clone(T,1.) + 
-                                                                             ( (nTot - molar_concentrations[s]) / nTot ) * _mixture.thermal_coefficient()[s]
-                                                                          )
-                                                            )
-                                      + Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] * molar_concentrations[s] / (nTot * nTot)
-                                      - dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz_T)
-                                      - K * dHa_dn_i[i] / (Ha * Ha);
-        if(i == s)domegas_dn_i_B_TERM[s][i] -= Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s]  / nTot;
-// in cm-3.km.s-1
+//std::cout << "(" << s << "," << i << ") " << dHa_dn_i << std::endl;
+          domegas_dn_i_A_TERM[s][i] = - (dDtilde_dn[s][i] + dK_dn) * Antioch::constant_clone(T,1e-10); //cm2.s-1.cm3 to km2.s-1.cm3
+          domegas_dn_i_B_TERM[s][i] = -  dDtilde_dn[s][i] * ( one_Hs + dT_dz_T_times_stuff )
+                                      + Dtilde_times_more_stuff // - Dtilde * 1/T * dT_dz * alphas * (- xs / nTot )
+                                      - dK_dn_times_stuff
+                                      + K_Ha_2 * dHa_dn_i[i];
+        if(i == s)domegas_dn_i_B_TERM[s][i] -= Dtilde_times_stuff;
+/*std::cout << "(" << s << "," << i << ") domegas_dn_i_B_TERM[s][i] = -  " << dDtilde_dn[s][i] << " * ( " << one_Hs << " + " << dT_dz_T_times_stuff<<" ) "
+                                 <<    " + " << Dtilde_times_more_stuff // + Dtilde * 1/T * dT_dz * alphas * xs / nTot
+                                 <<    " - " << dK_dn_times_stuff
+                                   <<  " - " << K_Ha_2 << " * " << dHa_dn_i[i] << std::endl;
+        if(i == s)std::cout << " i==s domegas_dn_i_B_TERM[s][i] -= " << Dtilde_times_stuff << std::endl;
+std::cout << domegas_dn_i_B_TERM[s][i] << "\n";
+*/// cm2.s-1.cm3 to km2.s-1.cm3
          domegas_dn_i_B_TERM[s][i] *= Antioch::constant_clone(T,1e-10);
        }
-// in cm-3.km.s-1
+std::cout << std::endl;
+// cm2.s-1 to km2.s-1
        omegas_A_TERM[s] *= Antioch::constant_clone(T,1e-10);
+// cm2.km-1.s-1 to km2.km-1.s-1
        omegas_B_TERM[s] *= Antioch::constant_clone(T,1e-10);
      }
 
