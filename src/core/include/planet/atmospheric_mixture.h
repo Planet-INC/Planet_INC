@@ -165,7 +165,7 @@ namespace Planet
         template<typename StateType>
         ANTIOCH_AUTO(StateType)
         Jeans_velocity(const CoeffType &ms, const StateType &T, const CoeffType &z) const
-        ANTIOCH_AUTOFUNC(StateType, //Antioch::constant_clone(T,1e-3) * //ns m -> km
+        ANTIOCH_AUTOFUNC(StateType, Antioch::constant_clone(T,1e-3) * // m -> km
                                          Antioch::ant_sqrt(Antioch::Constants::R_universal<StateType>() * T / (Antioch::constant_clone(T,2.) * ms * Constants::pi<StateType>())) 
                                        * Antioch::ant_exp(- ms * Constants::Universal::G<StateType>() * Constants::Titan::mass<StateType>() 
                                                          / (Antioch::constant_clone(T,1e3) * (Constants::Titan::radius<StateType>() + z) * Antioch::Constants::R_universal<StateType>() * T)
@@ -201,7 +201,7 @@ namespace Planet
 
         //!upper boundary derived condition
         template <typename StateType>
-        StateType upper_boundary_velocity(unsigned int s, const StateType & /*ex*/) const;
+        StateType upper_boundary_velocity(unsigned int s, const StateType & ex) const;
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -386,8 +386,9 @@ namespace Planet
 
     for(unsigned int s = 0; s < _neutral_composition.n_species(); s++)
     {
-      dHa_dn_i[s] = Ha / nTot;
+      dHa_dn_i[s] = Ha / Mm * (Mm / nTot - _neutral_composition.M(s));
     }
+
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -543,23 +544,22 @@ namespace Planet
     AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_flux(const VectorStateType &molar_concentrations, unsigned int s) const
   {
       antioch_assert_less(s,_neutral_composition.n_species());
-      antioch_assert_less(s,molar_concentrations.size());
+      antioch_assert_equal_to(_neutral_composition.n_species(),molar_concentrations.size());
 
-      return (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
-                        0.:
-                        - this->Jeans_flux(_neutral_composition.M(s), molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax); // cm-3.km.s-1, escaping flux, term < 0;
+      return (_neutral_composition.species_list()[s] == iH || _neutral_composition.species_list()[s] == iH2)?
+                        - this->Jeans_flux(_neutral_composition.M(s), molar_concentrations[s],_temperature.neutral_temperature(_zmax),_zmax): // cm-3.km.s-1, escaping flux, term < 0;
+                        Antioch::zero_clone(molar_concentrations[s]);
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template <typename StateType>
   inline
-  StateType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_velocity(unsigned int s, const StateType & /*ex*/) const
+  StateType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::upper_boundary_velocity(unsigned int s, const StateType & ex) const
   {
       antioch_assert_less(s,_neutral_composition.n_species());
-
-      return (_neutral_composition.species_list()[s] != iH && _neutral_composition.species_list()[s] != iH2)?
-                        0.:
-                        - this->Jeans_velocity(_neutral_composition.M(s), _temperature.neutral_temperature(_zmax),_zmax); // cm-3.km.s-1, escaping flux, term < 0
+      return (_neutral_composition.species_list()[s] == iH || _neutral_composition.species_list()[s] == iH2)?
+                        - this->Jeans_velocity(_neutral_composition.M(s), _temperature.neutral_temperature(_zmax),_zmax): // cm-3.km.s-1, escaping flux, term < 0
+                        Antioch::zero_clone(ex);
   }
 
 
