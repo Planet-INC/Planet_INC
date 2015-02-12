@@ -192,8 +192,8 @@ namespace Planet{
      StateType dT_dz_T = dT_dz / T;
 
 //eddy
-     CoeffType dK_dn = _eddy_diffusion.K_deriv_ns(nTot);
-     CoeffType K     = _eddy_diffusion.K(nTot);
+     StateType dK_dn = _eddy_diffusion.K_deriv_ns(nTot);
+     StateType K     = _eddy_diffusion.K(nTot);
 
 //molecular
      VectorStateType Dtilde;
@@ -259,23 +259,15 @@ namespace Planet{
 
        for(unsigned int i = 0; i < _mixture.neutral_composition().n_species(); i++)
        {
-//std::cout << "(" << s << "," << i << ") " << dHa_dn_i << std::endl;
           domegas_dn_i_A_TERM[s][i] = - (dDtilde_dn[s][i] + dK_dn) * Antioch::constant_clone(T,1e-10); //cm2.s-1.cm3 to km2.s-1.cm3
           domegas_dn_i_B_TERM[s][i] = -  dDtilde_dn[s][i] * ( one_Hs + dT_dz_T_times_stuff )
                                       + Dtilde_times_more_stuff // - Dtilde * 1/T * dT_dz * alphas * (- xs / nTot )
                                       - dK_dn_times_stuff
                                       + K_Ha_2 * dHa_dn_i[i];
         if(i == s)domegas_dn_i_B_TERM[s][i] -= Dtilde_times_stuff;
-/*std::cout << "(" << s << "," << i << ") domegas_dn_i_B_TERM[s][i] = -  " << dDtilde_dn[s][i] << " * ( " << one_Hs << " + " << dT_dz_T_times_stuff<<" ) "
-                                 <<    " + " << Dtilde_times_more_stuff // + Dtilde * 1/T * dT_dz * alphas * xs / nTot
-                                 <<    " - " << dK_dn_times_stuff
-                                   <<  " - " << K_Ha_2 << " * " << dHa_dn_i[i] << std::endl;
-        if(i == s)std::cout << " i==s domegas_dn_i_B_TERM[s][i] -= " << Dtilde_times_stuff << std::endl;
-std::cout << domegas_dn_i_B_TERM[s][i] << "\n";
-*/// cm2.s-1.cm3 to km2.s-1.cm3
+// cm2.s-1.cm3 to km2.s-1.cm3
          domegas_dn_i_B_TERM[s][i] *= Antioch::constant_clone(T,1e-10);
        }
-std::cout << std::endl;
 // cm2.s-1 to km2.s-1
        omegas_A_TERM[s] *= Antioch::constant_clone(T,1e-10);
 // cm2.km-1.s-1 to km2.km-1.s-1

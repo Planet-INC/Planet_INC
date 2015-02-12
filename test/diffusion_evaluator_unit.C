@@ -180,7 +180,6 @@ int tester(const std::string &input_T)
   neutrals.push_back("CH4");
 //ionic system contains neutral system
   ions = neutrals;
-  ions.push_back("N2+");
   Scalar MN(14.008L), MC(12.011), MH(1.008L);
   Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH;
   std::vector<Scalar> Mm;
@@ -194,8 +193,7 @@ int tester(const std::string &input_T)
   std::vector<Scalar> molar_frac;
   molar_frac.push_back(0.96L);
   molar_frac.push_back(0.04L);
-  molar_frac.push_back(0.L);
-  Scalar dens_tot(1e12L);
+  Scalar dens_tot(1.7e13L);
 
 //zenith angle
 //not necessary
@@ -304,7 +302,6 @@ int tester(const std::string &input_T)
  * checks
  ************************/
 
-  molar_frac.pop_back();//get the ion outta here
   Scalar mean_M;
   Antioch::set_zero(mean_M);
   for(unsigned int s = 0; s < molar_frac.size(); s++)
@@ -391,6 +388,53 @@ int tester(const std::string &input_T)
      }
   }
 
+  Scalar z(1.00126188021535153894e+03);
+  Scalar nN2(8.43005804625429992676e+10);
+  Scalar dnN2_dz(-1.48999877435783243179e+09);
+  Scalar nCH4(1.20988959053107666969e+09);
+  Scalar dnCH4_dz(-2.13845977940878272057e+07);
+
+  std::vector<Scalar> densities(2,0.);
+  densities[0] = nN2;
+  densities[1] = nCH4;
+  std::vector<Scalar> ddensities_dz(2,0.);
+  ddensities_dz[0] = dnN2_dz;
+  ddensities_dz[1] = dnCH4_dz;
+
+  std::vector<Scalar> A_lib(2,0.),B_lib(2,0.);
+  std::vector<std::vector<Scalar> > dA_lib(2,std::vector<Scalar>(2,0.)),dB_lib(2,std::vector<Scalar>(2,0.));
+
+  diffusion.diffusion_and_derivs(densities,ddensities_dz,z,A_lib,B_lib,dA_lib,dB_lib);
+
+  Scalar omega_A_N2(-8.91745150154882304580961160994058011150693141477e-3);
+  Scalar omega_A_CH4(-1.104779285772000424689969814217345776876057607747e-2);
+  Scalar omega_B_N2(-8.890663229272582684868201945551452637241904819e-5);
+  Scalar omega_B_CH4(-8.472520943252638403954699093459571430051180243e-5);
+
+  Scalar domega_A_N2_dCH4(5.468351719402458916575928694020385445e-14);
+  Scalar domega_A_CH4_dN2(9.41013244365896810745955626496851621e-14);
+  Scalar domega_B_N2_dCH4(9.0325080649590294607336826345205794e-16);
+  Scalar domega_B_CH4_dN2(6.3478962472226290094290797587472414e-16);
+  Scalar domega_A_N2_dN2(6.90365411299394253965738848931126499e-14);
+  Scalar domega_B_N2_dN2(6.8398665016645709138999378530991927e-16);
+  Scalar domega_A_CH4_dCH4(6.90365411299394253965738848931126499e-14);
+  Scalar domega_B_CH4_dCH4(8.7507876626170793617393231111165119e-16);
+
+
+  return_flag = check_test(omega_A_N2,A_lib[0], "golden value omega_A N2")  || return_flag;
+  return_flag = check_test(omega_B_N2,B_lib[0], "golden value omega_B N2")  || return_flag;
+  return_flag = check_test(omega_A_CH4,A_lib[1],"golden value omega_A CH4") || return_flag;
+  return_flag = check_test(omega_B_CH4,B_lib[1],"golden value omega_B CH4") || return_flag;
+
+  return_flag = check_test(domega_A_N2_dCH4, dA_lib[0][1],"golden value domega_A N2 CH4")  || return_flag;
+  return_flag = check_test(domega_B_N2_dCH4, dB_lib[0][1],"golden value domega_B N2 CH4")  || return_flag;
+  return_flag = check_test(domega_A_CH4_dN2, dA_lib[1][0],"golden value domega_A CH4 N2")  || return_flag;
+  return_flag = check_test(domega_B_CH4_dN2, dB_lib[1][0],"golden value domega_B CH4 N2")  || return_flag;
+  return_flag = check_test(domega_A_N2_dN2,  dA_lib[0][0],"golden value domega_A N2 N2")   || return_flag;
+  return_flag = check_test(domega_B_N2_dN2,  dB_lib[0][0],"golden value domega_B N2 N2")   || return_flag;
+  return_flag = check_test(domega_A_CH4_dCH4,dA_lib[1][1],"golden value domega_A CH4 CH4") || return_flag;
+  return_flag = check_test(domega_B_CH4_dCH4,dB_lib[1][1],"golden value domega_B CH4 CH4") || return_flag;
+
   return return_flag;
 }
 
@@ -405,6 +449,6 @@ int main(int argc, char** argv)
     }
 
   return (tester<float>(std::string(argv[1])) ||
-          tester<double>(std::string(argv[1])));//||
-          //tester<long double>(std::string(argv[1])));
+          tester<double>(std::string(argv[1])) ||
+          tester<long double>(std::string(argv[1])));
 }

@@ -341,6 +341,9 @@ namespace Planet
         StateType ns_over_nTot_square = molar_concentrations[s] * one_over_nTot / nTot;
         StateType one_minus_Ms_over_mean = (Antioch::constant_clone(T,1) - _mixture.neutral_composition().M(s)/meanM );
         StateType stuff = molar_concentrations[s] / (nTot * nTot_diff ) * _mixture.neutral_composition().M(s)/(meanM * meanM );
+        StateType Dtilde_over_Ds = Dtilde / Ds;
+
+//      dDtilde_dT = dDs_dT * Dtilde / Ds
 
         for(unsigned int k = 0; k < _mixture.neutral_composition().n_species(); k++)
         {
@@ -358,7 +361,7 @@ namespace Planet
           dDtilde_dn[k] += ns_over_nTot_square;
           dDtilde_dn[k] *= one_minus_Ms_over_mean;
           if(s != k)dDtilde_dn[k] += stuff * (_mixture.neutral_composition().M(k) - meanM); // if not the diagonal, saves operations
-          dDtilde_dn[k] /= - denom;
+          dDtilde_dn[k] *= - Dtilde_over_Ds;
           dDtilde_dn[k] += dDs_dn / Ds;
           dDtilde_dn[k] *= Dtilde;
         }
