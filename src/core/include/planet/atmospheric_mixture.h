@@ -371,6 +371,7 @@ namespace Planet
                                                                                                     StateType & Ha, VectorStateType & dHa_dn_i) const
   {
     antioch_assert_equal_to(molar_densities.size(),_neutral_composition.n_species());
+    antioch_assert_equal_to(dHa_dn_i.size(),       _neutral_composition.n_species());
 
     CoeffType Mm;
     Antioch::set_zero(Mm);

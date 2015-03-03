@@ -40,10 +40,11 @@
 
 
 template<typename Scalar>
-int check_test(Scalar theory, Scalar cal, const std::string &words)
+int check_test(Scalar theory, Scalar cal, const std::string &words, const Scalar tt = -1)
 {
-  const Scalar tol = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e16:
-                                                                      std::numeric_limits<Scalar>::epsilon() * 150;
+  const Scalar tol = (tt < 0.)?(std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e-16:
+                                                                                std::numeric_limits<Scalar>::epsilon() * 150:
+                               tt;
 
   if(std::abs((theory-cal)/theory) < tol)return 0;
 
@@ -57,25 +58,27 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
 }
 
 template <typename Scalar, typename VectorScalar, typename MatrixScalar>
-void check_der_finite_diff(Planet::AtmosphericMixture<Scalar,VectorScalar,MatrixScalar> & composition,
+int check_der_finite_diff(Planet::AtmosphericMixture<Scalar,VectorScalar,MatrixScalar> & composition,
                            VectorScalar & neutral_molar_concentrations, Scalar z)
 {
    VectorScalar library(neutral_molar_concentrations.size());
    Scalar H;
    composition.datmospheric_scale_height_dn_i(neutral_molar_concentrations, z, H, library);
 
-   Scalar eps(1e-8);
+   int out_flag(0);
    for(unsigned int s = 0; s < neutral_molar_concentrations.size(); s++)
    {
      VectorScalar mol(neutral_molar_concentrations);
+     Scalar eps(1L);
      mol[s] += eps;
      Scalar h = composition.atmospheric_scale_height(mol,z);
-     Scalar dH = (H - h) / eps;
+     Scalar dH = (h - H) / eps;
 
      std::stringstream ss;
      ss << s << " and altitude " << z;
-     check_test(dH,library[s],"Finite difference on species " + ss.str());
+     out_flag = check_test(dH,library[s],"Finite difference on species " + ss.str(),Scalar(1e-4)) || out_flag;
    }
+   return out_flag;
 
 }
 
@@ -221,7 +224,8 @@ int tester(const std::string & input_T, const std::string & input_species)
                   check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude " + wordsz.str()) ||
                   return_flag;
 
-    check_der_finite_diff(composition,neutral_molar_concentration,z);
+  if(std::numeric_limits<Scalar>::epsilon() < 1e-17)
+       return_flag = check_der_finite_diff(composition,neutral_molar_concentration,z) || return_flag;
 
   }
 
