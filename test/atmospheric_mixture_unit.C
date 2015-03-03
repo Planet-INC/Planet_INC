@@ -56,14 +56,27 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   return 1;
 }
 
-template<typename Scalar>
-Scalar linear_interpolation(const Scalar &z0, const Scalar &z1,
-                            const Scalar &T0, const Scalar &T1,
-                            const Scalar &z)
+template <typename Scalar, typename VectorScalar, typename MatrixScalar>
+void check_der_finite_diff(Planet::AtmosphericMixture<Scalar,VectorScalar,MatrixScalar> & composition,
+                           VectorScalar & neutral_molar_concentrations, Scalar z)
 {
-     Scalar a = (T0 - T1)/(z0 - z1);
-     Scalar b = T0 - a * z0;
-     return a * z + b;
+   VectorScalar library(neutral_molar_concentrations.size());
+   Scalar H;
+   composition.datmospheric_scale_height_dn_i(neutral_molar_concentrations, z, H, library);
+
+   Scalar eps(1e-8);
+   for(unsigned int s = 0; s < neutral_molar_concentrations.size(); s++)
+   {
+     VectorScalar mol(neutral_molar_concentrations);
+     mol[s] += eps;
+     Scalar h = composition.atmospheric_scale_height(mol,z);
+     Scalar dH = (H - h) / eps;
+
+     std::stringstream ss;
+     ss << s << " and altitude " << z;
+     check_test(dH,library[s],"Finite difference on species " + ss.str());
+   }
+
 }
 
 
@@ -207,6 +220,8 @@ int tester(const std::string & input_T, const std::string & input_species)
     return_flag = check_test(H_the, composition.atmospheric_scale_height(neutral_molar_concentration, z), "atmospheric scale height at altitude " + wordsz.str()) ||
                   check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude " + wordsz.str()) ||
                   return_flag;
+
+    check_der_finite_diff(composition,neutral_molar_concentration,z);
 
   }
 
