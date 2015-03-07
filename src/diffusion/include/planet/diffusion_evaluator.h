@@ -66,13 +66,12 @@ namespace Planet{
        //!
        template<typename StateType, typename VectorStateType>
        void diffusion(const VectorStateType &molar_concentrations,
-                      const VectorStateType &dmolar_concentrations_dz,
-                      const StateType &z, VectorStateType &omegas) const;
+                      const StateType &z, VectorStateType &omega_a, 
+                                          VectorStateType &omega_b) const;
 
        //!
        template<typename StateType, typename VectorStateType, typename MatrixStateType>
        void diffusion_and_derivs(const VectorStateType &molar_concentrations,
-                                 const VectorStateType &dmolar_concentrations_dz,
                                  const StateType &z, 
                                  VectorStateType &omegas_A_term,
                                  VectorStateType &omegas_B_term,
@@ -107,55 +106,50 @@ namespace Planet{
   template<typename StateType, typename VectorStateType>
   inline
   void DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::diffusion(const VectorStateType &molar_concentrations,
-                                                                 const VectorStateType &dmolar_concentrations_dz,
-                                                                 const StateType &z, VectorStateType &omegas) const
+                                                                 const StateType &z, VectorStateType &omega_a, VectorStateType &omega_b) const
   {
 
      antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
-     antioch_assert_equal_to(dmolar_concentrations_dz.size(),_mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(omega_a.size(),_mixture.neutral_composition().n_species());
+     antioch_assert_equal_to(omega_b.size(),_mixture.neutral_composition().n_species());
 
 // temperature
-     CoeffType T = _temperature.neutral_temperature(z);
-     CoeffType dT_dz = _temperature.dneutral_temperature_dz(z);
+     StateType T = _temperature.neutral_temperature(z);
+     StateType dT_dz_T = _temperature.dneutral_temperature_dz(z) / T;
 
 // Dtilde
-     VectorCoeffType molecular;
+     VectorStateType molecular(molar_concentrations.size());
      _molecular_diffusion.Dtilde(molar_concentrations,T,molecular);// Dtilde
 
 // nTot
-     CoeffType nTot(0.L);
+     StateType nTot(0.L);
      for(unsigned int s = 0; s < molar_concentrations.size(); s++)
      {
         nTot += molar_concentrations[s];
      }
 
 // scale heights
-     VectorCoeffType Hs;
+     VectorStateType Hs(molar_concentrations.size());
      _mixture.scale_heights(z,Hs);
      //mean
-     CoeffType Ha = _mixture.atmospheric_scale_height(molar_concentrations,z);
+     StateType Ha = _mixture.atmospheric_scale_height(molar_concentrations,z);
 
-     omegas.resize(_mixture.neutral_composition().n_species(),0.L);
 // eddy diff
-     CoeffType eddy_K = _eddy_diffusion.K(nTot);
+     StateType eddy_K = _eddy_diffusion.K(nTot);
 
 // in cm-3.km.s-1
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
-            omegas[s] = Antioch::constant_clone(T,1e-10) * (//omega = - ns * Dtilde * [
-            - molecular[s] * 
-            (
-                dmolar_concentrations_dz[s] // 1/ns * dns_dz
-              + molar_concentrations[s]/Hs[s]  // + 1/Hs
-              + molar_concentrations[s] * dT_dz/T // + 1/T * dT_dz * (
-                * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]) //1 + (1 - xs)*alphas ) ]
-            )
-             - eddy_K * // - ns * K * (
-            ( 
-                dmolar_concentrations_dz[s] // 1/ns * dns_dz
-              + molar_concentrations[s]/Ha // + 1/Ha
-              + molar_concentrations[s] * dT_dz/T //+1/T * dT_dz )
-            ));
+            // omega_A = -  Dtilde - K
+            omega_a[s] = - Antioch::constant_clone(T,1e-10) * (molecular[s] + eddy_K);
+            // omega_B = - ( Dtilde / Hs + Dtilde / T * dT_dz * (1 + (nt - ns) / nt) + K/Ha + K / T * dT_dz )
+            omega_b[s] = - Antioch::constant_clone(T,1e-10) *
+                        (
+                           molecular[s] / Hs[s] 
+                         + molecular[s] * dT_dz_T * (Antioch::constant_clone(z,1) - (nTot - molar_concentrations[s]) / nTot * _mixture.thermal_coefficient()[s] )
+                         + eddy_K / Ha
+                         + eddy_K * dT_dz_T
+                        );
      }
      return;
   }
@@ -164,7 +158,6 @@ namespace Planet{
   template <typename StateType, typename VectorStateType, typename MatrixStateType>
   inline
   void DiffusionEvaluator<CoeffType, VectorCoeffType,MatrixCoeffType>::diffusion_and_derivs(const VectorStateType &molar_concentrations,
-                                                                                            const VectorStateType &dmolar_concentrations_dz,
                                                                                             const StateType &z, 
                                                                                             VectorStateType &omegas_A_TERM,
                                                                                             VectorStateType &omegas_B_TERM,
@@ -173,7 +166,6 @@ namespace Planet{
   {
 
      antioch_assert_equal_to(_mixture.neutral_composition().n_species(),molar_concentrations.size());
-     antioch_assert_equal_to(_mixture.neutral_composition().n_species(),dmolar_concentrations_dz.size());
      antioch_assert_equal_to(_mixture.neutral_composition().n_species(),omegas_A_TERM.size());
      antioch_assert_equal_to(_mixture.neutral_composition().n_species(),omegas_B_TERM.size());
      antioch_assert_equal_to(_mixture.neutral_composition().n_species(),domegas_dn_i_A_TERM.size());
@@ -188,8 +180,7 @@ namespace Planet{
         antioch_assert_equal_to(_mixture.neutral_composition().n_species(),domegas_dn_i_B_TERM[s].size());
      }
      StateType T       = _temperature.neutral_temperature(z);
-     StateType dT_dz   = _temperature.dneutral_temperature_dz(z);
-     StateType dT_dz_T = dT_dz / T;
+     StateType dT_dz_T = _temperature.dneutral_temperature_dz(z) / T;
 
 //eddy
      StateType dK_dn = _eddy_diffusion.K_deriv_ns(nTot);
@@ -241,12 +232,10 @@ namespace Planet{
         StateType Dtilde_times_more_stuff(Dtilde_times_stuff * molar_concentrations[s] / nTot);
 
         omegas_A_TERM[s] = - Dtilde[s] - K ;
-        omegas_B_TERM[s] = 
-         - Dtilde[s] * one_Hs  // - D / Hs
-         - Dtilde[s] * dT_dz_T_times_stuff // - D * 1/T * dT_dz * (1 + (1 -xs) * alphas)
-        - K_Ha // - K / Ha
-        - K_times_dT_dz_T; //- K * 1 / T * dT_dz )
-
+        omegas_B_TERM[s] = - Dtilde[s] * one_Hs  // - D / Hs
+                           - Dtilde[s] * dT_dz_T_times_stuff // - D * 1/T * dT_dz * (1 + (1 -xs) * alphas)
+                           - K_Ha // - K / Ha
+                           - K_times_dT_dz_T; //- K * 1 / T * dT_dz )
 
 /*
     omega = omega_A * dn_dz + omega_B * n
