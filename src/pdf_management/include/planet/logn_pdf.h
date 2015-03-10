@@ -126,7 +126,7 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  const CoeffType LogNPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType LogNPdf<CoeffType>::value(unsigned int /* ip */) const
   {
       return this->mu();
   }

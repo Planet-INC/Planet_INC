@@ -155,8 +155,8 @@ DiffusionType BinaryDiffusion<CoeffType>::diffusion_model() const
 template<typename CoeffType>
 inline
 BinaryDiffusion<CoeffType>::BinaryDiffusion():
-_D01(-1.L),
-_beta(0.L),
+_D01(-1),
+_beta(0),
 _diffusion_model(DiffusionType::NoData)
 {
   return;
@@ -166,8 +166,8 @@ template<typename CoeffType>
 inline
 BinaryDiffusion<CoeffType>::BinaryDiffusion(const unsigned int &mol1, 
                                             const unsigned int &mol2):
-_D01(-1.L),
-_beta(0.L),
+_D01(-1),
+_beta(0),
 _diffusion_model(DiffusionType::NoData),
 _mol1(mol1),
 _mol2(mol2)
@@ -231,10 +231,10 @@ void BinaryDiffusion<CoeffType>::set_parameters(const StateType &par1, const Sta
     }
     case DiffusionType::Wilson:
     {
-      _D01 = par1 * Antioch::ant_pow(Constants::Convention::T_standard<CoeffType>(),par2 + CoeffType(1.L)) * 
+      _D01 = par1 * Antioch::ant_pow(Constants::Convention::T_standard<CoeffType>(),par2 + 1) * 
                     Constants::Universal::kb<CoeffType>() /
                     Constants::Convention::P_normal<CoeffType>();
-      _beta = par2 + CoeffType(1.L);
+      _beta = par2 + 1;
       return;
     } 
     case DiffusionType::Wakeham:
@@ -245,8 +245,8 @@ void BinaryDiffusion<CoeffType>::set_parameters(const StateType &par1, const Sta
     }
     case DiffusionType::NoData:
     {
-       _D01 = -1.L;
-       _beta = -1.L;
+       _D01 = -1;
+       _beta = -1;
        return;
     }
     default:
@@ -277,7 +277,7 @@ void BinaryDiffusion<CoeffType>::binary_coefficient_and_derivatives(const StateT
                                                                     StateType &Dij, StateType &Dij_dT, StateType &Dij_dns) const
 {
   Dij     = this->binary_coefficient(T,P);
-  Dij_dT  = Dij * (_beta - CoeffType(1.L)) / T;
+  Dij_dT  = Dij * (_beta - 1) / T;
   Dij_dns = - Dij / nTot;
   return;
 }
