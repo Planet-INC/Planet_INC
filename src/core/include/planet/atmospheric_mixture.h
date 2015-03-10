@@ -218,7 +218,7 @@ namespace Planet
 
         //!
         template<typename StateType, typename VectorStateType>
-        const CoeffType atmospheric_scale_height(const VectorStateType &molar_densities,const StateType &z) const;
+        const StateType atmospheric_scale_height(const VectorStateType &molar_densities,const StateType &z) const;
 
         //!
         template<typename StateType, typename VectorStateType>
@@ -344,7 +344,7 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   inline
-  const CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::atmospheric_scale_height(const VectorStateType &molar_densities, 
+  const StateType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::atmospheric_scale_height(const VectorStateType &molar_densities, 
                                                                                           const StateType &z) const
   {
     antioch_assert_equal_to(molar_densities.size(),_neutral_composition.n_species());
