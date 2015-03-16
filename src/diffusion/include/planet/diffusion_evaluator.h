@@ -122,20 +122,22 @@ namespace Planet{
      _molecular_diffusion.Dtilde(molar_concentrations,T,molecular);// Dtilde
 
 // nTot
-     StateType nTot(0.L);
+     StateType nTot(0);
      for(unsigned int s = 0; s < molar_concentrations.size(); s++)
      {
         nTot += molar_concentrations[s];
      }
+     StateType one_over_nTot = Antioch::constant_clone(T,1) / nTot;
 
 // scale heights
      VectorStateType Hs(molar_concentrations.size());
      _mixture.scale_heights(z,Hs);
-     //mean
-     StateType Ha = _mixture.atmospheric_scale_height(molar_concentrations,z);
 
-// eddy diff
+// eddy diff (K / Ha)
      StateType eddy_K = _eddy_diffusion.K(nTot);
+     StateType eddy_K_Ha = eddy_K / _mixture.atmospheric_scale_height(molar_concentrations,z);
+     
+     StateType eddy_K_times_dT_dz_T = eddy_K * dT_dz_T;
 
 // in cm-3.km.s-1
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
@@ -146,9 +148,9 @@ namespace Planet{
             omega_b[s] = - Antioch::constant_clone(T,1e-10) *
                         (
                            molecular[s] / Hs[s] 
-                         + molecular[s] * dT_dz_T * (Antioch::constant_clone(z,1) - (nTot - molar_concentrations[s]) / nTot * _mixture.thermal_coefficient()[s] )
-                         + eddy_K / Ha
-                         + eddy_K * dT_dz_T
+                         + molecular[s] * dT_dz_T * ( Antioch::constant_clone(z,1) + (nTot - molar_concentrations[s]) * one_over_nTot * _mixture.thermal_coefficient()[s] )
+                         + eddy_K_Ha
+                         + eddy_K_times_dT_dz_T
                         );
      }
      return;
@@ -200,42 +202,43 @@ namespace Planet{
 
 //scale heights
      CoeffType Ha;
-     VectorCoeffType dHa_dn_i;
-     VectorCoeffType Hs;
-     Hs.resize(_mixture.neutral_composition().n_species(),0.);
-     dHa_dn_i.resize(_mixture.neutral_composition().n_species(),0.);
+     VectorStateType dHa_dn_i;
+     VectorStateType Hs;
+     Hs.resize(_mixture.neutral_composition().n_species(),0);
+     dHa_dn_i.resize(_mixture.neutral_composition().n_species(),0);
 
      _mixture.datmospheric_scale_height_dn_i(molar_concentrations,z,Ha,dHa_dn_i);
      _mixture.scale_heights(z,Hs);
+
 
 // temporaries to limit computations
         // K / Ha
      StateType K_Ha(K / Ha);
           // K / (Ha * Ha)
-     StateType K_Ha_2(K / (Ha * Ha));
+     StateType K_Ha_2(K_Ha / Ha );
         // K * 1/T * dT_dz
      StateType K_times_dT_dz_T(K * dT_dz_T);
         // dK_dn * (1/Ha + dT_dz * 1/T)
-     StateType dK_dn_times_stuff(dK_dn * (Antioch::constant_clone(Ha,1) / Ha + dT_dz_T));
+     StateType dK_dn_times_stuff(dK_dn * (1 / Ha + dT_dz_T));
 
      for(unsigned int s = 0; s < _mixture.neutral_composition().n_species(); s++)
      {
 
 // temporaries to limit computations
           // 1/T * dT_dz * (1 + (1 -xs) * alphas)
-        StateType dT_dz_T_times_stuff(dT_dz_T * (Antioch::constant_clone(T,1.) + ((nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]));
+        StateType dT_dz_T_times_stuff(dT_dz_T * (1 + ( (nTot - molar_concentrations[s])/nTot) * _mixture.thermal_coefficient()[s]));
           // 1/Hs
-        StateType one_Hs(Antioch::constant_clone(Hs[s],1)/Hs[s]);
+        StateType one_Hs(1 / Hs[s]);
           // Dtilde * 1/T * dT_dz * alphas / nTot
         StateType Dtilde_times_stuff(Dtilde[s] * dT_dz_T * _mixture.thermal_coefficient()[s] / nTot);
           // Dtilde * 1/T * dT_dz * alphas * xs / nTot
         StateType Dtilde_times_more_stuff(Dtilde_times_stuff * molar_concentrations[s] / nTot);
 
         omegas_A_TERM[s] = - Dtilde[s] - K ;
-        omegas_B_TERM[s] = - Dtilde[s] * one_Hs  // - D / Hs
-                           - Dtilde[s] * dT_dz_T_times_stuff // - D * 1/T * dT_dz * (1 + (1 -xs) * alphas)
-                           - K_Ha // - K / Ha
-                           - K_times_dT_dz_T; //- K * 1 / T * dT_dz )
+        omegas_B_TERM[s] = - Dtilde[s] * one_Hs               // - D / Hs
+                           - Dtilde[s] * dT_dz_T_times_stuff  // - D * 1/T * dT_dz * (1 + (1 -xs) * alphas)
+                           - K_Ha                             // - K / Ha
+                           - K_times_dT_dz_T;                 // - K * 1 / T * dT_dz 
 
 /*
     omega = omega_A * dn_dz + omega_B * n

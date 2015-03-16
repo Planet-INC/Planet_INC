@@ -192,7 +192,7 @@ namespace Planet
   {
      antioch_assert_equal_to(molar_concentrations.size(),_mixture.neutral_composition().n_species());
 
-     Dtilde.resize(molar_concentrations.size(),0.L);
+     Dtilde.resize(molar_concentrations.size(),0);
      CoeffType nTot;
      Antioch::set_zero(nTot);
      for(unsigned int s = 0; s < molar_concentrations.size(); s++)
@@ -236,11 +236,10 @@ namespace Planet
         }
 //Dtilde = Ds numerator (ntot - n_s) / Ds denom ... 
 // cm2.s-1
-        return (nTot - molar_concentrations[s])
-                            / ( n_D * ( CoeffType(1.L) - molar_concentrations[s]/nTot * 
-                                         (CoeffType(1.L) - _mixture.neutral_composition().M(s) / meanM)
-                                      )
-                              );
+        return ntot_s / ( n_D * ( 
+                                  1 - molar_concentrations[s]/nTot * (1 - _mixture.neutral_composition().M(s) / meanM)
+                                )
+                        );
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
