@@ -41,19 +41,19 @@
 
 
 template<typename Scalar>
-int check_test(Scalar theory, Scalar cal, const std::string &words)
+int check_test(Scalar theory, Scalar cal, const std::string &words, const Scalar & tol, Scalar & max_diff)
 {
-  const Scalar tol = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?1e-16:
-                                                                     std::numeric_limits<Scalar>::epsilon() * 150.L;
   
-  bool test = (theory < tol)?std::abs(theory - cal) < tol:
-                             std::abs((theory-cal)/theory) < tol;
-  if(test)return 0;
+
+  Scalar diff = std::abs((theory-cal)/theory);
+  if(max_diff < diff)max_diff = diff;
+
+  if(diff < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
             << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
-            << "\ndifference: " << std::abs((theory-cal)/cal)
+            << "\ndifference: " << diff
             << "\ntolerance: " << tol << std::endl;
   return 1;
 }
@@ -118,7 +118,7 @@ Scalar binary_coefficient(const Scalar &T, const Scalar &P, const Scalar &D01, c
 template<typename Scalar>
 Scalar dbinary_coefficient_dn(const Scalar &T, const Scalar &P, const Scalar &D01, const Scalar &beta)
 {
-   return - binary_coefficient(T,P,D01,beta) / P * Planet::Constants::Universal::kb<Scalar>() * T * 1e6L;
+   return - binary_coefficient(T,P,D01,beta) / P * Planet::Constants::Universal::kb<Scalar>() * T * Scalar(1e6);
 }
 
 template<typename Scalar>
@@ -138,11 +138,11 @@ Scalar binary_coefficient(const Scalar &Dii, const Scalar &Mi, const Scalar &Mj)
 template<typename Scalar>
 Scalar pressure(const Scalar &n, const Scalar &T)
 {
-   return n * 1e6L * Planet::Constants::Universal::kb<Scalar>() * T; //cm-3 -> m-3
+   return n * Scalar(1e6) * Planet::Constants::Universal::kb<Scalar>() * T; //cm-3 -> m-3
 }
 
 template <typename Scalar>
-int tester(const std::string &input_T)
+int tester(const std::string &input_T, const std::string & type)
 {
 //description
   std::vector<std::string> neutrals;
@@ -153,7 +153,7 @@ int tester(const std::string &input_T)
 //ionic system contains neutral system
   ions = neutrals;
   Scalar MN(14.008e-3L), MC(12.011e-3L), MH(1.008e-3L);
-  Scalar MN2 = 2.L*MN , MCH4 = MC + 4.L*MH, MH2 = 2.L * MH;
+  Scalar MN2 = 2 * MN , MCH4 = MC + 4 * MH, MH2 = 2 * MH;
   std::vector<Scalar> Mm;
   Mm.push_back(MN2);
   Mm.push_back(MCH4);
@@ -261,15 +261,21 @@ int tester(const std::string &input_T)
 //N2, CH4, H2
   std::vector<std::vector<Scalar> > Dij;
   Dij.resize(2);
-  Dij[0].resize(3,0.L);
-  Dij[1].resize(3,0.L);
+  Dij[0].resize(3,0);
+  Dij[1].resize(3,0);
 
   std::vector<std::vector<std::vector<Scalar> > > dDij;
   dDij.resize(2);
-  dDij[0].resize(3,std::vector<Scalar>(2,0.));
-  dDij[1].resize(3,std::vector<Scalar>(2,0.));
+  dDij[0].resize(3,std::vector<Scalar>(2,0));
+  dDij[1].resize(3,std::vector<Scalar>(2,0));
 
   int return_flag(0);
+
+  const Scalar tol = std::numeric_limits<Scalar>::epsilon() * 4000;
+  Scalar max_diff(-1);
+
+  std::cout << type << " tolerance: " << tol << " and max diff ... ";
+
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
       std::stringstream walt;
@@ -281,9 +287,9 @@ int tester(const std::string &input_T)
       std::vector<Scalar> densities;
       calculate_densities(densities, dens_tot, molar_frac, zmin, z, T, Mm);
 
-      std::vector<Scalar> molecular_diffusion_Dtilde(densities.size(),0.);
-      std::vector<Scalar> molecular_diffusion_Dtilde_2(densities.size(),0.);
-      std::vector<Scalar> molecular_diffusion_dDtilde_dT(densities.size(),0.);
+      std::vector<Scalar> molecular_diffusion_Dtilde(densities.size(),0);
+      std::vector<Scalar> molecular_diffusion_Dtilde_2(densities.size(),0);
+      std::vector<Scalar> molecular_diffusion_dDtilde_dT(densities.size(),0);
       std::vector<std::vector<Scalar> > molecular_diffusion_dDtilde_dn(densities.size(), std::vector<Scalar>(densities.size(),0.));
 
       molecular_diffusion.Dtilde(densities,T,molecular_diffusion_Dtilde);
@@ -310,31 +316,31 @@ int tester(const std::string &input_T)
       dDij[1][2][0] = dbinary_coefficient_dn(T,P,Massman[4][0],Massman[4][1]); //CH4 H2 dn
       dDij[1][2][1] = dbinary_coefficient_dT(T,P,Massman[4][0],Massman[4][1]); //CH4 H2 dT
 
-      return_flag = check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude " + walt.str())   || 
-                    check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude " + walt.str())  || 
-                    check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 H2 at altitude " + walt.str())  || 
-                    check_test(Dij[1][0],molecular_diffusion.binary_coefficient(1,0,T,P),"binary molecular coefficient CH4 N2 at altitude " + walt.str())  || 
-                    check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude " + walt.str()) || 
-                    check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 H2 at altitude " + walt.str()) ||
-                    check_test(dDij[0][0][0],molecular_diffusion.binary_coefficient_deriv_n(0,0,0,T,P,nTot),"binary molecular coefficient N2 N2 derivative with respect to n at altitude " + walt.str()) ||
-                    check_test(dDij[0][0][1],molecular_diffusion.binary_coefficient_deriv_T(0,0,T,P),"binary molecular coefficient N2 N2 derivative with respect to T at altitude " + walt.str()) ||
-                    check_test(dDij[0][1][0],molecular_diffusion.binary_coefficient_deriv_n(0,1,0,T,P,nTot),"binary molecular coefficient N2 CH4 derivative with respect to n at altitude " + walt.str()) ||
-                    check_test(dDij[0][1][1],molecular_diffusion.binary_coefficient_deriv_T(0,1,T,P),"binary molecular coefficient N2 CH4 derivative with respect to T at altitude " + walt.str()) ||
-                    check_test(dDij[0][2][0],molecular_diffusion.binary_coefficient_deriv_n(0,2,0,T,P,nTot),"binary molecular coefficient N2 H2 derivative with respect to n at altitude " + walt.str()) ||
-                    check_test(dDij[0][2][1],molecular_diffusion.binary_coefficient_deriv_T(0,2,T,P),"binary molecular coefficient N2 H2 derivative with respect to T at altitude " + walt.str()) ||
-                    check_test(dDij[1][0][0],molecular_diffusion.binary_coefficient_deriv_n(1,0,0,T,P,nTot),"binary molecular coefficient CH4 N2 derivative with respect to n at altitude " + walt.str()) ||
-                    check_test(dDij[1][0][1],molecular_diffusion.binary_coefficient_deriv_T(1,0,T,P),"binary molecular coefficient CH4 N2 derivative with respect to T at altitude " + walt.str()) ||
-                    check_test(dDij[1][1][0],molecular_diffusion.binary_coefficient_deriv_n(1,1,0,T,P,nTot),"binary molecular coefficient CH4 CH4 derivative with respect to n at altitude " + walt.str()) ||
-                    check_test(dDij[1][1][1],molecular_diffusion.binary_coefficient_deriv_T(1,1,T,P),"binary molecular coefficient CH4 CH4 derivative with respect to T at altitude " + walt.str()) ||
-                    check_test(dDij[1][2][0],molecular_diffusion.binary_coefficient_deriv_n(1,2,0,T,P,nTot),"binary molecular coefficient CH4 H2 derivative with respect to n at altitude " + walt.str()) ||
-                    check_test(dDij[1][2][1],molecular_diffusion.binary_coefficient_deriv_T(1,2,T,P),"binary molecular coefficient CH4 H2 derivative with respect to T at altitude " + walt.str()) ||
+      return_flag = check_test(Dij[0][0],molecular_diffusion.binary_coefficient(0,0,T,P),"binary molecular coefficient N2 N2 at altitude " + walt.str(),tol,max_diff)   || 
+                    check_test(Dij[0][1],molecular_diffusion.binary_coefficient(0,1,T,P),"binary molecular coefficient N2 CH4 at altitude " + walt.str(),tol,max_diff)  || 
+                    check_test(Dij[0][2],molecular_diffusion.binary_coefficient(0,2,T,P),"binary molecular coefficient N2 H2 at altitude " + walt.str(),tol,max_diff)  || 
+                    check_test(Dij[1][0],molecular_diffusion.binary_coefficient(1,0,T,P),"binary molecular coefficient CH4 N2 at altitude " + walt.str(),tol,max_diff)  || 
+                    check_test(Dij[1][1],molecular_diffusion.binary_coefficient(1,1,T,P),"binary molecular coefficient CH4 CH4 at altitude " + walt.str(),tol,max_diff) || 
+                    check_test(Dij[1][2],molecular_diffusion.binary_coefficient(1,2,T,P),"binary molecular coefficient CH4 H2 at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[0][0][0],molecular_diffusion.binary_coefficient_deriv_n(0,0,0,T,P,nTot),"binary molecular coefficient N2 N2 derivative with respect to n at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[0][0][1],molecular_diffusion.binary_coefficient_deriv_T(0,0,T,P),"binary molecular coefficient N2 N2 derivative with respect to T at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[0][1][0],molecular_diffusion.binary_coefficient_deriv_n(0,1,0,T,P,nTot),"binary molecular coefficient N2 CH4 derivative with respect to n at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[0][1][1],molecular_diffusion.binary_coefficient_deriv_T(0,1,T,P),"binary molecular coefficient N2 CH4 derivative with respect to T at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[0][2][0],molecular_diffusion.binary_coefficient_deriv_n(0,2,0,T,P,nTot),"binary molecular coefficient N2 H2 derivative with respect to n at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[0][2][1],molecular_diffusion.binary_coefficient_deriv_T(0,2,T,P),"binary molecular coefficient N2 H2 derivative with respect to T at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[1][0][0],molecular_diffusion.binary_coefficient_deriv_n(1,0,0,T,P,nTot),"binary molecular coefficient CH4 N2 derivative with respect to n at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[1][0][1],molecular_diffusion.binary_coefficient_deriv_T(1,0,T,P),"binary molecular coefficient CH4 N2 derivative with respect to T at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[1][1][0],molecular_diffusion.binary_coefficient_deriv_n(1,1,0,T,P,nTot),"binary molecular coefficient CH4 CH4 derivative with respect to n at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[1][1][1],molecular_diffusion.binary_coefficient_deriv_T(1,1,T,P),"binary molecular coefficient CH4 CH4 derivative with respect to T at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[1][2][0],molecular_diffusion.binary_coefficient_deriv_n(1,2,0,T,P,nTot),"binary molecular coefficient CH4 H2 derivative with respect to n at altitude " + walt.str(),tol,max_diff) ||
+                    check_test(dDij[1][2][1],molecular_diffusion.binary_coefficient_deriv_T(1,2,T,P),"binary molecular coefficient CH4 H2 derivative with respect to T at altitude " + walt.str(),tol,max_diff) ||
                     return_flag;
 // per species
       for(unsigned int s = 0; s < molar_frac.size(); s++)
       {
 
-        Scalar tmp(0.L);
-        Scalar dDs_dT(0.L);
+        Scalar tmp(0);
+        Scalar dDs_dT(0);
         for(unsigned int imedium = 0; imedium < medium.size(); imedium++)
         {
            if(s == imedium)continue;
@@ -344,7 +350,7 @@ int tester(const std::string &input_T)
         Scalar Ds = (nTot - densities[s]) / tmp;
         dDs_dT *= Ds / tmp;
 
-        Scalar M_diff(0.L);
+        Scalar M_diff(0);
         Scalar totdens_diff = nTot - densities[s];
         for(unsigned int j = 0; j < molar_frac.size(); j++)
         {
@@ -353,15 +359,15 @@ int tester(const std::string &input_T)
         }
         M_diff /= totdens_diff;
 
-        Scalar Dtilde = Ds / (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - Mm[s]/M_diff));
-        dDs_dT /= (Scalar(1.L) - molar_frac[s] * (Scalar(1.L) - Mm[s]/M_diff));
+        Scalar Dtilde = Ds / (1 - molar_frac[s] * (1 - Mm[s]/M_diff));
+        dDs_dT /= (1 - molar_frac[s] * (1 - Mm[s]/M_diff));
 
         Scalar Dtilde_3 = molecular_diffusion.Dtilde(s, nTot, T, P, densities);
 
-        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],     "Dtilde of species "   + neutrals[s] + " at altitude " + walt.str()) || 
-                      check_test(Dtilde,molecular_diffusion_Dtilde_2[s],   "Dtilde 2 of species " + neutrals[s] + " at altitude " + walt.str()) || 
-                      check_test(Dtilde,Dtilde_3,                          "Dtilde 3 of species " + neutrals[s] + " at altitude " + walt.str()) || 
-                      check_test(dDs_dT,molecular_diffusion_dDtilde_dT[s], "Dtilde derived with respect to T of species " + neutrals[s] + " at altitude " + walt.str()) || 
+        return_flag = check_test(Dtilde,molecular_diffusion_Dtilde[s],     "Dtilde of species "   + neutrals[s] + " at altitude " + walt.str(),tol,max_diff) || 
+                      check_test(Dtilde,molecular_diffusion_Dtilde_2[s],   "Dtilde 2 of species " + neutrals[s] + " at altitude " + walt.str(),tol,max_diff) || 
+                      check_test(Dtilde,Dtilde_3,                          "Dtilde 3 of species " + neutrals[s] + " at altitude " + walt.str(),tol,max_diff) || 
+                      check_test(dDs_dT,molecular_diffusion_dDtilde_dT[s], "Dtilde derived with respect to T of species " + neutrals[s] + " at altitude " + walt.str(),tol,max_diff) || 
                       return_flag;
 
 // now the derivatives with n
@@ -371,7 +377,7 @@ int tester(const std::string &input_T)
            Antioch::set_zero(term_bimol);
            if(s != k && k < medium.size())
            {
-             Scalar sum(0.L);
+             Scalar sum(0);
              for(unsigned int m = 0; m < medium.size(); m++)
              {
                 if(m == s)continue;
@@ -390,7 +396,7 @@ int tester(const std::string &input_T)
            if(s != k)dDtilde_dn += Antioch::constant_clone(T,1) / (nTot - densities[s]);
            dDtilde_dn *= Dtilde;
 
-           return_flag = check_test(dDtilde_dn,molecular_diffusion_dDtilde_dn[s][k],"Dtilde derivative with respect to " + neutrals[k] + " of species " + neutrals[s] + " at altitude " + walt.str()) || 
+           return_flag = check_test(dDtilde_dn,molecular_diffusion_dDtilde_dn[s][k],"Dtilde derivative with respect to " + neutrals[k] + " of species " + neutrals[s] + " at altitude " + walt.str(),tol,max_diff) || 
                          return_flag;
         }
 
@@ -401,42 +407,43 @@ int tester(const std::string &input_T)
   densities[1] = 2.40386768896000000000e11L;
   densities[2] = 1.03623997440000000000e10L;
   const Scalar nTot = densities[0] + densities[1] + densities[2];
-  const Scalar T = 1.82128890991210937500e2L;
+  const Scalar T = 197.3444020114407067012507468461990356;
   std::vector<Scalar> test(3,0.);
   std::vector<std::vector<Scalar> > dtest(3,std::vector<Scalar>(3,0.));
+
   molecular_diffusion.Dtilde_and_derivs_dn(densities,T,nTot,test,dtest);
 
-  const Scalar exact_N2(0.124061382408639588954080008707613416952725);
-  const Scalar dexact_N2_N2(-0.734627841054788800039919547216712e-14);
-  const Scalar dexact_N2_CH4(-0.6987326089207320057457885284229204e-14);
-  const Scalar dexact_N2_H2(6.397509549171066777021504146502492026e-14);
+  const Scalar exact_N2(0.13175620959620829365933043902850430735644492531321);
+  const Scalar dexact_N2_N2(-7.80192658843725743470610638359192186e-15);
+  const Scalar dexact_N2_CH4(-7.42071048099607652288172861518391368e-15);
+  const Scalar dexact_N2_H2(6.794310950670392087834409003544762293e-14);
 
-  const Scalar exact_CH4(0.21549157406084152957228970249446252);
-  const Scalar dexact_CH4_N2(-1.27608779103830978235171238683343e-14);
-  const Scalar dexact_CH4_CH4(-0.7307023689721878657565828130168e-14);
-  const Scalar dexact_CH4_H2(7.5460688436359531666580085520e-18);
+  const Scalar exact_CH4(0.22885729988609127375665445647101399645508956757757);
+  const Scalar dexact_CH4_N2(-1.355236312822976495111972234499004441e-14);
+  const Scalar dexact_CH4_CH4(-7.76023711888293341444280146924910631e-15);
+  const Scalar dexact_CH4_H2(8.01410889421362104507059311510769e-18);
 
-  const Scalar exact_H2(0.788720143947339638067540668638661695);
-  const Scalar dexact_H2_N2(-4.6363607902903173016553850003813313e-14);
-  const Scalar dexact_H2_CH4(-5.045883591346508854133726379404650e-14);
-  const Scalar dexact_H2_H2(-0.3360764638890571091881063585275271e-14);
+  const Scalar exact_H2(0.84230055725467281158924055356031866834452738609897);
+  const Scalar dexact_H2_N2(-4.950987607664367816185865630216608636e-14);
+  const Scalar dexact_H2_CH4(-5.41213244060823733480112116153913187e-14);
+  const Scalar dexact_H2_H2(-3.58907268929640668494924664343440539e-15);
 
+  return_flag = check_test(exact_N2,test[0],"Dtilde N2 compared to bc",tol,max_diff) || return_flag;
+  return_flag = check_test(dexact_N2_N2, dtest[0][0],"Dtilde N2 derived with respect to N2 compared to bc",tol,max_diff)  || return_flag;
+  return_flag = check_test(dexact_N2_CH4,dtest[0][1],"Dtilde N2 derived with respect to CH4 compared to bc",tol,max_diff) || return_flag;
+  return_flag = check_test(dexact_N2_H2, dtest[0][2],"Dtilde N2 derived with respect to H2 compared to bc",tol,max_diff)  || return_flag;
 
-  return_flag = check_test(exact_N2,test[0],"Dtilde N2 compared to bc") || return_flag;
-  return_flag = check_test(dexact_N2_N2, dtest[0][0],"Dtilde N2 derived with respect to N2 compared to bc") || return_flag;
-  return_flag = check_test(dexact_N2_CH4,dtest[0][1],"Dtilde N2 derived with respect to CH4 compared to bc") || return_flag;
-  return_flag = check_test(dexact_N2_H2, dtest[0][2],"Dtilde N2 derived with respect to H2 compared to bc") || return_flag;
+  return_flag = check_test(exact_CH4,test[1],"Dtilde CH4 compared to bc",tol,max_diff) || return_flag;
+  return_flag = check_test(dexact_CH4_N2, dtest[1][0],"Dtilde CH4 derived with respect to N2 compared to bc",tol,max_diff)  || return_flag;
+  return_flag = check_test(dexact_CH4_CH4,dtest[1][1],"Dtilde CH4 derived with respect to CH4 compared to bc",tol,max_diff) || return_flag;
+  return_flag = check_test(dexact_CH4_H2, dtest[1][2],"Dtilde CH4 derived with respect to H2 compared to bc",tol,max_diff)  || return_flag;
 
-  return_flag = check_test(exact_CH4,test[1],"Dtilde CH4 compared to bc") || return_flag;
-  return_flag = check_test(dexact_CH4_N2, dtest[1][0],"Dtilde CH4 derived with respect to N2 compared to bc") || return_flag;
-  return_flag = check_test(dexact_CH4_CH4,dtest[1][1],"Dtilde CH4 derived with respect to CH4 compared to bc") || return_flag;
-  return_flag = check_test(dexact_CH4_H2, dtest[1][2],"Dtilde CH4 derived with respect to H2 compared to bc") || return_flag;
+  return_flag = check_test(exact_H2,test[2],"Dtilde H2 compared to bc",tol,max_diff) || return_flag;
+  return_flag = check_test(dexact_H2_N2, dtest[2][0],"Dtilde H2 derived with respect to N2 compared to bc",tol,max_diff)  || return_flag;
+  return_flag = check_test(dexact_H2_CH4,dtest[2][1],"Dtilde H2 derived with respect to CH4 compared to bc",tol,max_diff) || return_flag;
+  return_flag = check_test(dexact_H2_H2, dtest[2][2],"Dtilde H2 derived with respect to H2 compared to bc",tol,max_diff)  || return_flag;
 
-  return_flag = check_test(exact_H2,test[2],"Dtilde H2 compared to bc") || return_flag;
-  return_flag = check_test(dexact_H2_N2, dtest[2][0],"Dtilde H2 derived with respect to N2 compared to bc") || return_flag;
-  return_flag = check_test(dexact_H2_CH4,dtest[2][1],"Dtilde H2 derived with respect to CH4 compared to bc") || return_flag;
-  return_flag = check_test(dexact_H2_H2, dtest[2][2],"Dtilde H2 derived with respect to H2 compared to bc") || return_flag;
-
+  std::cout << max_diff << std::endl;
 
   return return_flag;
 }
@@ -451,7 +458,7 @@ int main(int argc, char** argv)
       antioch_error();
     }
 
-  return (tester<float>(std::string(argv[1])) ||
-          tester<double>(std::string(argv[1])) ||
-          tester<long double>(std::string(argv[1])));
+  return (tester<float>(std::string(argv[1]), "float") ||
+          tester<double>(std::string(argv[1]), "double") ||
+          tester<long double>(std::string(argv[1]), "long double"));
 }

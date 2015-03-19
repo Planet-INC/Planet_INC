@@ -1048,7 +1048,6 @@ int tester(const std::string &input_T,const std::string & input_hv,
      std::vector<Scalar> chemical_theo;
      std::vector<Scalar> dummy;
      std::vector<Scalar> virtual_densities;
-     std::vector<Scalar> virtual_dns_dz;
 
      dummy.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
@@ -1069,7 +1068,6 @@ int tester(const std::string &input_T,const std::string & input_hv,
                        tc, Ha, omega_theo_A, omega_theo_B);
 
      virtual_densities.resize(densities.size());
-     virtual_dns_dz.resize(densities.size());
 //
 // The solver use rescaled densities, so we
 // descale here before giving it to the evaluator
@@ -1077,9 +1075,8 @@ int tester(const std::string &input_T,const std::string & input_hv,
      for(unsigned int s = 0; s < molar_frac.size(); s++)
      {
          virtual_densities[s] = densities[s] / nTot_virtual;
-         virtual_dns_dz[s]    = dns_dz[s] / nTot_virtual;
      }
-     evaluator.compute(virtual_densities, virtual_dns_dz, z);//compute with real densities
+     evaluator.compute(virtual_densities, z);//compute with real densities
 
      std::stringstream alt;
      alt << z;
