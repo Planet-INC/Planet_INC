@@ -127,7 +127,7 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  const CoeffType NormPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType NormPdf<CoeffType>::value(unsigned int /* ip */) const
   {
       return this->mu();
   }

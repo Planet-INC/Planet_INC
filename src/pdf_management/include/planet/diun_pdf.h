@@ -102,7 +102,7 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  const CoeffType DiUnPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType DiUnPdf<CoeffType>::value(unsigned int /*ip*/) const
   {
       return CoeffType(1.L)/(CoeffType)_n;
   }

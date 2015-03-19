@@ -96,8 +96,8 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
-     temp >> t >> tz >> dt >> dtz;
+     Scalar t,tz;
+     temp >> t >> tz;
      if(!temp.good())break;
      T0.push_back(t);
      Tz.push_back(tz);
@@ -192,7 +192,7 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
 ////////////////////:
   molar_frac.pop_back();
@@ -202,7 +202,9 @@ int tester(const std::string &input_T, const std::string &input_N2, const std::s
   
   for(Scalar z = zmin; z <= zmax; z += zstep)
   {
+std::cout << "Altitude " << z << std::endl;
      Scalar T = temperature.neutral_temperature(z);
+std::cout << "T = " << T << std::endl;
 
      std::vector<Scalar> sum_dens;
      densities(z,zmin,zmax,dens_tot,temperature,Mmean,molar_frac,sum_dens);
