@@ -32,6 +32,7 @@
 #include "antioch/string_utils.h"
 #include "antioch/kinetics_parsing.h"
 #include "antioch/reaction_parsing.h"
+#include "antioch/gsl_spliner.h"
 
 //Planet
 #include "planet/diffusion_evaluator.h"
@@ -158,8 +159,11 @@ namespace Planet
 //  eddy
     CoeffType _K0;
 
-
+    // \todo, remove
     CoeffType _scaling_factor;
+
+    bool _explicit_first_guess;
+    std::vector<Antioch::GSLSpliner> _first_guess_spline;
 
     /*! Convenience method to hide all the construction code for
         composition, kinetics, and diffusion */
@@ -184,6 +188,9 @@ namespace Planet
     void build_diffusion( std::vector<std::vector<std::vector<CoeffType> > >& bin_diff_data,
                           std::vector<std::vector<DiffusionType> >& bin_diff_model,
                           const std::vector<std::string>& neutrals);
+
+    // read conc_s(z) from a file
+    void parse_first_guess(const std::string & file);
 
     // Helper functions for parsing data
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
@@ -253,7 +260,8 @@ namespace Planet
       _ionic_reaction_set(NULL),
       _chapman(NULL),
       _tau(NULL),
-      _scaling_factor(-1.L)
+      _scaling_factor(-1.L),
+      _explicit_first_guess(false)
   {
     this->build(input);
     this->sanity_check_chemical_system();
@@ -287,11 +295,26 @@ namespace Planet
   template<typename StateType, typename VectorStateType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(VectorStateType & molar_concentrations_first_guess, const StateType z) const
   {
-      _composition->first_guess_densities(z,molar_concentrations_first_guess);
-      for(unsigned int i = 0; i < molar_concentrations_first_guess.size(); i++)
-      {
-         molar_concentrations_first_guess[i] /= _scaling_factor;
-      }
+
+     antioch_assert_equal_to(molar_concentrations_first_guess.size(),_neutral_species->n_species());
+     Antioch::set_zero(molar_concentrations_first_guess);
+
+     if(_explicit_first_guess)
+     {
+        for(unsigned int s = 0; s < molar_concentrations_first_guess.size(); s++)
+        {
+           molar_concentrations_first_guess[s] = _first_guess_spline[s].interpolated_value(z) / _scaling_factor;
+        }
+
+     }else
+     {
+        _composition->first_guess_densities(z,molar_concentrations_first_guess);
+        for(unsigned int i = 0; i < molar_concentrations_first_guess.size(); i++)
+        {
+           molar_concentrations_first_guess[i] /= _scaling_factor;
+        }
+     }
+
       return;
   }
 
@@ -299,7 +322,13 @@ namespace Planet
   template<typename StateType>
   StateType PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::first_guess(unsigned int s, const StateType z) const
   {
-    return _composition->first_guess_density(z,s) / _scaling_factor;
+    if(_explicit_first_guess)
+    {
+       return _first_guess_spline[s].interpolated_value(z) / _scaling_factor;
+    }else
+    {
+      return _composition->first_guess_density(z,s) / _scaling_factor;
+    }
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
@@ -412,6 +441,12 @@ namespace Planet
     // Must be called after: build_temperature, build_species
     this->build_composition(input, molar_frac, dens_tot, tc, hard_sphere_radius);
 
+    // now we have the composition, let's see if first guess is explicit (a.k.a. in a given file)
+    if( input.have_variable("Planet/first_guess") )
+    {
+        this->parse_first_guess(input("Planet/first_guess","DIE!"));
+    }
+
     return;
   }
 
@@ -474,8 +509,8 @@ namespace Planet
         ions[n_neutral + s] = input("Planet/ionic_species", "DIE!", s);
       }
 
-    _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals,true,chem_spec_file);
-    _ionic_species   = new Antioch::ChemicalMixture<CoeffType>(ions,true,chem_spec_file);
+    _neutral_species = new Antioch::ChemicalMixture<CoeffType>(neutrals,false,chem_spec_file);
+    _ionic_species   = new Antioch::ChemicalMixture<CoeffType>(ions,false,chem_spec_file);
 
     for( unsigned int s = 0; s < n_ionic; s++ )
       {
@@ -1815,6 +1850,68 @@ namespace Planet
 
    // if(!balanced)antioch_error();
     return;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::parse_first_guess(const std::string & file)
+  {
+     if(file == "DIE!")
+     {
+        std::cerr << "The first guess file is inexistant.  Please check your input file" << std::endl;
+        antioch_error();
+     }
+
+     std::ifstream first_guess(file.c_str());
+     Antioch::skip_comment_lines(first_guess,'#');
+     std::string header;
+     std::vector<std::string> species;
+
+     std::vector<CoeffType> altitude;
+     std::vector<std::vector<CoeffType> > neutrals(_neutral_species->n_species());
+
+     if(!getline(first_guess,header))antioch_error();
+     Antioch::SplitString(header," ",species,false);
+     if(species.empty())antioch_parsing_error("Couldn't find the header");
+
+     while(!first_guess.eof())
+     {
+       Antioch::skip_comment_lines(first_guess,'#');
+
+       CoeffType alt;
+       std::vector<CoeffType> spec(species.size() - 1,0);
+
+       first_guess >> alt;
+       for(unsigned int s = 0; s < species.size() - 1; s++)first_guess >> spec[s];
+
+       if(first_guess.good())
+       {
+         if(alt >= _composition->zmin() && alt <= _composition->zmax())
+         {
+           altitude.push_back(alt);
+           for(unsigned int s = 0; s < neutrals.size(); s++)neutrals[s].push_back(0);
+           for(unsigned int s = 0; s < spec.size(); s++)
+           {
+              if(_neutral_species->species_name_map().count(species[s+1]))
+              {
+                 neutrals[_neutral_species->species_name_map().at(species[s+1])].back() = spec[s];
+              }
+           }
+         }
+       }
+
+     }
+     first_guess.close();
+
+     // now the spline
+     _first_guess_spline.resize(_neutral_species->n_species());
+     for(unsigned int s = 0; s < _neutral_species->n_species(); s++)
+     {
+       _first_guess_spline[s].spline_init(altitude,neutrals[s]);
+     }
+
+     // setting the boolean
+     _explicit_first_guess = true;
+
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
