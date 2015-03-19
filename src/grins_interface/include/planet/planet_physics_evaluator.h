@@ -38,7 +38,7 @@ namespace Planet
     //computes omega_dot and omega
     template<typename StateType, typename VectorStateType>
     void compute(const VectorStateType & molar_concentrations,
-                 const VectorStateType & dmolar_concentrations_dz,
+           //      const VectorStateType & dmolar_concentrations_dz,
                  const StateType & z);
 
     libMesh::Real diffusion_A_term(unsigned int s) const;
@@ -171,16 +171,21 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   template<typename StateType, typename VectorStateType>
   void PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::compute(const VectorStateType & molar_concentrations,
-                                                                                  const VectorStateType & dmolar_concentrations_dz,
                                                                                   const StateType & z)
   {
    VectorStateType  molar = Antioch::zero_clone(molar_concentrations);
-   VectorStateType dmolar = Antioch::zero_clone(dmolar_concentrations_dz);
+   StateType sum(0);
    for(unsigned int i = 0; i < molar_concentrations.size(); i++)
    {
-      molar[i]  = molar_concentrations[i]     * _scaling_factor;
-      dmolar[i] = dmolar_concentrations_dz[i] * _scaling_factor;
+      molar[i]  = molar_concentrations[i] * _scaling_factor;
    }
+
+   Antioch::set_zero(_omegas_B_term);
+   Antioch::set_zero(_domegas_dn_B_TERM);
+   Antioch::set_zero(_omegas_A_term);
+   Antioch::set_zero(_domegas_dn_A_TERM);
+   Antioch::set_zero(_omegas_dots);
+   Antioch::set_zero(_domegas_dots_dn);
 
 // calculate phy
    VectorStateType phy;
@@ -198,7 +203,7 @@ namespace Planet
    }
 
 // diff and chem
-   _diffusion.diffusion_and_derivs(molar,dmolar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
+   _diffusion.diffusion_and_derivs(molar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
    _kinetics.chemical_rate_and_derivs(molar,KC,z,_omegas_dots,_domegas_dots_dn);
 
    this->update_cache(molar,z);
@@ -287,19 +292,19 @@ namespace Planet
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_A_term_dn(unsigned int s, unsigned int i) const
   {
-    return _domegas_dn_A_TERM[s][i];
+    return _domegas_dn_A_TERM[s][i] * _scaling_factor;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::ddiffusion_B_term_dn(unsigned int s, unsigned int i) const
   {
-    return _domegas_dn_B_TERM[s][i];
+    return _domegas_dn_B_TERM[s][i] * _scaling_factor;
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   libMesh::Real PlanetPhysicsEvaluator<CoeffType,VectorCoeffType,MatrixCoeffType>::dchemical_term_dn_i(unsigned int s, unsigned int i)  const
   {
-    return _domegas_dots_dn[s][i] / _scaling_factor;
+    return _domegas_dots_dn[s][i];
   }
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>

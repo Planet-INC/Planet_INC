@@ -98,33 +98,12 @@ namespace Planet
   }
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
-  libMesh::Real PlanetUpperNeumannBC<CoeffType,VectorCoeffType,MatrixCoeffType>::normal_derivative( const GRINS::AssemblyContext& context,
+  libMesh::Real PlanetUpperNeumannBC<CoeffType,VectorCoeffType,MatrixCoeffType>::normal_derivative( const GRINS::AssemblyContext& /*context*/,
                                                                                                     const GRINS::CachedValues& /*cache*/,
-                                                                                                    const unsigned int qp )
+                                                                                                    const unsigned int /*qp*/ )
   {
     //libmesh_not_implemented();
-
-    unsigned int n_species = _physics_helper.composition().neutral_composition().n_species();
-
-    std::vector<libMesh::Number> molar_densities(n_species, 0);
-    for(unsigned int s=0; s < n_species; s++ )
-      {
-        molar_densities[s] = context.interior_value(this->_species_vars[s],qp);
-      }
-
-    libMesh::Real value = _physics_helper.upper_boundary_neumann(molar_densities,_species);
-    libMesh::Real eps = 1.0e-8;
-
-    for(unsigned int s=0; s < n_species; s++ )
-      {
-        molar_densities[s] = context.interior_value(this->_species_vars[s],qp) + eps;
-      }
-
-    libMesh::Real value_p_eps = _physics_helper.upper_boundary_neumann(molar_densities,_species);
-
-    libMesh::Real deriv = (value_p_eps - value)/eps;
-    std::cout << deriv << std::endl;
-    return deriv;
+    return _physics_helper.dupper_boundary_neumann_s_dn_i(_species,_species, libMesh::Real());
   }
 
 } // end namespace Planet

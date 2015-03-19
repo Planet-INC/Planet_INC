@@ -219,8 +219,7 @@ namespace Planet
             dmolar_concentrations_dz[s] = context.interior_gradient(this->_species_vars[s],qp)(0);
           }
 
-        evaluator.compute(molar_concentrations, dmolar_concentrations_dz, // {n}_s, {dn_dz}_s
-                              z );//- Constants::Titan::radius<double>() ) ; // z
+        evaluator.compute(molar_concentrations, z ); // {n}_s, z
 
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
@@ -236,19 +235,16 @@ namespace Planet
             libMesh::Real omega_B_term = evaluator.diffusion_B_term(s);
 
             libMesh::Real omega_dot = evaluator.chemical_term(s);
-/*std::cout << "omega A = " << omega_A_term 
-          << ", omega B = " << omega_B_term 
-          << ", omega_dot = " << omega_dot << std::endl;*/
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
                 Fs(i) += (  omega_dot * s_phi[i][qp]  // chemistry
                           + (n_s * omega_B_term + dns_dz * omega_A_term) * s_grad_phi[i][qp](0) //diffusion
-                          )*jac;
+                         )*jac;
 
                 if( compute_jacobian )
                   {
-                    //libmesh_not_implemented();
+
                     for(unsigned int t=0; t < this->_n_species; t++ )
                       {
                         libMesh::DenseSubMatrix<libMesh::Number> &J =
@@ -262,12 +258,22 @@ namespace Planet
 
                         for(unsigned int j=0; j != n_s_dofs; j++)
                           {
-                            J(i,j) += jac*( domega_dot_dns*s_phi[i][qp]*s_phi[j][qp]
-                                            + omega_B_term*s_grad_phi[i][qp](0)*s_phi[j][qp]
-                                            + n_s*domega_B_term_dns*s_grad_phi[i][qp](0)*s_phi[j][qp]
-                                            + omega_A_term*s_grad_phi[i][qp](0)*s_grad_phi[j][qp](0)
-                                            + dns_dz*domega_A_term_dns*s_grad_phi[i][qp](0)*s_phi[j][qp] );
+                            J(i,j) += jac*( domega_dot_dns * s_phi[i][qp] * s_phi[j][qp]
+                                            + n_s * domega_B_term_dns * s_grad_phi[i][qp](0) * s_phi[j][qp]
+                                            + dns_dz * domega_A_term_dns * s_grad_phi[i][qp](0) * s_phi[j][qp] 
+                                          );
                           }
+
+                        if(s == t)
+                        {
+                           
+                        for(unsigned int j=0; j != n_s_dofs; j++)
+                          {
+                            J(i,j) += jac*( omega_B_term * s_grad_phi[i][qp](0) * s_phi[j][qp]
+                                            + omega_A_term * s_grad_phi[i][qp](0) * s_grad_phi[j][qp](0)
+                                          );
+                          }
+                        }
                       }
                   }
               }

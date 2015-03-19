@@ -49,7 +49,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
                                      std::abs((theory-cal)/theory); // non-zero
   if(criteria < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
-            << "failed test: " << words << "\n"
+            << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -100,10 +100,13 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
-     temp >> t >> tz >> dt >> dtz;
-     T0.push_back(t);
-     Tz.push_back(tz);
+     Scalar t,tz;
+     temp >> t >> tz;
+     if(temp.good())
+     {
+       T0.push_back(t);
+       Tz.push_back(tz);
+     }
   }
   temp.close();
   return;
@@ -195,7 +198,7 @@ template<typename Scalar>
 Scalar a(const Scalar &T, const Scalar &Mmean, const Scalar &z)
 {
   return Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) * Mmean * 
-            (Planet::Constants::Titan::radius<Scalar>() + z) * Scalar(1e3) / (Antioch::Constants::Avogadro<Scalar>() * Planet::Constants::Universal::kb<Scalar>() * T);
+            (Planet::Constants::Titan::radius<Scalar>() + z) * Scalar(1e3) / (Antioch::Constants::R_universal<Scalar>() * T);
 }
 
 template<typename Scalar, typename VectorScalar>
@@ -300,7 +303,7 @@ int tester(const std::string &input_T, const std::string &input_hv,
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
 //photon opacity
   Planet::PhotonOpacity<Scalar,std::vector<Scalar> > tau(chapman);

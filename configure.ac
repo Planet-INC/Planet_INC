@@ -104,6 +104,9 @@ fi
 # eigen
 CONFIGURE_EIGEN(2.3.0,yes)
 
+# GSL for spline method
+AX_PATH_GSL_NEW(1.10,yes)
+
 dnl -Wall warnings, -Wall the time.
 AX_CXXFLAGS_WARN_ALL
 

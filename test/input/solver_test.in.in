@@ -83,7 +83,11 @@ verify_analytic_jacobians = 0.0
 initial_linear_tolerance = 1.0e-6
 minimal_linear_tolerance = 1.0e-6
 
-relative_residual_tolerance = 1e-4
+relative_residual_tolerance = 1e-14
+absolute_residual_tolerance = 1e-14
+relative_step_tolerance = 1e-14
+
+relative_residual_tolerance = 1e-14
 
 use_numerical_jacobians_only = 'true'
 

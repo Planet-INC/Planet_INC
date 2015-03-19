@@ -54,7 +54,7 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   if(theory != 0.)test = std::abs(test/cal);
   if(test < tol)return 0;
   std::cout << std::scientific << std::setprecision(20)
-            << "failed test: " << words << "\n"
+            << "\nfailed test: " << words << "\n"
             << "theory: " << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -688,9 +688,8 @@ Scalar pressure(const Scalar &n, const Scalar &T)
 template<typename Scalar>
 Scalar scale_height(const Scalar &T, const Scalar &z, const Scalar &Mm)
 {
-  return Scalar(1e-3) * Planet::Constants::Universal::kb<Scalar>() * T /  // in km
-         (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) *
-          Mm/Antioch::Constants::Avogadro<Scalar>());
+  return Scalar(1e-3) * Antioch::Constants::R_universal<Scalar>() * T /  // in km
+         (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(),z,Planet::Constants::Titan::mass<Scalar>()) * Mm);
 }
 
 template<typename Scalar, typename VectorScalar, typename TensorScalar>
@@ -961,7 +960,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
 /************************
  * second level
@@ -1022,7 +1021,7 @@ int tester(const std::string &input_T,const std::string & input_hv,
   }
 
   int return_flag(0);
-  const Scalar nTot_virtual(dens_tot);
+  const Scalar nTot_virtual(helper.scaling_factor());
   std::vector<Scalar> flux_at_z(lambda_hv.size(),0.);
   std::vector<Scalar> sum_densities;
 
@@ -1049,7 +1048,6 @@ int tester(const std::string &input_T,const std::string & input_hv,
      std::vector<Scalar> chemical_theo;
      std::vector<Scalar> dummy;
      std::vector<Scalar> virtual_densities;
-     std::vector<Scalar> virtual_dns_dz;
 
      dummy.resize(densities.size());
      chemical_theo.resize(densities.size(),0.L);
@@ -1070,7 +1068,6 @@ int tester(const std::string &input_T,const std::string & input_hv,
                        tc, Ha, omega_theo_A, omega_theo_B);
 
      virtual_densities.resize(densities.size());
-     virtual_dns_dz.resize(densities.size());
 //
 // The solver use rescaled densities, so we
 // descale here before giving it to the evaluator
@@ -1078,9 +1075,8 @@ int tester(const std::string &input_T,const std::string & input_hv,
      for(unsigned int s = 0; s < molar_frac.size(); s++)
      {
          virtual_densities[s] = densities[s] / nTot_virtual;
-         virtual_dns_dz[s]    = dns_dz[s] / nTot_virtual;
      }
-     evaluator.compute(virtual_densities, virtual_dns_dz, z);//compute with real densities
+     evaluator.compute(virtual_densities, z);//compute with real densities
 
      std::stringstream alt;
      alt << z;

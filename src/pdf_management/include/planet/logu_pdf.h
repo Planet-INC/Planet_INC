@@ -128,9 +128,9 @@ namespace Planet
 
   template <typename CoeffType>
   inline
-  const CoeffType LogUPdf<CoeffType>::value(unsigned int ip) const
+  const CoeffType LogUPdf<CoeffType>::value(unsigned int /* ip */) const
   {
-      return Antioch::ant_pow(this->min() * this->max(),0.5L);
+      return Antioch::ant_pow(this->min() * this->max(),CoeffType(0.5));
   }
 
   template <typename CoeffType>

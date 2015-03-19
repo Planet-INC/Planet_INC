@@ -40,15 +40,16 @@
 
 
 template<typename Scalar>
-int check_test(Scalar theory, Scalar cal, const std::string &words)
+int check_test(Scalar theory, Scalar cal, const std::string &words, const Scalar tt = -1)
 {
-  const Scalar tol = (std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e16:
-                                                                      std::numeric_limits<Scalar>::epsilon() * 150;
+  const Scalar tol = (tt < 0.)?(std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e-16:
+                                                                                std::numeric_limits<Scalar>::epsilon() * 150:
+                               tt;
 
   if(std::abs((theory-cal)/theory) < tol)return 0;
 
   std::cout << std::scientific  << std::setprecision(20)
-            << "failed test: "  << words << "\n"
+            << "\nfailed test: "  << words << "\n"
             << "theory: "       << theory
             << "\ncalculated: " << cal
             << "\ndifference: " << std::abs((theory-cal)/cal)
@@ -56,14 +57,29 @@ int check_test(Scalar theory, Scalar cal, const std::string &words)
   return 1;
 }
 
-template<typename Scalar>
-Scalar linear_interpolation(const Scalar &z0, const Scalar &z1,
-                            const Scalar &T0, const Scalar &T1,
-                            const Scalar &z)
+template <typename Scalar, typename VectorScalar, typename MatrixScalar>
+int check_der_finite_diff(Planet::AtmosphericMixture<Scalar,VectorScalar,MatrixScalar> & composition,
+                           VectorScalar & neutral_molar_concentrations, Scalar z)
 {
-     Scalar a = (T0 - T1)/(z0 - z1);
-     Scalar b = T0 - a * z0;
-     return a * z + b;
+   VectorScalar library(neutral_molar_concentrations.size());
+   Scalar H;
+   composition.datmospheric_scale_height_dn_i(neutral_molar_concentrations, z, H, library);
+
+   int out_flag(0);
+   for(unsigned int s = 0; s < neutral_molar_concentrations.size(); s++)
+   {
+     VectorScalar mol(neutral_molar_concentrations);
+     Scalar eps(1L);
+     mol[s] += eps;
+     Scalar h = composition.atmospheric_scale_height(mol,z);
+     Scalar dH = (h - H) / eps;
+
+     std::stringstream ss;
+     ss << s << " and altitude " << z;
+     out_flag = check_test(dH,library[s],"Finite difference on species " + ss.str(),Scalar(1e-4)) || out_flag;
+   }
+   return out_flag;
+
 }
 
 
@@ -77,10 +93,13 @@ void read_temperature(VectorScalar &T0, VectorScalar &Tz, const std::string &fil
   getline(temp,line);
   while(!temp.eof())
   {
-     Scalar t,tz,dt,dtz;
-     temp >> t >> tz >> dt >> dtz;
-     T0.push_back(t);
-     Tz.push_back(tz);
+     Scalar t,tz;
+     temp >> t >> tz;
+     if(temp.good())
+     {
+       T0.push_back(t);
+       Tz.push_back(tz);
+     }
   }
   temp.close();
   return;
@@ -90,9 +109,9 @@ template <typename Scalar>
 Scalar Jeans(const Scalar &m, const Scalar &n, const Scalar &T, const Scalar &z)
 {
   Scalar lambda =  Planet::Constants::Universal::G<Scalar>()  * Planet::Constants::Titan::mass<Scalar>() * m / 
-                  (Planet::Constants::Universal::kb<Scalar>() * T * (z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
+                  (Antioch::Constants::R_universal<Scalar>() * T * (z + Planet::Constants::Titan::radius<Scalar>()) * Scalar(1e3)); 
 
-  return 1e-3 * n * Antioch::ant_sqrt(Planet::Constants::Universal::kb<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
+  return 1e-3 * n * Antioch::ant_sqrt(Antioch::Constants::R_universal<Scalar>() * T / (Scalar(2.) * Planet::Constants::pi<Scalar>() * m))
               * Antioch::ant_exp(-lambda) * (Scalar(1.) + lambda);
 }
 
@@ -142,7 +161,7 @@ int tester(const std::string & input_T, const std::string & input_species)
 //temperature
   std::vector<Scalar> T0,Tz;
   read_temperature<Scalar>(T0,Tz,input_T);
-  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(T0, T0, Tz, Tz);
+  Planet::AtmosphericTemperature<Scalar, std::vector<Scalar> > temperature(Tz, T0);
 
 /*********************************
  * third level
@@ -171,17 +190,17 @@ int tester(const std::string & input_T, const std::string & input_species)
 
     for(unsigned int s = 0; s < neutrals.size(); s++)
     {
-       Scalar scale_height = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T / 
+       Scalar scale_height = 1e-3L * Antioch::Constants::R_universal<Scalar>() * T / 
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                        Mm[s]/Antioch::Constants::Avogadro<Scalar>());
+                        Mm[s]);
 
-       Scalar Jeans_flux = Jeans(Mm[s]/Antioch::Constants::Avogadro<Scalar>(), //mass (kg)
+       Scalar Jeans_flux = Jeans(Mm[s], //mass (kg/mol)
                                  neutral_molar_concentration[s], //n
                                  T,z); //T,alt
 
        std::stringstream wordsJ;
        return_flag = check_test(Jeans_flux,composition.Jeans_flux(
-                                        composition.neutral_composition().M(s)/Antioch::Constants::Avogadro<Scalar>(), //g/mol -> kg/mol
+                                        composition.neutral_composition().M(s), //kg/mol
                                         neutral_molar_concentration[s], //n, cm-3
                                         T,// T (K)
                                         z), //km 
@@ -195,15 +214,18 @@ int tester(const std::string & input_T, const std::string & input_species)
        M_the += Mm[s] * molar_frac[s];
     }
 
-    Scalar H_the = 1e-3L * Planet::Constants::Universal::kb<Scalar>() * T /
+    Scalar H_the = 1e-3L * Antioch::Constants::R_universal<Scalar>() * T /
                    (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
-                   M_the / Antioch::Constants::Avogadro<Scalar>()); //kb*T/(g(z) * M/Navo)
+                   M_the); //kb*T/(g(z) * M/Navo)
 
     Scalar a_the = (Planet::Constants::Titan::radius<Scalar>() + z) / H_the;
 
     return_flag = check_test(H_the, composition.atmospheric_scale_height(neutral_molar_concentration, z), "atmospheric scale height at altitude " + wordsz.str()) ||
                   check_test(a_the, composition.a(neutral_molar_concentration, z), "atmospheric a factor at altitude " + wordsz.str()) ||
                   return_flag;
+
+  if(std::numeric_limits<Scalar>::epsilon() < 1e-17)
+       return_flag = check_der_finite_diff(composition,neutral_molar_concentration,z) || return_flag;
 
   }
 
