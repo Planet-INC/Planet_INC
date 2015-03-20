@@ -40,7 +40,7 @@ zmin = '600.0'
 zmax = '1400.0'
 
 #for infos more than anything else at the moment
-radius = '2575.5'
+#radius = '2575.5'
 []
 
 # Physics options
@@ -81,10 +81,10 @@ max_linear_iterations = 2500
 verify_analytic_jacobians = 0.0
 
 initial_linear_tolerance = 1.0e-6
-minimal_linear_tolerance = 1.0e-6
+#minimal_linear_tolerance = 1.0e-6
 
 relative_residual_tolerance = 1e-14
-absolute_residual_tolerance = 1e-14
+absolute_residual_tolerance = 1e-10
 relative_step_tolerance = 1e-14
 
 relative_residual_tolerance = 1e-14
@@ -94,11 +94,11 @@ use_numerical_jacobians_only = 'true'
 # Options for time solvers
 [unsteady-solver]
 transient = 'false' 
-theta = 1.0
-n_timesteps = 100
-deltat = 1000000
-target_tolerance = -1
-max_growth = 100
+#theta = 1.0
+#n_timesteps = 100
+#deltat = 1000000
+#target_tolerance = -1
+#max_growth = 100
 
 []
 

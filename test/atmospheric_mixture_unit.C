@@ -42,8 +42,7 @@
 template<typename Scalar>
 int check_test(Scalar theory, Scalar cal, const std::string &words, const Scalar tt = -1)
 {
-  const Scalar tol = (tt < 0.)?(std::numeric_limits<Scalar>::epsilon() < 1e-17)?5e-16:
-                                                                                std::numeric_limits<Scalar>::epsilon() * 150:
+  const Scalar tol = (tt < 0.)?std::numeric_limits<Scalar>::epsilon() * 500:
                                tt;
 
   if(std::abs((theory-cal)/theory) < tol)return 0;
@@ -69,14 +68,14 @@ int check_der_finite_diff(Planet::AtmosphericMixture<Scalar,VectorScalar,MatrixS
    for(unsigned int s = 0; s < neutral_molar_concentrations.size(); s++)
    {
      VectorScalar mol(neutral_molar_concentrations);
-     Scalar eps(1L);
+     Scalar eps(1);
      mol[s] += eps;
      Scalar h = composition.atmospheric_scale_height(mol,z);
      Scalar dH = (h - H) / eps;
 
      std::stringstream ss;
      ss << s << " and altitude " << z;
-     out_flag = check_test(dH,library[s],"Finite difference on species " + ss.str(),Scalar(1e-4)) || out_flag;
+     out_flag = check_test(dH,library[s],"Finite difference on species " + ss.str(),Scalar(1e-5)) || out_flag;
    }
    return out_flag;
 
@@ -190,7 +189,7 @@ int tester(const std::string & input_T, const std::string & input_species)
 
     for(unsigned int s = 0; s < neutrals.size(); s++)
     {
-       Scalar scale_height = 1e-3L * Antioch::Constants::R_universal<Scalar>() * T / 
+       Scalar scale_height = 1e-3 * Antioch::Constants::R_universal<Scalar>() * T / 
                 (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
                         Mm[s]);
 
@@ -214,7 +213,7 @@ int tester(const std::string & input_T, const std::string & input_species)
        M_the += Mm[s] * molar_frac[s];
     }
 
-    Scalar H_the = 1e-3L * Antioch::Constants::R_universal<Scalar>() * T /
+    Scalar H_the = 1e-3 * Antioch::Constants::R_universal<Scalar>() * T /
                    (Planet::Constants::g<Scalar>(Planet::Constants::Titan::radius<Scalar>(), z,Planet::Constants::Titan::mass<Scalar>()) *
                    M_the); //kb*T/(g(z) * M/Navo)
 
