@@ -205,8 +205,6 @@ namespace Planet
    _diffusion.diffusion_and_derivs(molar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
    _kinetics.chemical_rate_and_derivs(molar,KC,z,_omegas_dots,_domegas_dots_dn);
 
-   this->update_cache(molar,z);
-
     return;
   }
 
