@@ -142,18 +142,18 @@ namespace Planet
       _diffusion(_molecular_diffusion,_eddy_diffusion,_composition,helper.temperature()),
       _scaling_factor(helper.scaling_factor())
   {
-    _omegas_A_term.resize(_kinetics.neutral_kinetics().n_species(),0.);
-    _omegas_B_term.resize(_kinetics.neutral_kinetics().n_species(),0.);
-    _omegas_dots.resize(_kinetics.neutral_kinetics().n_species(),0.);
+    _omegas_A_term.resize(_kinetics.neutral_kinetics().n_species(),0);
+    _omegas_B_term.resize(_kinetics.neutral_kinetics().n_species(),0);
+    _omegas_dots.resize(_kinetics.neutral_kinetics().n_species(),0);
 
     _domegas_dots_dn.resize(_kinetics.neutral_kinetics().n_species());
     _domegas_dn_A_TERM.resize(_kinetics.neutral_kinetics().n_species());
     _domegas_dn_B_TERM.resize(_kinetics.neutral_kinetics().n_species());
     for(unsigned int s = 0; s < _kinetics.neutral_kinetics().n_species(); s++)
     {
-      _domegas_dots_dn[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
-      _domegas_dn_A_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
-      _domegas_dn_B_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0.);
+      _domegas_dots_dn[s].resize(_kinetics.neutral_kinetics().n_species(),0);
+      _domegas_dn_A_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0);
+      _domegas_dn_B_TERM[s].resize(_kinetics.neutral_kinetics().n_species(),0);
     }
 
     // calculate photon flux
@@ -174,7 +174,6 @@ namespace Planet
                                                                                   const StateType & z)
   {
    VectorStateType  molar = Antioch::zero_clone(molar_concentrations);
-   StateType sum(0);
    for(unsigned int i = 0; i < molar_concentrations.size(); i++)
    {
       molar[i]  = molar_concentrations[i] * _scaling_factor;
@@ -205,8 +204,6 @@ namespace Planet
 // diff and chem
    _diffusion.diffusion_and_derivs(molar,z,_omegas_A_term,_omegas_B_term,_domegas_dn_A_TERM,_domegas_dn_B_TERM);
    _kinetics.chemical_rate_and_derivs(molar,KC,z,_omegas_dots,_domegas_dots_dn);
-
-   this->update_cache(molar,z);
 
     return;
   }

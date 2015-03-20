@@ -230,6 +230,12 @@ namespace Planet
         //!
         const VectorCoeffType neutral_molar_fraction_bottom() const;
 
+        //! zmin
+        CoeffType zmin() const;
+
+        //! zmax
+        CoeffType zmax() const;
+
    };
 
 
@@ -562,6 +568,21 @@ namespace Planet
                         - this->Jeans_velocity(_neutral_composition.M(s), _temperature.neutral_temperature(_zmax),_zmax): // cm-3.km.s-1, escaping flux, term < 0
                         Antioch::zero_clone(ex);
   }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::zmin() const
+  {
+     return _zmin;
+  }
+
+  template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+  inline
+  CoeffType AtmosphericMixture<CoeffType,VectorCoeffType,MatrixCoeffType>::zmax() const
+  {
+     return _zmax;
+  }
+
 
 
 }
