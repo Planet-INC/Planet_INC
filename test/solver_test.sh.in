@@ -2,7 +2,7 @@
 
 PROG="@top_builddir@/test/solver_test"
 
-INPUT="@abs_top_srcdir@/test/input/solver_test.in"
+INPUT="@top_builddir@/test/input/solver_test.in"
 
 $PROG $INPUT
 
