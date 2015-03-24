@@ -196,10 +196,10 @@ namespace Planet
     void read_temperature(VectorCoeffType& T0, VectorCoeffType& Tz, const std::string& file) const;
 
     void fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
-                                           Antioch::ReactionSet<CoeffType>& neutral_reaction_set ) const;
+                                           Antioch::ReactionSet<CoeffType>& neutral_reaction_set, const CoeffType &Tref ) const;
 
     void fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
-                                        Antioch::ReactionSet<CoeffType>& neutral_reaction_set) const;
+                                        Antioch::ReactionSet<CoeffType>& neutral_reaction_set, const CoeffType &Tref ) const;
 
     void fill_ionic_system_reaction(const std::string &file_ions_reac,
                                     Antioch::ReactionSet<CoeffType> &ionic_reaction_set) const;
@@ -623,9 +623,14 @@ namespace Planet
 
     // here read the reactions, Antioch will take care of it once hdf5, no ionic reactions there
     //Kooij / Arrhenius + photochem
-    this->fill_neutral_reactions_elementary(input_reactions_elem, *_neutral_reaction_set);
+    CoeffType Tref(1);
+    if( input.have_variable("Planet/Kooij_Tref") )
+      {
+         Tref = input("Planet/Kooij_Tref","1");
+      }
+    this->fill_neutral_reactions_elementary(input_reactions_elem, *_neutral_reaction_set, Tref);
 
-    this->fill_neutral_reactions_falloff(input_reactions_fall, *_neutral_reaction_set);
+    this->fill_neutral_reactions_falloff(input_reactions_fall, *_neutral_reaction_set, Tref);
 
     //now the photochemical ones
     unsigned int n_hv_reacting = input.vector_variable_size("Planet/photo_reacting_species");
@@ -745,7 +750,8 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_elementary(const std::string &neutral_reactions_file,
-                                                                                                         Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const
+                                                                                                         Antioch::ReactionSet<CoeffType> &neutral_reaction_set,
+                                                                                                         const CoeffType & Tref) const
   {
     //here only simple ones: bimol Kooij/Arrhenius model
     std::ifstream data(neutral_reactions_file.c_str());
@@ -796,13 +802,13 @@ namespace Planet
           {
             kineticsModel = Antioch::KineticsModel::ARRHENIUS;
             dataf.push_back(std::atof(str_data[2].c_str()));//Ea_R
-            dataf.push_back(1.L);
+            dataf.push_back(1); // factor from Ea to Ea_R
           }else
           {
             dataf.push_back(std::atof(str_data[1].c_str())); //beta
             dataf.push_back(std::atof(str_data[2].c_str()));//Ea_R
-            dataf.push_back(1.L); //Tref
-            dataf.push_back(1.L);// factor from Ea to Ea_R
+            dataf.push_back(Tref); //Tref
+            dataf.push_back(1); // factor from Ea to Ea_R
           }
 
 
@@ -825,7 +831,8 @@ namespace Planet
 
   template<typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::fill_neutral_reactions_falloff(const std::string &neutral_reactions_file,
-                                                                                                      Antioch::ReactionSet<CoeffType> &neutral_reaction_set) const
+                                                                                                      Antioch::ReactionSet<CoeffType> &neutral_reaction_set,
+                                                                                                      const CoeffType & Tref) const
   {
     //Lindemann
     std::ifstream data(neutral_reactions_file.c_str());
@@ -881,11 +888,11 @@ namespace Planet
         dataf2.push_back(std::atof(str_data[5].c_str()));
         if(kineticsModel == Antioch::KineticsModel::KOOIJ)
           {
-            dataf1.push_back(1.); //Tref
-            dataf2.push_back(1.); //Tref
+            dataf1.push_back(Tref); //Tref
+            dataf2.push_back(Tref); //Tref
           }
-        dataf1.push_back(1.L); //Ea_R provided
-        dataf2.push_back(1.L); //Ea_R provided
+        dataf1.push_back(1); //Ea_R provided
+        dataf2.push_back(1); //Ea_R provided
 
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate1 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf1,kineticsModel); //kinetics rate
         Antioch::KineticsType<CoeffType, VectorCoeffType>* rate2 = Antioch::build_rate<CoeffType,VectorCoeffType>(dataf2,kineticsModel); //kinetics rate
