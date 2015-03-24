@@ -359,7 +359,7 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
     // Let's start with the scaling factor
-    _scaling_factor = input("Planet/scale_factor", -1.);
+    _scaling_factor = input("Planet/scale_factor", -1);
 
 
     // Parse medium
@@ -626,7 +626,7 @@ namespace Planet
     CoeffType Tref(1);
     if( input.have_variable("Planet/Kooij_Tref") )
       {
-         Tref = input("Planet/Kooij_Tref","1");
+         Tref = input("Planet/Kooij_Tref",1);
       }
     this->fill_neutral_reactions_elementary(input_reactions_elem, *_neutral_reaction_set, Tref);
 
@@ -692,7 +692,7 @@ namespace Planet
     _composition->set_thermal_coefficient(tc);
     _composition->set_hard_sphere_radius(hard_sphere_radius);
 
-    if(_scaling_factor < 0.)_scaling_factor = dens_tot;
+    if(_scaling_factor < 0)_scaling_factor = dens_tot;
 
     return;
   }
