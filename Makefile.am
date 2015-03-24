@@ -96,6 +96,22 @@ MAINTAINERCLEANFILES += m4/ltsugar.m4
 MAINTAINERCLEANFILES += m4/ltversion.m4
 MAINTAINERCLEANFILES += m4/lt~obsolete.m4
 
+#---------------------------------
+# Embedded license header support (from Antioch)
+#---------------------------------
+# PB: I'm leaving this here commented out in case the AC_SUBST solution
+#     dies at some point. The below requires GNU make and causes a
+#     an Automake warning (that can be suppressed with -Wno-portability)
+#     so I went for the more general solution instead, but the below
+#     works.
+#STAMPED_FILES  = $(shell find $(top_srcdir)/src -name '*.h' -or -name '*.C')
+
+.license.stamp: $(top_srcdir)/LICENSE
+	@$(top_srcdir)/src/common/lic_utils/update_license.pl $(top_srcdir)/LICENSE $(PLANET_STAMPED_FILES)
+	echo 'updated source license headers' >$@
+
+CLEANFILES = .license.stamp
+
 # -------------------------------------------
 # Optional support for code coverage analysis
 # -------------------------------------------
