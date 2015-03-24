@@ -1,3 +1,5 @@
+BUILT_SOURCES   = .license.stamp
+
 # Doxygen support
 include $(top_srcdir)/doxygen/aminclude.am
 
@@ -64,7 +66,7 @@ install-data-hook:
 	fi
 
 # Install config file
-BUILT_SOURCES = planet_config.h
+BUILT_SOURCES += planet_config.h
 include_HEADERS	= planet_config.h
 
 # Additional files to be deleted by 'make distclean'

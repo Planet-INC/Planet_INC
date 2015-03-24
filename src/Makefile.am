@@ -77,6 +77,7 @@ include_HEADERS += pdf_management/include/planet/dirg_pdf.h
 include_HEADERS += pdf_management/include/planet/diut_pdf.h
 include_HEADERS += pdf_management/include/planet/diun_pdf.h
 include_HEADERS += pdf_management/include/planet/dior_pdf.h
+include_HEADERS += pdf_management/include/planet/dirw_pdf.h
 include_HEADERS += pdf_management/include/planet/pdf_management.h
 
 # temperature
