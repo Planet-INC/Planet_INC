@@ -260,7 +260,7 @@ namespace Planet
       _ionic_reaction_set(NULL),
       _chapman(NULL),
       _tau(NULL),
-      _scaling_factor(-1.L),
+      _scaling_factor(-1),
       _explicit_first_guess(false)
   {
     this->build(input);
@@ -359,7 +359,8 @@ namespace Planet
   void PlanetPhysicsHelper<CoeffType,VectorCoeffType,MatrixCoeffType>::build(const GetPot& input)
   {
     // Let's start with the scaling factor
-    _scaling_factor = input("Planet/scale_factor", -1);
+    if(input.have_variable("Planet/scale_factor") )
+       _scaling_factor = input("Planet/scale_factor", -1);
 
 
     // Parse medium
