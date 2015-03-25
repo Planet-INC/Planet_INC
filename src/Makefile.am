@@ -1,5 +1,3 @@
-BUILT_SOURCES   = .license.stamp
-
 #----------------------------------------
 # Programs and libraries we want to build
 #----------------------------------------
@@ -79,6 +77,7 @@ include_HEADERS += pdf_management/include/planet/dirg_pdf.h
 include_HEADERS += pdf_management/include/planet/diut_pdf.h
 include_HEADERS += pdf_management/include/planet/diun_pdf.h
 include_HEADERS += pdf_management/include/planet/dior_pdf.h
+include_HEADERS += pdf_management/include/planet/dirw_pdf.h
 include_HEADERS += pdf_management/include/planet/pdf_management.h
 
 # temperature
@@ -141,17 +140,6 @@ CLEANFILES =
 if CODE_COVERAGE_ENABLED
   CLEANFILES += *.gcda *.gcno
 endif
-
-#---------------------------------
-# Embedded license header support
-#---------------------------------
-STAMPED_FILES = $(libplanet_la_SOURCES) $(include_HEADERS) $(planet_version_SOURCES)
-
-.license.stamp: $(top_srcdir)/LICENSE
-	$(top_srcdir)/src/common/lic_utils/update_license.pl $(top_srcdir)/LICENSE $(STAMPED_FILES) 
-	echo 'updated source license headers' >$@
-
-CLEANFILES += .license.stamp
 
 EXTRA_DIST = common
 
