@@ -71,9 +71,10 @@ namespace Planet
                                           GRINS::AssemblyContext& context,
                                           GRINS::CachedValues& cache );
 
-    virtual void mass_residual( bool compute_jacobian,
+    //! default one, Fs = d/dt (ns)
+   /* virtual void mass_residual( bool compute_jacobian,
                                 GRINS::AssemblyContext& context,
-                                GRINS::CachedValues& cache );
+                                GRINS::CachedValues& cache );*/
 
     virtual void side_time_derivative( bool /*compute_jacobian*/,
                                        GRINS::AssemblyContext& /*context*/,
@@ -285,10 +286,10 @@ namespace Planet
     return;
   }
 
-  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
+/*  template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::mass_residual( bool compute_jacobian,
                                                                                 GRINS::AssemblyContext& context,
-                                                                                GRINS::CachedValues& /*cache*/ )
+                                                                                GRINS::CachedValues& cache )
   {
     unsigned int n_qpoints = context.get_element_qrule().n_points();
 
@@ -317,25 +318,32 @@ namespace Planet
 
         for(unsigned int s=0; s < this->_n_species; s++ )
           {
-            const libMesh::Real n_s_dot = context.interior_value(this->_species_vars[s],qp);
+            libMesh::Real n_s_dot;
+            context.interior_rate(this->_species_vars[s],qp,n_s_dot);
 
             libMesh::DenseSubVector<libMesh::Number> &Fs = 
               context.get_elem_residual(this->_species_vars[s]); // R_{s}
 
             for(unsigned int i=0; i != n_s_dofs; i++)
               {
-                Fs(i) += ( n_s_dot*s_phi[i][qp] )*jac;
+                Fs(i) -= ( n_s_dot*s_phi[i][qp] )*jac;
 
                 if( compute_jacobian )
                   {
-                    libmesh_not_implemented();
+                     libMesh::DenseSubMatrix<libMesh::Number> &J =
+                          context.get_elem_jacobian(this->_species_vars[s], this->_species_vars[s]); // R_{s},{s}
+                        for(unsigned int j=0; j != n_s_dofs; j++)
+                          {
+                            J(i,j) -= jac*( s_phi[i][qp] * s_phi[j][qp]
+                                          ) * context.get_elem_solution_rate_derivative();
+                          }
                   }
               }
           }
       }
     
     return;
-  }
+  }*/
 
   template <typename CoeffType, typename VectorCoeffType, typename MatrixCoeffType>
   void PlanetPhysics<CoeffType,VectorCoeffType,MatrixCoeffType>::side_time_derivative( bool compute_jacobian,
