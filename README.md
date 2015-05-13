@@ -13,7 +13,8 @@ Planet\_INC requires [Antioch](https://github.com/libantioch/antioch), [GRINS](h
 
 The required dependencies are, in the order of building:
   - [Boost](http://www.boost.org/)
-  - [PETSc](http://www.mcs.anl.gov/petsc/)Advised configation options are
+  - [PETSc](http://www.mcs.anl.gov/petsc/). Advised configation options are
+```
         ./configure --with-clanguage=C++ --with-shared-libraries \
         --with-mpi-dir=$MPI_DIR \
         --with-mumps=true --download-mumps=1 \
@@ -28,10 +29,13 @@ The required dependencies are, in the order of building:
         --with-errorchecking=1 \
         --with-debugging=1 \
         --with-clib-autodetect=0 \
-        --prefix=/the/right/path         
+        --prefix=/the/right/path
+```
   - [SLEPc](http://slepc.upv.es/). 
   - [libmesh](https://github.com/libMesh/libmesh). Configure with the following options:
+```
         ../libmesh/configure --prefix=/where/to/install/libmesh --enable-everything --with-metis=PETSc
+```
 
 GSL, Antioch and Eigen can be built independently. Note that Antioch is
 also a dependency of GRINS.
@@ -40,21 +44,25 @@ Installation and running
 ========================
 
 Download the code in a convenient place:
+```
 $ cd /convenient/place/
 $ mkdir src
 $ cd src
 $ git clone https://Planet-INC/Planet-INC .
+```
 
 Then compile and install the code in another folder:
+```
 $ mkdir ../built-dir
 $ cd ../built-dir
 $ ../src/configure --prefix=/where/the/executable/should/be
 $ make
 $ make test (optional)
 $ make install (might require root provilege)
+```
 
 To run the executable, the advised command is:
-$ mpiexec -p NUMBER\_OF\_CORES planet INPUT\_FILE -ksp\_type preonly -pc\_type lu -pc\_factor\_mat\_solver\_package superlu-dist
+```$ mpiexec -p NUMBER_OF_CORES planet INPUT_FILE -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu-dist```
 
 The options -ksp\_type, -pc\_type, and -pc\_factor\_mat\_solver\_package are PETSc options. See PETSc documentation for
 details and other desired options.
