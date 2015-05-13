@@ -3,13 +3,15 @@ Planet\_INC
 
 Planet\_INC is a planetary code for atmospheric calculations using [Antioch](https://github.com/libantioch/antioch)
 for the kinetics chemical computations and [GRINS](https://github.com/grinsfem/grins) for the
-solving part.
+solving part. It requires also [Eigen](http://eigen.tuxfamily.org/) and [GSL](http://www.gnu.org/software/gsl/)
+for some technical features.
 
 Dependencies
 ============
 
 Planet\_INC requires [Antioch](https://github.com/libantioch/antioch), [GRINS](https://github.com/grinsfem/grins),
-[Eigen](http://eigen.tuxfamily.org/), GSL, and GRINS dependencies.
+[Eigen](http://eigen.tuxfamily.org/), [GSL](http://www.gnu.org/software/gsl/), 
+and the [GRINS](https://github.com/grinsfem/grins) dependencies.
 
 The required dependencies are, in the order of building:
   - [Boost](http://www.boost.org/)
@@ -38,8 +40,14 @@ The required dependencies are, in the order of building:
                      --enable-everything --with-metis=PETSc
 ```
 
-GSL, Antioch and Eigen can be built independently. Note that Antioch is
-also a dependency of GRINS.
+[GSL](http://www.gnu.org/software/gsl/), 
+[Antioch](https://github.com/libantioch/antioch),
+and 
+[Eigen](http://eigen.tuxfamily.org/),
+can be built independently. Note that 
+[Antioch](https://github.com/libantioch/antioch)
+is also a dependency of 
+[GRINS](https://github.com/grinsfem/grins).
 
 Installation and running
 ========================
@@ -66,5 +74,5 @@ To run the executable, the advised command is:
 
 ```$ mpiexec -p NUMBER_OF_CORES planet INPUT_FILE -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu-dist```
 
-The options -ksp\_type, -pc\_type, and -pc\_factor\_mat\_solver\_package are PETSc options. See PETSc documentation for
-details and other desired options.
+The options -ksp\_type, -pc\_type, and -pc\_factor\_mat\_solver\_package are [PETSc](http://www.mcs.anl.gov/petsc/) options. 
+See [PETSc documentation](http://www.mcs.anl.gov/petsc/documentation/index.html) for details and other desired options.
